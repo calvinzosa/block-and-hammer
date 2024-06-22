@@ -25,26 +25,25 @@ import {
     RunService,
     Players,
 	StarterGui,
+	Workspace,
 } from '@rbxts/services';
-
-const workspace = game.GetService('Workspace') as Workspace;
 
 const player = Players.LocalPlayer;
 const GUI = player.WaitForChild('PlayerGui') as ScreenGui;
-const camera = workspace.CurrentCamera as Camera;
+const camera = Workspace.CurrentCamera as Camera;
 
 const screenGui = GUI.WaitForChild('ScreenGui') as ScreenGui;
 const isSpectating = GUI.WaitForChild('is_spectating') as BoolValue;
 const spectatePlayer = isSpectating.WaitForChild('player') as StringValue;
 const canMove = GUI.WaitForChild('can_move') as BoolValue;
-const mapFolder = workspace.WaitForChild('Map');
+const mapFolder = Workspace.WaitForChild('Map');
 const mudParts = mapFolder.WaitForChild('MudParts');
-const effectsFolder = workspace.WaitForChild('Effects') as BasePart;
+const effectsFolder = Workspace.WaitForChild('Effects') as BasePart;
 const goalPart = mapFolder.WaitForChild('end_area') as BasePart;
-const wallPlane = workspace.WaitForChild('Wall') as BasePart;
+const wallPlane = Workspace.WaitForChild('Wall') as BasePart;
 const flippedGravity = ReplicatedStorage.WaitForChild('flipped_gravity') as BoolValue;
-const mouseVisual = workspace.WaitForChild('MouseVisual') as BasePart;
-const modifierDisablers = workspace.WaitForChild('ForceDisableModifiers')
+const mouseVisual = Workspace.WaitForChild('MouseVisual') as BasePart;
+const modifierDisablers = Workspace.WaitForChild('ForceDisableModifiers')
 
 let cube: BasePart | undefined = undefined;
 
@@ -96,12 +95,12 @@ function mouseRaycast() {
 	params.FilterType = Enum.RaycastFilterType.Include;
 	params.FilterDescendantsInstances = [ wallPlane ];
 	
-	const resultA = workspace.Raycast(ray.Origin, ray.Direction.Unit.mul(512), params);
+	const resultA = Workspace.Raycast(ray.Origin, ray.Direction.Unit.mul(512), params);
 	
 	params.FilterType = Enum.RaycastFilterType.Exclude;
-	params.FilterDescendantsInstances = [ mouseVisual, modifierDisablers, effectsFolder ]; // workspace.FindFirstChild('ray_part')
+	params.FilterDescendantsInstances = [ mouseVisual, modifierDisablers, effectsFolder ]; // Workspace.FindFirstChild('ray_part')
 	
-	const resultB = workspace.Raycast(ray.Origin, ray.Direction.Unit.mul(512), params)
+	const resultB = Workspace.Raycast(ray.Origin, ray.Direction.Unit.mul(512), params)
 	return [ resultA?.Position, resultB?.Position, resultB?.Instance !== wallPlane ];
 }
 
@@ -185,7 +184,7 @@ function updateModifiers() {
                 
                 if (action === actionNames.GrapplingHammer.Activate) {
                     const head = cube.FindFirstChild('Head');
-                    const axisLock = workspace.FindFirstChild('AxisLock');
+                    const axisLock = Workspace.FindFirstChild('AxisLock');
                     const rightAttachment = head?.FindFirstChild('RightAttachment');
                     if (!head?.IsA('BasePart') || !axisLock?.IsA('BasePart') || !rightAttachment?.IsA('Attachment')) return;
                     
@@ -194,11 +193,11 @@ function updateModifiers() {
                         params.FilterType = Enum.RaycastFilterType.Exclude;
                         
                         const filter = [  ];
-                        for (const object of workspace.GetChildren()) {
-                            if (object !== workspace.FindFirstChild('Map') && object !== workspace.FindFirstChild('NonBreakable')) filter.push(object);
+                        for (const object of Workspace.GetChildren()) {
+                            if (object !== Workspace.FindFirstChild('Map') && object !== Workspace.FindFirstChild('NonBreakable')) filter.push(object);
                         }
                         
-                        const propellers = workspace.FindFirstChild('Propellers') as (Folder | undefined);
+                        const propellers = Workspace.FindFirstChild('Propellers') as (Folder | undefined);
                         if (propellers) {
                             for (const propeller of propellers.GetChildren()) {
                                 const hitbox = propeller.FindFirstChild('Hitbox') as (BasePart | undefined);
@@ -208,7 +207,7 @@ function updateModifiers() {
                         
                         params.FilterDescendantsInstances = filter;
                         
-                        const result = workspace.Raycast(head.Position, head.CFrame.LookVector.mul(6144), params);
+                        const result = Workspace.Raycast(head.Position, head.CFrame.LookVector.mul(6144), params);
                         if (!result) return;
                         
                         const target = new Instance('Attachment');
@@ -268,7 +267,7 @@ function updateModifiers() {
                         task.delay(1.5, () => cooldowns.shotgun = false);
                         
                         const velocity = cube.AssemblyAngularVelocity;
-                        const force = arm.CFrame.RightVector.mul(workspace.Gravity * -0.7);
+                        const force = arm.CFrame.RightVector.mul(Workspace.Gravity * -0.7);
                         cube.AssemblyAngularVelocity = velocity.add(force);
                         
                         playSound('shotgun_fire');
@@ -276,7 +275,7 @@ function updateModifiers() {
                         const params = new RaycastParams();
                         params.FilterDescendantsInstances = [ cube ];
                         
-                        const result = workspace.Raycast(arm.Position.add(arm.CFrame.RightVector.mul(4)), arm.CFrame.RightVector.mul(512), params);
+                        const result = Workspace.Raycast(arm.Position.add(arm.CFrame.RightVector.mul(4)), arm.CFrame.RightVector.mul(512), params);
                         if (result) {
                             const part = result.Instance
                             Events.ClientCreateDebris.Fire(result.Normal.mul(30), result.Position, part, 1, true);
@@ -345,7 +344,7 @@ function updateModifiers() {
                         explosion.Position = head.Position;
                         explosion.BlastRadius = 0;
                         explosion.BlastPressure = 0;
-                        explosion.Parent = workspace.FindFirstChild('Effects');
+                        explosion.Parent = Workspace.FindFirstChild('Effects');
                         
                         for (let i = 0; i < 15; i++) playSound('explosion', { PlaybackSpeed: randomFloat(0.9, 1), Volume: head.AssemblyAngularVelocity.Magnitude / 50 });
                     }
@@ -404,24 +403,24 @@ RunService.RenderStepped.Connect((dt) => {
 	const currentHammer = getHammerTexture();
 	const cubeHat = getCubeHat();
 	
-	workspace.Gravity = (workspace.GetAttribute('default_gravity') as number | undefined) ?? 0;
+	Workspace.Gravity = (Workspace.GetAttribute('default_gravity') as number | undefined) ?? 0;
 	if (getSetting(GameSetting.Modifiers)) {
 		if (cubeHat === Accessories.CubeHat.AstronautHelmet) {
-			workspace.Gravity = 5;
+			Workspace.Gravity = 5;
 		} else if (currentHammer === Accessories.HammerTexture.Hammer404 || player.GetAttribute('ERROR_LAND')) {
-			workspace.Gravity /= 2;
+			Workspace.Gravity /= 2;
 		}
 	}
 	
 	let spectatingCube: BasePart | undefined = undefined;
 	const otherPlayer = Players.FindFirstChild(spectatePlayer.Value) as Player | undefined;
 	if (isSpectating.Value && otherPlayer?.IsA('Player')) {
-		const otherCube = workspace.FindFirstChild(`cube${otherPlayer.UserId}`);
+		const otherCube = Workspace.FindFirstChild(`cube${otherPlayer.UserId}`);
 		if (otherCube?.IsA('BasePart')) spectatingCube = otherCube;
 	}
 	
 	if (!cube) {
-		const localCube = workspace.FindFirstChild(`cube${player.UserId}`);
+		const localCube = Workspace.FindFirstChild(`cube${player.UserId}`);
 		if (!localCube?.IsA('BasePart')) return;
 		
 		cube = localCube;
@@ -517,7 +516,7 @@ RunService.RenderStepped.Connect((dt) => {
 				force.Parent = cube;
 			}
 			const force = cube.FindFirstChild('upsidedown_gravity') as VectorForce;
-			force.Force = new Vector3(0, workspace.Gravity * cube.AssemblyMass * 2, 0);
+			force.Force = new Vector3(0, Workspace.Gravity * cube.AssemblyMass * 2, 0);
 		} else {
 			alignOrientation.CFrame = CFrame.fromOrientation(0, 0, 0);
 			cube.FindFirstChild('upsidedown_gravity')?.Destroy();
@@ -536,7 +535,7 @@ RunService.RenderStepped.Connect((dt) => {
 			}
 			
 			wasModifiersEnabled = Settings.modifiers;
-			if (workspace.GetPartsInPart(cube, params).size() > 0) wasModifiersEnabled = false;
+			if (Workspace.GetPartsInPart(cube, params).size() > 0) wasModifiersEnabled = false;
 		}
 		
 		let cubePosition = cube.Position;
@@ -564,14 +563,14 @@ RunService.RenderStepped.Connect((dt) => {
 		
 		const distance = start.sub(goal).Magnitude;
 		
-		// let part = workspace.FindFirstChild('ray_part') as BasePart | undefined;
+		// let part = Workspace.FindFirstChild('ray_part') as BasePart | undefined;
 		// if (!part) {
 		// 	part = new Instance('Part');
 		// 	part.CanCollide = false;
 		// 	part.Anchored = true;
 		// 	part.Transparency = 1;
 		// 	part.Name = 'ray_part';
-		// 	part.Parent = workspace;
+		// 	part.Parent = Workspace;
 		// }
 		
 		// part.Position = new Vector3(start.X, start.Y, distance / -2);
@@ -581,7 +580,7 @@ RunService.RenderStepped.Connect((dt) => {
 		params.FilterType = Enum.RaycastFilterType.Include;
 		params.FilterDescendantsInstances = [ mapFolder ];
 		
-		for (const obstructingPart of workspace.GetPartBoundsInBox(new CFrame(start.X, start.Y, distance / -2), new Vector3(10, 10, distance), params)) {
+		for (const obstructingPart of Workspace.GetPartBoundsInBox(new CFrame(start.X, start.Y, distance / -2), new Vector3(10, 10, distance), params)) {
 			if (obstructingPart.GetAttribute('CAMERA_TRANSPARENT')) {
 				obstructingPart.LocalTransparencyModifier = numLerp(obstructingPart.LocalTransparencyModifier, 0.9, dt * 5);
 				TweenService.Create(obstructingPart, tweenTypes.linear.short, { LocalTransparencyModifier: 0 }).Play();
@@ -647,7 +646,7 @@ RunService.RenderStepped.Connect((dt) => {
 				part.Color = Color3.fromRGB(0, 0, 0);
 				part.TopSurface = Enum.SurfaceType.Smooth;
 				part.BottomSurface = Enum.SurfaceType.Smooth;
-				part.Parent = workspace;
+				part.Parent = Workspace;
 				
 				task.spawn(() => {
 					RunService.RenderStepped.Wait();
@@ -733,7 +732,7 @@ RunService.RenderStepped.Connect((dt) => {
 			);
 			
 			let totalSounds = 0;
-			for (const sound of workspace.GetChildren()) {
+			for (const sound of Workspace.GetChildren()) {
 				if (sound.IsA('Sound') && sound.Volume > 0 && sound.IsPlaying) totalSounds++;
 			}
 			
@@ -748,7 +747,7 @@ RunService.RenderStepped.Connect((dt) => {
 			);
 			
 			let unanchoredParts = 0;
-			for (const descendant of workspace.GetDescendants()) {
+			for (const descendant of Workspace.GetDescendants()) {
 				if (descendant.IsA('BasePart') && !descendant.IsA('Terrain') && !descendant.Anchored) unanchoredParts++;
 			}
 			
@@ -813,6 +812,6 @@ RunService.Heartbeat.Connect((step) => {
 	for (const part of touching) {
 		if (!part?.IsA('BasePart')) return;
 		
-		if (workspace.GetPartsInPart(part, params).size() > 0) part.AssemblyLinearVelocity = part.AssemblyLinearVelocity.mul(slowdownFactor);
+		if (Workspace.GetPartsInPart(part, params).size() > 0) part.AssemblyLinearVelocity = part.AssemblyLinearVelocity.mul(slowdownFactor);
 	}
 });
