@@ -1,5 +1,14 @@
 -- Compiled with roblox-ts v2.3.0
 local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
+local ContextActionService = _services.ContextActionService
+local ReplicatedStorage = _services.ReplicatedStorage
+local UserInputService = _services.UserInputService
+local TweenService = _services.TweenService
+local RunService = _services.RunService
+local StarterGui = _services.StarterGui
+local Workspace = _services.Workspace
+local Players = _services.Players
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
 local numLerp = _utils.numLerp
 local getSetting = _utils.getSetting
@@ -17,30 +26,21 @@ local getTime = _utils.getTime
 local Settings = _utils.Settings
 local roundDecimalPlaces = _utils.roundDecimalPlaces
 local getCubeTime = _utils.getCubeTime
-local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
-local ContextActionService = _services.ContextActionService
-local ReplicatedStorage = _services.ReplicatedStorage
-local UserInputService = _services.UserInputService
-local TweenService = _services.TweenService
-local RunService = _services.RunService
-local Players = _services.Players
-local StarterGui = _services.StarterGui
-local workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
 local GUI = player:WaitForChild("PlayerGui")
-local camera = workspace.CurrentCamera
+local camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera")
 local screenGui = GUI:WaitForChild("ScreenGui")
 local isSpectating = GUI:WaitForChild("is_spectating")
 local spectatePlayer = isSpectating:WaitForChild("player")
 local canMove = GUI:WaitForChild("can_move")
-local mapFolder = workspace:WaitForChild("Map")
+local mapFolder = Workspace:WaitForChild("Map")
 local mudParts = mapFolder:WaitForChild("MudParts")
-local effectsFolder = workspace:WaitForChild("Effects")
+local effectsFolder = Workspace:WaitForChild("Effects")
 local goalPart = mapFolder:WaitForChild("end_area")
-local wallPlane = workspace:WaitForChild("Wall")
+local wallPlane = Workspace:WaitForChild("Wall")
 local flippedGravity = ReplicatedStorage:WaitForChild("flipped_gravity")
-local mouseVisual = workspace:WaitForChild("MouseVisual")
-local modifierDisablers = workspace:WaitForChild("ForceDisableModifiers")
+local mouseVisual = Workspace:WaitForChild("MouseVisual")
+local modifierDisablers = Workspace:WaitForChild("ForceDisableModifiers")
 local cube = nil
 local Events = {
 	BuildingHammerPlace = ReplicatedStorage:WaitForChild("BuildingHammerPlace"),
@@ -81,7 +81,6 @@ local abilityObjects = {
 }
 local wasModifiersEnabled = false
 local previousModifiersCheck = true
-local isFirstTime = true
 local ragdollTime = 0
 local intensity = 0
 local function formatDebugWorldNumber(num)
@@ -94,10 +93,10 @@ local function mouseRaycast()
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Include
 	params.FilterDescendantsInstances = { wallPlane }
-	local resultA = workspace:Raycast(ray.Origin, ray.Direction.Unit * 512, params)
+	local resultA = Workspace:Raycast(ray.Origin, ray.Direction.Unit * 512, params)
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = { mouseVisual, modifierDisablers, effectsFolder }
-	local resultB = workspace:Raycast(ray.Origin, ray.Direction.Unit * 512, params)
+	local resultB = Workspace:Raycast(ray.Origin, ray.Direction.Unit * 512, params)
 	local _result = resultA
 	if _result ~= nil then
 		_result = _result.Position
@@ -221,7 +220,7 @@ local function updateModifiers()
 				end
 				if action == actionNames.GrapplingHammer.Activate then
 					local head = cube:FindFirstChild("Head")
-					local axisLock = workspace:FindFirstChild("AxisLock")
+					local axisLock = Workspace:FindFirstChild("AxisLock")
 					local _rightAttachment = head
 					if _rightAttachment ~= nil then
 						_rightAttachment = _rightAttachment:FindFirstChild("RightAttachment")
@@ -253,12 +252,12 @@ local function updateModifiers()
 						local params = RaycastParams.new()
 						params.FilterType = Enum.RaycastFilterType.Exclude
 						local filter = {}
-						for _, object in workspace:GetChildren() do
-							if object ~= workspace:FindFirstChild("Map") and object ~= workspace:FindFirstChild("NonBreakable") then
+						for _, object in Workspace:GetChildren() do
+							if object ~= Workspace:FindFirstChild("Map") and object ~= Workspace:FindFirstChild("NonBreakable") then
 								table.insert(filter, object)
 							end
 						end
-						local propellers = workspace:FindFirstChild("Propellers")
+						local propellers = Workspace:FindFirstChild("Propellers")
 						if propellers then
 							for _, propeller in propellers:GetChildren() do
 								local hitbox = propeller:FindFirstChild("Hitbox")
@@ -268,7 +267,7 @@ local function updateModifiers()
 							end
 						end
 						params.FilterDescendantsInstances = filter
-						local result = workspace:Raycast(head.Position, head.CFrame.LookVector * 6144, params)
+						local result = Workspace:Raycast(head.Position, head.CFrame.LookVector * 6144, params)
 						if not result then
 							return nil
 						end
@@ -347,13 +346,13 @@ local function updateModifiers()
 						end)
 						local velocity = cube.AssemblyAngularVelocity
 						local _rightVector = arm.CFrame.RightVector
-						local _arg0 = workspace.Gravity * -0.7
+						local _arg0 = Workspace.Gravity * -0.7
 						local force = _rightVector * _arg0
 						cube.AssemblyAngularVelocity = velocity + force
 						playSound("shotgun_fire")
 						local params = RaycastParams.new()
 						params.FilterDescendantsInstances = { cube }
-						local _fn = workspace
+						local _fn = Workspace
 						local _position = arm.Position
 						local _arg0_1 = arm.CFrame.RightVector * 4
 						local result = _fn:Raycast(_position + _arg0_1, arm.CFrame.RightVector * 512, params)
@@ -468,7 +467,7 @@ local function updateModifiers()
 						explosion.Position = head.Position
 						explosion.BlastRadius = 0
 						explosion.BlastPressure = 0
-						explosion.Parent = workspace:FindFirstChild("Effects")
+						explosion.Parent = Workspace:FindFirstChild("Effects")
 						do
 							local i = 0
 							local _shouldIncrement = false
@@ -557,18 +556,18 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 	local currentHammer = getHammerTexture()
 	local cubeHat = getCubeHat()
-	local _condition = (workspace:GetAttribute("default_gravity"))
+	local _condition = (Workspace:GetAttribute("default_gravity"))
 	if _condition == nil then
 		_condition = 0
 	end
-	workspace.Gravity = _condition
+	Workspace.Gravity = _condition
 	if getSetting(GameSetting.Modifiers) then
 		if cubeHat == Accessories.CubeHat.AstronautHelmet then
-			workspace.Gravity = 5
+			Workspace.Gravity = 5
 		else
 			local _value_1 = currentHammer == Accessories.HammerTexture.Hammer404 or player:GetAttribute("ERROR_LAND")
 			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
-				workspace.Gravity /= 2
+				Workspace.Gravity /= 2
 			end
 		end
 	end
@@ -583,7 +582,7 @@ RunService.RenderStepped:Connect(function(dt)
 		_condition_1 = _result
 	end
 	if _condition_1 then
-		local otherCube = workspace:FindFirstChild(`cube{otherPlayer.UserId}`)
+		local otherCube = Workspace:FindFirstChild(`cube{otherPlayer.UserId}`)
 		local _result = otherCube
 		if _result ~= nil then
 			_result = _result:IsA("BasePart")
@@ -593,7 +592,7 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 	end
 	if not cube then
-		local localCube = workspace:FindFirstChild(`cube{player.UserId}`)
+		local localCube = Workspace:FindFirstChild(`cube{player.UserId}`)
 		local _result = localCube
 		if _result ~= nil then
 			_result = _result:IsA("BasePart")
@@ -723,7 +722,7 @@ RunService.RenderStepped:Connect(function(dt)
 			armAlignOrientation.Enabled = false
 		else
 			alignOrientation.Enabled = true
-			arm.CanCollide = true
+			arm.CanCollide = false
 			arm.Massless = true
 			armAlignPosition.Enabled = true
 			armAlignOrientation.Enabled = true
@@ -759,7 +758,7 @@ RunService.RenderStepped:Connect(function(dt)
 		if _condition_7 == nil then
 			_condition_7 = 0
 		end
-		local intensity = _condition_7
+		intensity = _condition_7
 		if isSpectating.Value and otherPlayer then
 			intensity = 0
 			local _result_4 = screenGui:FindFirstChild("SpectatingGUI")
@@ -781,7 +780,7 @@ RunService.RenderStepped:Connect(function(dt)
 				force.Parent = cube
 			end
 			local force = cube:FindFirstChild("upsidedown_gravity")
-			force.Force = Vector3.new(0, workspace.Gravity * cube.AssemblyMass * 2, 0)
+			force.Force = Vector3.new(0, Workspace.Gravity * cube.AssemblyMass * 2, 0)
 		else
 			alignOrientation.CFrame = CFrame.fromOrientation(0, 0, 0)
 			local _result_4 = cube:FindFirstChild("upsidedown_gravity")
@@ -801,7 +800,7 @@ RunService.RenderStepped:Connect(function(dt)
 				previousModifiersCheck = true
 			end
 			wasModifiersEnabled = Settings.modifiers
-			if #workspace:GetPartsInPart(cube, params) > 0 then
+			if #Workspace:GetPartsInPart(cube, params) > 0 then
 				wasModifiersEnabled = false
 			end
 		end
@@ -832,21 +831,21 @@ RunService.RenderStepped:Connect(function(dt)
 		local start = cube.Position
 		local goal = cameraCFrame.Position
 		local distance = (start - goal).Magnitude
-		-- let part = workspace.FindFirstChild('ray_part') as BasePart | undefined;
+		-- let part = Workspace.FindFirstChild('ray_part') as BasePart | undefined;
 		-- if (!part) {
 		-- 	part = new Instance('Part');
 		-- 	part.CanCollide = false;
 		-- 	part.Anchored = true;
 		-- 	part.Transparency = 1;
 		-- 	part.Name = 'ray_part';
-		-- 	part.Parent = workspace;
+		-- 	part.Parent = Workspace;
 		-- }
 		-- part.Position = new Vector3(start.X, start.Y, distance / -2);
 		-- part.Size = new Vector3(10, 10, distance);
 		local params = OverlapParams.new()
 		params.FilterType = Enum.RaycastFilterType.Include
 		params.FilterDescendantsInstances = { mapFolder }
-		for _, obstructingPart in workspace:GetPartBoundsInBox(CFrame.new(start.X, start.Y, distance / -2), Vector3.new(10, 10, distance), params) do
+		for _, obstructingPart in Workspace:GetPartBoundsInBox(CFrame.new(start.X, start.Y, distance / -2), Vector3.new(10, 10, distance), params) do
 			local _value_1 = obstructingPart:GetAttribute("CAMERA_TRANSPARENT")
 			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 				obstructingPart.LocalTransparencyModifier = numLerp(obstructingPart.LocalTransparencyModifier, 0.9, dt * 5)
@@ -938,7 +937,7 @@ RunService.RenderStepped:Connect(function(dt)
 				part.Color = Color3.fromRGB(0, 0, 0)
 				part.TopSurface = Enum.SurfaceType.Smooth
 				part.BottomSurface = Enum.SurfaceType.Smooth
-				part.Parent = workspace
+				part.Parent = Workspace
 				task.spawn(function()
 					RunService.RenderStepped:Wait()
 					part:Destroy()
@@ -1010,7 +1009,7 @@ RunService.RenderStepped:Connect(function(dt)
 			(left:FindFirstChild("RagdollTime")).Text = string.format("RagdollTime: %.3fs", ragdollTime);
 			(left:FindFirstChild("CameraShake")).Text = string.format("CameraShake: %.3fs studs", intensity)
 			local totalSounds = 0
-			for _, sound in workspace:GetChildren() do
+			for _, sound in Workspace:GetChildren() do
 				if sound:IsA("Sound") and sound.Volume > 0 and sound.IsPlaying then
 					totalSounds += 1
 				end
@@ -1023,7 +1022,7 @@ RunService.RenderStepped:Connect(function(dt)
 			end
 			(left:FindFirstChild("DestroyedCounter")).Text = _fn_1.format("Destroyed Counter: %d", _condition_9)
 			local unanchoredParts = 0
-			for _, descendant in workspace:GetDescendants() do
+			for _, descendant in Workspace:GetDescendants() do
 				if descendant:IsA("BasePart") and not descendant:IsA("Terrain") and not descendant.Anchored then
 					unanchoredParts += 1
 				end
@@ -1096,7 +1095,7 @@ RunService.Heartbeat:Connect(function(step)
 		if not _result then
 			return nil
 		end
-		if #workspace:GetPartsInPart(part, params) > 0 then
+		if #Workspace:GetPartsInPart(part, params) > 0 then
 			part.AssemblyLinearVelocity = part.AssemblyLinearVelocity * slowdownFactor
 		end
 	end

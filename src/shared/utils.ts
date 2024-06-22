@@ -11,7 +11,7 @@ import {
 import str from '@rbxts/string-utils';
 
 const player = Players.LocalPlayer;
-const GUI = player?.WaitForChild('PlayerGui') as (ScreenGui | undefined);
+const GUI = player?.WaitForChild('PlayerGui') as (PlayerGui | undefined);
 
 const settingChangedEvent = ReplicatedStorage.WaitForChild('SettingChanged') as BindableEvent;
 const makeReplayEvent = ReplicatedStorage.WaitForChild('MakeReplayEvent') as BindableEvent;

@@ -1,4 +1,15 @@
 import {
+    ContextActionService,
+    ReplicatedStorage,
+    UserInputService,
+    TweenService,
+    RunService,
+	StarterGui,
+	Workspace,
+    Players,
+} from '@rbxts/services';
+
+import {
 	numLerp,
 	getSetting,
 	GameSetting,
@@ -17,20 +28,9 @@ import {
 	getCubeTime
 } from 'shared/utils';
 
-import {
-    ContextActionService,
-    ReplicatedStorage,
-    UserInputService,
-    TweenService,
-    RunService,
-    Players,
-	StarterGui,
-	Workspace,
-} from '@rbxts/services';
-
 const player = Players.LocalPlayer;
-const GUI = player.WaitForChild('PlayerGui') as ScreenGui;
-const camera = Workspace.CurrentCamera as Camera;
+const GUI = player.WaitForChild('PlayerGui') as PlayerGui;
+const camera = Workspace.CurrentCamera ?? Workspace.WaitForChild('Camera') as Camera;
 
 const screenGui = GUI.WaitForChild('ScreenGui') as ScreenGui;
 const isSpectating = GUI.WaitForChild('is_spectating') as BoolValue;
@@ -43,7 +43,7 @@ const goalPart = mapFolder.WaitForChild('end_area') as BasePart;
 const wallPlane = Workspace.WaitForChild('Wall') as BasePart;
 const flippedGravity = ReplicatedStorage.WaitForChild('flipped_gravity') as BoolValue;
 const mouseVisual = Workspace.WaitForChild('MouseVisual') as BasePart;
-const modifierDisablers = Workspace.WaitForChild('ForceDisableModifiers')
+const modifierDisablers = Workspace.WaitForChild('ForceDisableModifiers');
 
 let cube: BasePart | undefined = undefined;
 
@@ -56,7 +56,7 @@ const Events = {
     'ClientReset': ReplicatedStorage.WaitForChild('ClientReset') as BindableEvent,
     'ClientRagdoll': ReplicatedStorage.WaitForChild('ClientRagdoll') as BindableEvent,
     'ClientCreateDebris': ReplicatedStorage.WaitForChild('ClientCreateDebris') as BindableEvent,
-}
+};
 
 const cooldowns = {
     'explosiveHammer': false,
@@ -70,7 +70,7 @@ const actionNames = {
     'ExplosiveHammer': { 'Explode': 'explosive_hammer-explode' },
     'Shotgun': { 'Fire': 'shotgun-fire' },
     'InverterHammer': { 'Invert': 'inverter_hammer-invert' }
-}
+};
 
 const abilityObjects = {
     'grapplingHammerRope': undefined as (Instance | undefined)
@@ -78,7 +78,6 @@ const abilityObjects = {
 
 let wasModifiersEnabled = false;
 let previousModifiersCheck = true;
-let isFirstTime = true;
 let ragdollTime = 0;
 let intensity = 0;
 
@@ -472,7 +471,7 @@ RunService.RenderStepped.Connect((dt) => {
 			armAlignOrientation.Enabled = false;
 		} else {
 			alignOrientation.Enabled = true;
-			arm.CanCollide = true;
+			arm.CanCollide = false;
 			arm.Massless = true;
 			armAlignPosition.Enabled = true
 			armAlignOrientation.Enabled = true;
@@ -499,7 +498,7 @@ RunService.RenderStepped.Connect((dt) => {
 			}
 		}
 		
-		let intensity = (player.GetAttribute('client_shake_intensity') as number | undefined) ?? 0
+		intensity = (player.GetAttribute('client_shake_intensity') as number | undefined) ?? 0
 		if (isSpectating.Value && otherPlayer) {
 			intensity = 0;
 			const label = screenGui.FindFirstChild('SpectatingGUI')?.FindFirstChild('PlayerName') as TextLabel | undefined;
