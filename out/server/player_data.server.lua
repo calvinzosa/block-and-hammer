@@ -195,8 +195,7 @@ local function playerRemoved(player)
 	local serverJoinTime = _condition_1
 	local cubeColor = player:GetAttribute("CUBE_COLOR")
 	local destroyedCounter = cube:GetAttribute("destroyed_counter")
-	local _binding = getCubeTime(cube)
-	local extraTime = _binding[1]
+	local extraTime = getCubeTime(cube)
 	local settingsJSON = player:GetAttribute("settings_json")
 	local activeQuest = player:GetAttribute("activeQuest")
 	local _object = {

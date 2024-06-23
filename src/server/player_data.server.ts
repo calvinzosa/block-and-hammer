@@ -8,7 +8,7 @@ import {
     Workspace,
 } from '@rbxts/services';
 
-import { $error, $print, $warn } from 'rbxts-transform-debug';
+import { $print, $warn } from 'rbxts-transform-debug';
 
 import {
     decodeJSONObject,

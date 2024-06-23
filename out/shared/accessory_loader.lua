@@ -568,8 +568,15 @@ local function loadAccessories(cube, data, player, hammerRemoveFunction)
 						clone.Parent = cube
 						if RunService:IsServer() then
 							task.delay(0.5, function()
-								while not { clone:CanSetNetworkOwnership() } do
-									task.wait()
+								while true do
+									local _value_1 = task.wait()
+									if not (_value_1 ~= 0 and _value_1 == _value_1 and _value_1) then
+										break
+									end
+									local canSet = clone:CanSetNetworkOwnership()
+									if canSet then
+										break
+									end
 								end
 								clone:SetNetworkOwner(player)
 								for _, descendant in clone:GetDescendants() do
@@ -673,14 +680,19 @@ local function loadAccessories(cube, data, player, hammerRemoveFunction)
 	end
 	if type(hammer) == "string" then
 		local accessoryData = accessoryList[hammer]
-		if accessoryData then
-			local data = accessoryData.data
-			local hammerFunction = hammerFunctions[hammer]
+		local _data = accessoryData
+		if _data ~= nil then
+			_data = _data.data
+		end
+		local data = _data
+		if accessoryData and type(data) == "string" then
+			local hammerFunction = hammerFunctions[data]
 			if type(data) == "string" and type(hammerFunction) == "function" then
-				hammerFunction(cube, player)
+				return hammerFunction(cube, player)
 			end
 		end
 	end
+	return nil
 end
 local function reloadAccessories(cube, b, hatAccessory, auraAccessory)
 	if hatAccessory == nil then
@@ -726,7 +738,7 @@ local function reloadAccessories(cube, b, hatAccessory, auraAccessory)
 			_result_1.Color = ColorSequence.new(cubeColor)
 		end
 	end)
-	print("[src/shared/accessory_loader.ts:476]", `Updated accessories for {cube.Name}`)
+	print("[src/shared/accessory_loader.ts:481]", `Updated accessories for {cube.Name}`)
 end
 return {
 	loadAccessories = loadAccessories,

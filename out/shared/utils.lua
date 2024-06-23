@@ -388,7 +388,7 @@ local function getCubeTime(cube)
 	local currentTime = getTime()
 	local finishTotalTime = cube:GetAttribute("finishTotalTime")
 	if type(finishTotalTime) == "number" then
-		return { finishTotalTime, getTime() - finishTotalTime }
+		return finishTotalTime, getTime() - finishTotalTime
 	end
 	local extraTime = cube:GetAttribute("extra_time")
 	local _extraTime = extraTime
@@ -400,14 +400,14 @@ local function getCubeTime(cube)
 	if not (type(_startTime) == "number") then
 		startTime = 0
 	end
-	return { math.min((currentTime - startTime) + extraTime, 3599), startTime }
+	return math.min((currentTime - startTime) + extraTime, 3599), startTime
 end
 local function getTimeUnits(ms)
 	local hours = math.floor(ms / (1000 * 60 * 60))
 	local minutes = math.floor((ms % (1000 * 60 * 60)) / (1000 * 60))
 	local seconds = math.floor((ms % (1000 * 60)) / 1000)
 	local milliseconds = ms % 1000
-	return { hours, minutes, seconds, milliseconds }
+	return hours, minutes, seconds, milliseconds
 end
 local function formatBytes(bytes)
 	local units = { "bytes", "kb", "mb", "gb", "tb" }
@@ -583,7 +583,7 @@ local function giveBadge(player, badgeId)
 		return nil
 	end
 	if isTestingServer() then
-		warn("[src/shared/utils.ts:456]", "Badges are disabled in the Testing Server.")
+		warn("[src/shared/utils.ts:457]", "Badges are disabled in the Testing Server.")
 		return nil
 	end
 	local userId = player.UserId

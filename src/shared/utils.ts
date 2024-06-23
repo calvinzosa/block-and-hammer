@@ -312,11 +312,11 @@ export function playSound(name: string, properties: Record<string, DictValue> = 
     sound.Ended.Connect(() => sound.Destroy());
 }
 
-export function getCubeTime(cube: BasePart): [ number, number ] {
+export function getCubeTime(cube: BasePart): LuaTuple<[ number, number ]> {
     const currentTime = getTime();
     
     const finishTotalTime = cube.GetAttribute('finishTotalTime');
-    if (typeIs(finishTotalTime, 'number')) return [ finishTotalTime, getTime() - finishTotalTime ];
+    if (typeIs(finishTotalTime, 'number')) return $tuple(finishTotalTime, getTime() - finishTotalTime);
     
     let extraTime = cube.GetAttribute('extra_time');
     if (!typeIs(extraTime, 'number')) extraTime = 0;
@@ -324,15 +324,16 @@ export function getCubeTime(cube: BasePart): [ number, number ] {
     let startTime = cube.GetAttribute('start_time');
     if (!typeIs(startTime, 'number')) startTime = 0;
     
-    return [ math.min((currentTime - startTime) + extraTime, 3599), startTime ];
+    return $tuple(math.min((currentTime - startTime) + extraTime, 3599), startTime);
 }
 
-export function getTimeUnits(ms: number): [ number, number, number, number ] {
+export function getTimeUnits(ms: number): LuaTuple<[ number, number, number, number ]> {
     const hours = math.floor(ms / (1000 * 60 * 60));
     const minutes = math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = math.floor((ms % (1000 * 60)) / 1000);
     const milliseconds = ms % 1000;
-    return [ hours, minutes, seconds, milliseconds ];
+    
+    return $tuple(hours, minutes, seconds, milliseconds);
 }
 
 export function formatBytes(bytes: number): string {
@@ -476,12 +477,12 @@ export function giveBadge(player: Player, badgeId: number): void {
     });
 }
 
-export function isTestingServer() {
+export function isTestingServer(): boolean {
     if (RunService.IsStudio()) return false;
 	return placeId === 17837400665;
 }
 
-export function isMainServer() {
+export function isMainServer(): boolean {
     if (RunService.IsStudio()) return true;
 	return placeId === 13458875976;
 }

@@ -26,6 +26,7 @@ local waitUntil = _utils.waitUntil
 local Settings = _utils.Settings
 local numLerp = _utils.numLerp
 local getTime = _utils.getTime
+local getTimeUnits = _utils.getTimeUnits
 local Events = {
 	BuildingHammerPlace = ReplicatedStorage:WaitForChild("BuildingHammerPlace"),
 	AddRagdollCount = ReplicatedStorage:WaitForChild("AddRagdollCount"),
@@ -45,6 +46,9 @@ local isSpectating = valueInstances:WaitForChild("is_spectating")
 local spectatePlayer = isSpectating:WaitForChild("player")
 local canMove = valueInstances:WaitForChild("can_move")
 local screenGui = GUI:WaitForChild("ScreenGui")
+local timerLabel = screenGui:WaitForChild("Timer")
+local speedometerLabel = screenGui:WaitForChild("Speedometer")
+local altitudeLabel = screenGui:WaitForChild("Altitude")
 local mapFolder = Workspace:WaitForChild("Map")
 local mudParts = mapFolder:WaitForChild("MudParts")
 local effectsFolder = Workspace:WaitForChild("Effects")
@@ -674,6 +678,15 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 		local _binding = convertStudsToMeters(cube.Position.Y - 1.9)
 		local altitude = _binding[1]
+		local altitudeString = _binding[2]
+		local _binding_1 = convertStudsToMeters(cube.AssemblyLinearVelocity.Magnitude)
+		local _ = _binding_1[1]
+		local speedString = _binding_1[2]
+		local cubeTime = getCubeTime(cube)
+		local minutes, seconds, milliseconds = select(2, unpack({ getTimeUnits(math.round(cubeTime * 1000)) }))
+		timerLabel.Text = string.format("%02d:%02d.%d", minutes, seconds, math.floor(milliseconds / 100))
+		altitudeLabel.Text = altitudeString
+		speedometerLabel.Text = speedString
 		local windForce = cube:FindFirstChild("WindForce")
 		local _result_3 = windForce
 		if _result_3 ~= nil then
@@ -699,7 +712,7 @@ RunService.RenderStepped:Connect(function(dt)
 			end
 		end
 		cube.CollisionGroup = "clientCube"
-		for _, descendant in cube:GetDescendants() do
+		for _1, descendant in cube:GetDescendants() do
 			if descendant:IsA("BasePart") and descendant.CollisionGroup == "cubes" then
 				descendant.CollisionGroup = "clientCube"
 			end
@@ -730,7 +743,7 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 		local hammerTransparency = _condition_6
 		cube.Transparency = numLerp(cube.Transparency, cubeTransparency, dt * 15)
-		for _, part in { head, arm } do
+		for _1, part in { head, arm } do
 			local alpha = dt * 15
 			local _value_1 = cube:GetAttribute("instantHammerTransparency")
 			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
@@ -738,7 +751,7 @@ RunService.RenderStepped:Connect(function(dt)
 				cube:SetAttribute("instantHammerTransparent", nil)
 			end
 			part.Transparency = numLerp(part.Transparency, hammerTransparency, alpha)
-			for _1, descendant in part:GetDescendants() do
+			for _2, descendant in part:GetDescendants() do
 				if descendant:IsA("Decal") or descendant:IsA("Texture") then
 					descendant.Transparency = part.Transparency
 				end
@@ -817,21 +830,10 @@ RunService.RenderStepped:Connect(function(dt)
 		local start = cube.Position
 		local goal = cameraCFrame.Position
 		local distance = (start - goal).Magnitude
-		-- let part = Workspace.FindFirstChild('ray_part') as BasePart | undefined;
-		-- if (!part) {
-		-- 	part = new Instance('Part');
-		-- 	part.CanCollide = false;
-		-- 	part.Anchored = true;
-		-- 	part.Transparency = 1;
-		-- 	part.Name = 'ray_part';
-		-- 	part.Parent = Workspace;
-		-- }
-		-- part.Position = new Vector3(start.X, start.Y, distance / -2);
-		-- part.Size = new Vector3(10, 10, distance);
 		local params = OverlapParams.new()
 		params.FilterType = Enum.RaycastFilterType.Include
 		params.FilterDescendantsInstances = { mapFolder }
-		for _, obstructingPart in Workspace:GetPartBoundsInBox(CFrame.new(start.X, start.Y, distance / -2), Vector3.new(10, 10, distance), params) do
+		for _1, obstructingPart in Workspace:GetPartBoundsInBox(CFrame.new(start.X, start.Y, distance / -2), Vector3.new(10, 10, distance), params) do
 			local _value_1 = obstructingPart:GetAttribute("CAMERA_TRANSPARENT")
 			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 				local _condition_7 = obstructingPart:GetAttribute("CAMERA_TRANSPARENCY")
@@ -896,7 +898,7 @@ RunService.RenderStepped:Connect(function(dt)
 				armAlignPosition.MaxForce = 6250
 				armAlignPosition.Responsiveness = 40
 				armAlignOrientation.Responsiveness = 100
-				for _, effect in effectsFolder:GetDescendants() do
+				for _1, effect in effectsFolder:GetDescendants() do
 					if effect:IsA("ParticleEmitter") then
 						effect.TimeScale *= 0.5
 					end
@@ -945,7 +947,7 @@ RunService.RenderStepped:Connect(function(dt)
 			armAlignPosition.MaxForce = 6250
 			armAlignPosition.Responsiveness = 40
 			armAlignOrientation.Responsiveness = 100
-			for _, effect in effectsFolder:GetDescendants() do
+			for _1, effect in effectsFolder:GetDescendants() do
 				if effect:IsA("ParticleEmitter") then
 					effect.TimeScale *= 0.5
 				end
@@ -975,7 +977,7 @@ RunService.RenderStepped:Connect(function(dt)
 		if canMove.Value then
 			local rotationOffset = CFrame.fromOrientation(math.pi / 2, math.pi / 2, 0)
 			local mouse = UserInputService:GetMouseLocation()
-			for _, gui in StarterGui:GetGuiObjectsAtPosition(mouse.X, mouse.Y) do
+			for _1, gui in StarterGui:GetGuiObjectsAtPosition(mouse.X, mouse.Y) do
 				if gui.Name == "ContextButtonFrame" then
 					return nil
 				end
@@ -997,7 +999,7 @@ RunService.RenderStepped:Connect(function(dt)
 			(left:FindFirstChild("RagdollTime")).Text = string.format("RagdollTime: %.3fs", ragdollTime);
 			(left:FindFirstChild("CameraShake")).Text = string.format("CameraShake: %.3fs studs", intensity)
 			local totalSounds = 0
-			for _, sound in Workspace:GetChildren() do
+			for _1, sound in Workspace:GetChildren() do
 				if sound:IsA("Sound") and sound.Volume > 0 and sound.IsPlaying then
 					totalSounds += 1
 				end
@@ -1010,7 +1012,7 @@ RunService.RenderStepped:Connect(function(dt)
 			end
 			(left:FindFirstChild("DestroyedCounter")).Text = _fn_1.format("Destroyed Counter: %d", _condition_8)
 			local unanchoredParts = 0
-			for _, descendant in Workspace:GetDescendants() do
+			for _1, descendant in Workspace:GetDescendants() do
 				if descendant:IsA("BasePart") and not descendant:IsA("Terrain") and not descendant.Anchored then
 					unanchoredParts += 1
 				end
@@ -1037,9 +1039,8 @@ goalPart.Touched:Connect(function(otherPart)
 	end
 	if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
 		player:SetAttribute("finished", true)
-		local _binding = getCubeTime(otherPart)
-		local totalTime = _binding[1]
-		print("[src/client/cube_movement.client.ts:779]", `Completed game in {totalTime} seconds`)
+		local totalTime = getCubeTime(otherPart)
+		print("[src/client/cube.client.ts:778]", `Completed game in {totalTime} seconds`)
 		Events.CompleteGame:FireServer(totalTime)
 		Events.MakeReplayEvent:Fire(string.format("win,%d", totalTime * 1000))
 	end

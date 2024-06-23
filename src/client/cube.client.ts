@@ -28,6 +28,7 @@ import {
 	Settings,
 	numLerp,
 	getTime,
+	getTimeUnits,
 } from 'shared/utils';
 
 const Events = {
@@ -52,6 +53,9 @@ const isSpectating = valueInstances.WaitForChild('is_spectating') as BoolValue;
 const spectatePlayer = isSpectating.WaitForChild('player') as StringValue;
 const canMove = valueInstances.WaitForChild('can_move') as BoolValue;
 const screenGui = GUI.WaitForChild('ScreenGui') as ScreenGui;
+const timerLabel = screenGui.WaitForChild('Timer') as TextLabel;
+const speedometerLabel = screenGui.WaitForChild('Speedometer') as TextLabel;
+const altitudeLabel = screenGui.WaitForChild('Altitude') as TextLabel;
 const mapFolder = Workspace.WaitForChild('Map');
 const mudParts = mapFolder.WaitForChild('MudParts');
 const effectsFolder = Workspace.WaitForChild('Effects') as BasePart;
@@ -446,7 +450,15 @@ RunService.RenderStepped.Connect((dt) => {
 		if (!armCFrame?.IsA('Attachment') || !armRotation?.IsA('Attachment')) return;
 		if (!typeIs(startTime, 'number')) return;
 		
-		const [ altitude ] = convertStudsToMeters(cube.Position.Y - 1.9);
+		const [ altitude, altitudeString ] = convertStudsToMeters(cube.Position.Y - 1.9);
+		const [ _, speedString ] = convertStudsToMeters(cube.AssemblyLinearVelocity.Magnitude);
+		const [ cubeTime ] = getCubeTime(cube);
+		
+		const [ minutes, seconds, milliseconds ] = select(2, ...getTimeUnits(math.round(cubeTime * 1000))) as LuaTuple<[ number, number, number ]>;
+		
+		timerLabel.Text = string.format('%02d:%02d.%d', minutes, seconds, math.floor(milliseconds / 100));
+		altitudeLabel.Text = altitudeString;
+		speedometerLabel.Text = speedString;
 		
 		const windForce = cube.FindFirstChild('WindForce')
 		if (windForce?.IsA('VectorForce')) {
@@ -566,19 +578,6 @@ RunService.RenderStepped.Connect((dt) => {
 		const goal = cameraCFrame.Position;
 		
 		const distance = start.sub(goal).Magnitude;
-		
-		// let part = Workspace.FindFirstChild('ray_part') as BasePart | undefined;
-		// if (!part) {
-		// 	part = new Instance('Part');
-		// 	part.CanCollide = false;
-		// 	part.Anchored = true;
-		// 	part.Transparency = 1;
-		// 	part.Name = 'ray_part';
-		// 	part.Parent = Workspace;
-		// }
-		
-		// part.Position = new Vector3(start.X, start.Y, distance / -2);
-		// part.Size = new Vector3(10, 10, distance);
 		
 		const params = new OverlapParams();
 		params.FilterType = Enum.RaycastFilterType.Include;

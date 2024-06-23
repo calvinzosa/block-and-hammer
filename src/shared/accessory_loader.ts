@@ -334,7 +334,7 @@ export const hammerFunctions: Record<string, (cube: BasePart, player: Player) =>
 	}
 }
 
-export function loadAccessories(cube: BasePart, data: { face?: string, hammer?: string, hat?: string, aura?: string }, player: Player, hammerRemoveFunction: () => void | undefined) {
+export function loadAccessories(cube: BasePart, data: { face?: string, hammer?: string, hat?: string, aura?: string }, player: Player, hammerRemoveFunction: (() => void) | undefined) {
 	const { face, hammer, hat, aura } = data;
 	
 	if (typeIs(face, 'string')) {
@@ -371,7 +371,10 @@ export function loadAccessories(cube: BasePart, data: { face?: string, hammer?: 
 						
 						if (RunService.IsServer()) {
 							task.delay(0.5, () => {
-								while (!clone.CanSetNetworkOwnership()) task.wait();
+								while (task.wait()) {
+									const [ canSet ] = clone.CanSetNetworkOwnership();
+									if (canSet) break;
+								}
 								
 								clone.SetNetworkOwner(player);
 								for (const descendant of clone.GetDescendants()) {
@@ -446,12 +449,14 @@ export function loadAccessories(cube: BasePart, data: { face?: string, hammer?: 
 	
 	if (typeIs(hammer, 'string')) {
 		const accessoryData = accessoryList[hammer];
-		if (accessoryData) {
-			const data = accessoryData.data;
-			const hammerFunction = hammerFunctions[hammer];
-			if (typeIs(data, 'string') && typeIs(hammerFunction, 'function')) hammerFunction(cube, player);
+		const data = accessoryData?.data;
+		if (accessoryData && typeIs(data, 'string')) {
+			const hammerFunction = hammerFunctions[data];
+			if (typeIs(data, 'string') && typeIs(hammerFunction, 'function')) return hammerFunction(cube, player);
 		}
 	}
+	
+	return undefined;
 }
 
 export function reloadAccessories(cube: BasePart, b: Color3 | Player, hatAccessory: string = Accessories.CubeHat.NoHat, auraAccessory: string = Accessories.CubeAura.NoAura) {
