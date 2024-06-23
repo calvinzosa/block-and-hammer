@@ -17,16 +17,16 @@ local tweenTypes = _utils.tweenTypes
 local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera")
 local GUI = player:WaitForChild("PlayerGui")
+local canMove = GUI:WaitForChild("Values"):WaitForChild("can_move")
 local menuGui = GUI:WaitForChild("MainMenuGui")
+local screenGui = GUI:WaitForChild("ScreenGui")
 local playButton = menuGui:WaitForChild("Play")
 local editButton = menuGui:WaitForChild("Edit")
 local titleLabel = menuGui:WaitForChild("Title")
 local hintLabel = menuGui:WaitForChild("Hint")
-local screenGui = GUI:WaitForChild("ScreenGui")
 local shadow = menuGui:WaitForChild("Shadow")
 local shadowTitle = shadow:WaitForChild("Title")
 local shadowText = shadow:WaitForChild("Loading")
-local canMove = GUI:WaitForChild("can_move")
 local effectsFolder = Workspace:WaitForChild("Effects")
 local didClickButton = false
 player:SetAttribute("in_main_menu", true)
@@ -79,21 +79,9 @@ UserInputService.InputBegan:Once(function()
 	end
 	local start = hammer:GetPivot()
 	local goal = (menuAssets:WaitForChild("EndAnim")).CFrame
-	do
-		local i = 0
-		local _shouldIncrement = false
-		while true do
-			if _shouldIncrement then
-				i += 0.1
-			else
-				_shouldIncrement = true
-			end
-			if not (i <= 1) then
-				break
-			end
-			hammer:PivotTo(start:Lerp(goal, i))
-			task.wait()
-		end
+	for i = 0, 1, 0.1 do
+		hammer:PivotTo(start:Lerp(goal, i))
+		task.wait()
 	end
 	hammer:PivotTo(goal)
 	playButton.Visible = true

@@ -26,22 +26,6 @@ local getTime = _utils.getTime
 local Settings = _utils.Settings
 local roundDecimalPlaces = _utils.roundDecimalPlaces
 local getCubeTime = _utils.getCubeTime
-local player = Players.LocalPlayer
-local GUI = player:WaitForChild("PlayerGui")
-local camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera")
-local screenGui = GUI:WaitForChild("ScreenGui")
-local isSpectating = GUI:WaitForChild("is_spectating")
-local spectatePlayer = isSpectating:WaitForChild("player")
-local canMove = GUI:WaitForChild("can_move")
-local mapFolder = Workspace:WaitForChild("Map")
-local mudParts = mapFolder:WaitForChild("MudParts")
-local effectsFolder = Workspace:WaitForChild("Effects")
-local goalPart = mapFolder:WaitForChild("end_area")
-local wallPlane = Workspace:WaitForChild("Wall")
-local flippedGravity = ReplicatedStorage:WaitForChild("flipped_gravity")
-local mouseVisual = Workspace:WaitForChild("MouseVisual")
-local modifierDisablers = Workspace:WaitForChild("ForceDisableModifiers")
-local cube = nil
 local Events = {
 	BuildingHammerPlace = ReplicatedStorage:WaitForChild("BuildingHammerPlace"),
 	AddRagdollCount = ReplicatedStorage:WaitForChild("AddRagdollCount"),
@@ -52,6 +36,24 @@ local Events = {
 	ClientRagdoll = ReplicatedStorage:WaitForChild("ClientRagdoll"),
 	ClientCreateDebris = ReplicatedStorage:WaitForChild("ClientCreateDebris"),
 }
+local player = Players.LocalPlayer
+local camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera")
+local GUI = player:WaitForChild("PlayerGui")
+local valueInstances = GUI:WaitForChild("Values")
+local shakeIntensity = valueInstances:WaitForChild("shake_intensity")
+local isSpectating = valueInstances:WaitForChild("is_spectating")
+local spectatePlayer = isSpectating:WaitForChild("player")
+local canMove = valueInstances:WaitForChild("can_move")
+local screenGui = GUI:WaitForChild("ScreenGui")
+local mapFolder = Workspace:WaitForChild("Map")
+local mudParts = mapFolder:WaitForChild("MudParts")
+local effectsFolder = Workspace:WaitForChild("Effects")
+local goalPart = mapFolder:WaitForChild("end_area")
+local wallPlane = Workspace:WaitForChild("Wall")
+local flippedGravity = ReplicatedStorage:WaitForChild("flipped_gravity")
+local mouseVisual = Workspace:WaitForChild("MouseVisual")
+local modifierDisablers = Workspace:WaitForChild("ForceDisableModifiers")
+local cube = nil
 local cooldowns = {
 	explosiveHammer = false,
 	shotgun = false,
@@ -468,23 +470,11 @@ local function updateModifiers()
 						explosion.BlastRadius = 0
 						explosion.BlastPressure = 0
 						explosion.Parent = Workspace:FindFirstChild("Effects")
-						do
-							local i = 0
-							local _shouldIncrement = false
-							while true do
-								if _shouldIncrement then
-									i += 1
-								else
-									_shouldIncrement = true
-								end
-								if not (i < 15) then
-									break
-								end
-								playSound("explosion", {
-									PlaybackSpeed = randomFloat(0.9, 1),
-									Volume = head.AssemblyAngularVelocity.Magnitude / 50,
-								})
-							end
+						for i = 1, 15 do
+							playSound("explosion", {
+								PlaybackSpeed = randomFloat(0.9, 1),
+								Volume = head.AssemblyAngularVelocity.Magnitude / 50,
+							})
 						end
 					end
 				end
@@ -754,11 +744,7 @@ RunService.RenderStepped:Connect(function(dt)
 				end
 			end
 		end
-		local _condition_7 = (player:GetAttribute("client_shake_intensity"))
-		if _condition_7 == nil then
-			_condition_7 = 0
-		end
-		intensity = _condition_7
+		intensity = shakeIntensity.Value
 		if isSpectating.Value and otherPlayer then
 			intensity = 0
 			local _result_4 = screenGui:FindFirstChild("SpectatingGUI")
@@ -859,11 +845,11 @@ RunService.RenderStepped:Connect(function(dt)
 		if _result_4 ~= nil then
 			_result_4 = _result_4:IsA("ScreenGui")
 		end
-		local _condition_8 = not _result_4
-		if not _condition_8 then
-			_condition_8 = not replayGui.Enabled
+		local _condition_7 = not _result_4
+		if not _condition_7 then
+			_condition_7 = not replayGui.Enabled
 		end
-		if _condition_8 then
+		if _condition_7 then
 			local _position = camera.CFrame.Position
 			local _position_1 = cameraCFrame.Position
 			if (_position - _position_1).Magnitude > 50 then
@@ -878,7 +864,7 @@ RunService.RenderStepped:Connect(function(dt)
 		if isSpectating.Value then
 			return nil
 		end
-		player:SetAttribute("client_shake_intensity", math.max(intensity - dt * 3, 0))
+		shakeIntensity.Value = math.max(intensity - dt * 3, 0)
 		wallPlane.Position = cubePosition
 		local _binding_1 = mouseRaycast()
 		local position = _binding_1[1]
@@ -928,11 +914,11 @@ RunService.RenderStepped:Connect(function(dt)
 				part.Anchored = true
 				part.CanCollide = false
 				part.Position = getBuildPosition(head.CFrame)
-				local _condition_9 = (player:GetAttribute("build_type"))
-				if _condition_9 == nil then
-					_condition_9 = 0
+				local _condition_8 = (player:GetAttribute("build_type"))
+				if _condition_8 == nil then
+					_condition_8 = 0
 				end
-				part.Size = getBuildSize(_condition_9)
+				part.Size = getBuildSize(_condition_8)
 				part.Transparency = 0.7
 				part.Color = Color3.fromRGB(0, 0, 0)
 				part.TopSurface = Enum.SurfaceType.Smooth
@@ -1016,11 +1002,11 @@ RunService.RenderStepped:Connect(function(dt)
 			end
 			(left:FindFirstChild("TotalSounds")).Text = string.format("Total Sounds Playing: %d", totalSounds)
 			local _fn_1 = string
-			local _condition_9 = (cube:GetAttribute("destroyed_counter"))
-			if _condition_9 == nil then
-				_condition_9 = 0
+			local _condition_8 = (cube:GetAttribute("destroyed_counter"))
+			if _condition_8 == nil then
+				_condition_8 = 0
 			end
-			(left:FindFirstChild("DestroyedCounter")).Text = _fn_1.format("Destroyed Counter: %d", _condition_9)
+			(left:FindFirstChild("DestroyedCounter")).Text = _fn_1.format("Destroyed Counter: %d", _condition_8)
 			local unanchoredParts = 0
 			for _, descendant in Workspace:GetDescendants() do
 				if descendant:IsA("BasePart") and not descendant:IsA("Terrain") and not descendant.Anchored then
@@ -1051,7 +1037,7 @@ goalPart.Touched:Connect(function(otherPart)
 		player:SetAttribute("finished", true)
 		local _binding = getCubeTime(otherPart)
 		local totalTime = _binding[1]
-		print(`Completed game in {totalTime} seconds`)
+		print("[src/client/cube_movement.client.ts:776]", `Completed game in {totalTime} seconds`)
 		Events.CompleteGame:FireServer(totalTime)
 		Events.MakeReplayEvent:Fire(string.format("win,%d", totalTime * 1000))
 	end

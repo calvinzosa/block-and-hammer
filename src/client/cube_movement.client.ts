@@ -8,6 +8,7 @@ import {
 	Workspace,
     Players,
 } from '@rbxts/services';
+import { $print } from 'rbxts-transform-debug';
 
 import {
 	numLerp,
@@ -28,25 +29,6 @@ import {
 	getCubeTime
 } from 'shared/utils';
 
-const player = Players.LocalPlayer;
-const GUI = player.WaitForChild('PlayerGui') as PlayerGui;
-const camera = Workspace.CurrentCamera ?? Workspace.WaitForChild('Camera') as Camera;
-
-const screenGui = GUI.WaitForChild('ScreenGui') as ScreenGui;
-const isSpectating = GUI.WaitForChild('is_spectating') as BoolValue;
-const spectatePlayer = isSpectating.WaitForChild('player') as StringValue;
-const canMove = GUI.WaitForChild('can_move') as BoolValue;
-const mapFolder = Workspace.WaitForChild('Map');
-const mudParts = mapFolder.WaitForChild('MudParts');
-const effectsFolder = Workspace.WaitForChild('Effects') as BasePart;
-const goalPart = mapFolder.WaitForChild('end_area') as BasePart;
-const wallPlane = Workspace.WaitForChild('Wall') as BasePart;
-const flippedGravity = ReplicatedStorage.WaitForChild('flipped_gravity') as BoolValue;
-const mouseVisual = Workspace.WaitForChild('MouseVisual') as BasePart;
-const modifierDisablers = Workspace.WaitForChild('ForceDisableModifiers');
-
-let cube: BasePart | undefined = undefined;
-
 const Events = {
     'BuildingHammerPlace': ReplicatedStorage.WaitForChild('BuildingHammerPlace') as RemoteEvent,
     'AddRagdollCount': ReplicatedStorage.WaitForChild('AddRagdollCount') as RemoteEvent,
@@ -57,6 +39,27 @@ const Events = {
     'ClientRagdoll': ReplicatedStorage.WaitForChild('ClientRagdoll') as BindableEvent,
     'ClientCreateDebris': ReplicatedStorage.WaitForChild('ClientCreateDebris') as BindableEvent,
 };
+
+const player = Players.LocalPlayer;
+const camera = Workspace.CurrentCamera ?? Workspace.WaitForChild('Camera') as Camera;
+
+const GUI = player.WaitForChild('PlayerGui') as PlayerGui;
+const valueInstances = GUI.WaitForChild('Values') as ScreenGui;
+const shakeIntensity = valueInstances.WaitForChild('shake_intensity') as NumberValue;
+const isSpectating = valueInstances.WaitForChild('is_spectating') as BoolValue;
+const spectatePlayer = isSpectating.WaitForChild('player') as StringValue;
+const canMove = valueInstances.WaitForChild('can_move') as BoolValue;
+const screenGui = GUI.WaitForChild('ScreenGui') as ScreenGui;
+const mapFolder = Workspace.WaitForChild('Map');
+const mudParts = mapFolder.WaitForChild('MudParts');
+const effectsFolder = Workspace.WaitForChild('Effects') as BasePart;
+const goalPart = mapFolder.WaitForChild('end_area') as BasePart;
+const wallPlane = Workspace.WaitForChild('Wall') as BasePart;
+const flippedGravity = ReplicatedStorage.WaitForChild('flipped_gravity') as BoolValue;
+const mouseVisual = Workspace.WaitForChild('MouseVisual') as BasePart;
+const modifierDisablers = Workspace.WaitForChild('ForceDisableModifiers');
+
+let cube: BasePart | undefined = undefined;
 
 const cooldowns = {
     'explosiveHammer': false,
@@ -345,7 +348,7 @@ function updateModifiers() {
                         explosion.BlastPressure = 0;
                         explosion.Parent = Workspace.FindFirstChild('Effects');
                         
-                        for (let i = 0; i < 15; i++) playSound('explosion', { PlaybackSpeed: randomFloat(0.9, 1), Volume: head.AssemblyAngularVelocity.Magnitude / 50 });
+						for (const i of $range(1, 15)) playSound('explosion', { PlaybackSpeed: randomFloat(0.9, 1), Volume: head.AssemblyAngularVelocity.Magnitude / 50 });
                     }
                 }
             }
@@ -498,7 +501,7 @@ RunService.RenderStepped.Connect((dt) => {
 			}
 		}
 		
-		intensity = (player.GetAttribute('client_shake_intensity') as number | undefined) ?? 0
+		intensity = shakeIntensity.Value;
 		if (isSpectating.Value && otherPlayer) {
 			intensity = 0;
 			const label = screenGui.FindFirstChild('SpectatingGUI')?.FindFirstChild('PlayerName') as TextLabel | undefined;
@@ -595,7 +598,7 @@ RunService.RenderStepped.Connect((dt) => {
 		if (camera.CameraType !== Enum.CameraType.Scriptable) camera.CameraType = Enum.CameraType.Scriptable;
 		if (isSpectating.Value) return;
 		
-		player.SetAttribute('client_shake_intensity', math.max(intensity - dt * 3, 0));
+		shakeIntensity.Value = math.max(intensity - dt * 3, 0);
 		wallPlane.Position = cubePosition;
 		
 		const [ position, nonFiltered, hitPart ] = mouseRaycast();
@@ -770,9 +773,9 @@ goalPart.Touched.Connect((otherPart) => {
 		player.SetAttribute('finished', true);
 		
 		const [ totalTime ] = getCubeTime(otherPart);
-		print(`Completed game in ${totalTime} seconds`);
-		Events.CompleteGame.FireServer(totalTime);
+		$print(`Completed game in ${totalTime} seconds`);
 		
+		Events.CompleteGame.FireServer(totalTime);
 		Events.MakeReplayEvent.Fire(string.format('win,%d', totalTime * 1000));
 	}
 });

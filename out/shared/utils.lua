@@ -18,6 +18,7 @@ local GUI = _result
 local settingChangedEvent = ReplicatedStorage:WaitForChild("SettingChanged")
 local makeReplayEvent = ReplicatedStorage:WaitForChild("MakeReplayEvent")
 local placeId = game.PlaceId
+local RNG = Random.new()
 local GameSetting = {
 	HideOthers = "hideothers",
 	ShowRange = "showrange",
@@ -141,22 +142,9 @@ local function numLerp(a, b, t)
 end
 local function getPartId(part)
 	local tags = part:GetTags()
-	do
-		local i = 0
-		local _shouldIncrement = false
-		while true do
-			if _shouldIncrement then
-				i += 1
-			else
-				_shouldIncrement = true
-			end
-			if not (i < #tags) then
-				break
-			end
-			local tag = tags[i + 1]
-			if str.startsWith(tag, "mapPart-") then
-				return tag
-			end
+	for _, tag in tags do
+		if str.startsWith(tag, "mapPart-") then
+			return tag
 		end
 	end
 	return ""
@@ -179,6 +167,14 @@ local function roundDecimalPlaces(x, decimalPlaces)
 end
 local function randomFloat(min, max)
 	return math.random() * (max - min) + min
+end
+local function randomDirection(length)
+	if length == nil then
+		length = 1
+	end
+	local _exp = RNG:NextUnitVector()
+	local _length = length
+	return _exp * _length
 end
 local function waitUntil(callback, maxTime)
 	if maxTime == nil then
@@ -621,6 +617,7 @@ return {
 	getTime = getTime,
 	roundDecimalPlaces = roundDecimalPlaces,
 	randomFloat = randomFloat,
+	randomDirection = randomDirection,
 	waitUntil = waitUntil,
 	canUseSetting = canUseSetting,
 	getSetting = getSetting,

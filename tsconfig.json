@@ -1,5 +1,13 @@
 {
 	"compilerOptions": {
+		"plugins": [
+			{
+				"transform": "rbxts-transform-debug",
+                "enabled": true,
+                "verbose": true
+            },
+		],
+		
 		// required
 		"allowSyntheticDefaultImports": true,
 		"downlevelIteration": true,

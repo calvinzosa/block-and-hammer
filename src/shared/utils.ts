@@ -17,6 +17,8 @@ const settingChangedEvent = ReplicatedStorage.WaitForChild('SettingChanged') as 
 const makeReplayEvent = ReplicatedStorage.WaitForChild('MakeReplayEvent') as BindableEvent;
 const placeId = game.PlaceId;
 
+const RNG = new Random();
+
 export type DictKey = string | number | symbol;
 export type DictValue = string | number | symbol;
 
@@ -156,8 +158,7 @@ export function numLerp(a: number, b: number, t: number) {
 
 export function getPartId(part: BasePart): string {
     const tags = part.GetTags()
-    for (let i = 0; i < tags.size(); i++) {
-        const tag = tags[i];
+    for (const tag of tags) {
         if (str.startsWith(tag, 'mapPart-')) return tag;
     }
     
@@ -182,7 +183,11 @@ export function randomFloat(min: number, max: number): number {
     return math.random() * (max - min) + min;
 }
 
-export function waitUntil(callback: () => (boolean), maxTime: number = math.huge): void {
+export function randomDirection(length: number | Vector3 = 1) {
+    return RNG.NextUnitVector().mul(length);
+}
+
+export function waitUntil(callback: () => (boolean | undefined), maxTime: number = math.huge): void {
 	const startTime = time();
 	while (!callback() && (time() - startTime) < maxTime) task.wait();
 }

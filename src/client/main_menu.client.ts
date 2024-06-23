@@ -20,16 +20,16 @@ const player = Players.LocalPlayer;
 const camera = Workspace.CurrentCamera ?? Workspace.WaitForChild('Camera') as Camera;
 
 const GUI = player.WaitForChild('PlayerGui') as PlayerGui;
+const canMove = GUI.WaitForChild('Values').WaitForChild('can_move') as BoolValue;
 const menuGui = GUI.WaitForChild('MainMenuGui') as ScreenGui;
+const screenGui = GUI.WaitForChild('ScreenGui') as ScreenGui;
 const playButton = menuGui.WaitForChild('Play') as TextButton;
 const editButton = menuGui.WaitForChild('Edit') as TextButton;
 const titleLabel = menuGui.WaitForChild('Title') as TextLabel;
 const hintLabel = menuGui.WaitForChild('Hint') as TextLabel;
-const screenGui = GUI.WaitForChild('ScreenGui') as ScreenGui;
 const shadow = menuGui.WaitForChild('Shadow') as Frame;
 const shadowTitle = shadow.WaitForChild('Title') as TextLabel;
 const shadowText = shadow.WaitForChild('Loading') as TextLabel;
-const canMove = GUI.WaitForChild('can_move') as BoolValue;
 const effectsFolder = Workspace.WaitForChild('Effects');
 
 let didClickButton = false;
@@ -85,10 +85,11 @@ UserInputService.InputBegan.Once(() => {
 	
 	const start = hammer.GetPivot();
     const goal = (menuAssets.WaitForChild('EndAnim') as BasePart).CFrame;
-    for (let i = 0; i <= 1; i += 0.1) {
+    for (const i of $range(0, 1, 0.1)) {
         hammer.PivotTo(start.Lerp(goal, i));
         task.wait();
     }
+    
 	hammer.PivotTo(goal);
 	
 	playButton.Visible = true;
