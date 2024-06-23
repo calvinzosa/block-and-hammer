@@ -33,11 +33,12 @@ const Events = {
     'BuildingHammerPlace': ReplicatedStorage.WaitForChild('BuildingHammerPlace') as RemoteEvent,
     'AddRagdollCount': ReplicatedStorage.WaitForChild('AddRagdollCount') as RemoteEvent,
     'CompleteGame': ReplicatedStorage.WaitForChild('CompleteGame') as RemoteEvent,
-    'MakeReplayEvent': ReplicatedStorage.WaitForChild('MakeReplayEvent') as BindableEvent,
+	
     'StartClientTutorial': ReplicatedStorage.WaitForChild('StartClientTutorial') as BindableEvent,
-    'ClientReset': ReplicatedStorage.WaitForChild('ClientReset') as BindableEvent,
-    'ClientRagdoll': ReplicatedStorage.WaitForChild('ClientRagdoll') as BindableEvent,
     'ClientCreateDebris': ReplicatedStorage.WaitForChild('ClientCreateDebris') as BindableEvent,
+    'MakeReplayEvent': ReplicatedStorage.WaitForChild('MakeReplayEvent') as BindableEvent,
+    'ClientRagdoll': ReplicatedStorage.WaitForChild('ClientRagdoll') as BindableEvent,
+    'ClientReset': ReplicatedStorage.WaitForChild('ClientReset') as BindableEvent,
 };
 
 const player = Players.LocalPlayer;

@@ -30,11 +30,11 @@ local Events = {
 	BuildingHammerPlace = ReplicatedStorage:WaitForChild("BuildingHammerPlace"),
 	AddRagdollCount = ReplicatedStorage:WaitForChild("AddRagdollCount"),
 	CompleteGame = ReplicatedStorage:WaitForChild("CompleteGame"),
-	MakeReplayEvent = ReplicatedStorage:WaitForChild("MakeReplayEvent"),
 	StartClientTutorial = ReplicatedStorage:WaitForChild("StartClientTutorial"),
-	ClientReset = ReplicatedStorage:WaitForChild("ClientReset"),
-	ClientRagdoll = ReplicatedStorage:WaitForChild("ClientRagdoll"),
 	ClientCreateDebris = ReplicatedStorage:WaitForChild("ClientCreateDebris"),
+	MakeReplayEvent = ReplicatedStorage:WaitForChild("MakeReplayEvent"),
+	ClientRagdoll = ReplicatedStorage:WaitForChild("ClientRagdoll"),
+	ClientReset = ReplicatedStorage:WaitForChild("ClientReset"),
 }
 local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera")
@@ -1037,7 +1037,7 @@ goalPart.Touched:Connect(function(otherPart)
 		player:SetAttribute("finished", true)
 		local _binding = getCubeTime(otherPart)
 		local totalTime = _binding[1]
-		print("[src/client/cube_movement.client.ts:776]", `Completed game in {totalTime} seconds`)
+		print("[src/client/cube_movement.client.ts:777]", `Completed game in {totalTime} seconds`)
 		Events.CompleteGame:FireServer(totalTime)
 		Events.MakeReplayEvent:Fire(string.format("win,%d", totalTime * 1000))
 	end

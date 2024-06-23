@@ -90,6 +90,13 @@ export namespace Accessories {
     }
 }
 
+export enum PlayerAttributes {
+    HammerTexture = 'hammer_Texture',
+    CubeFace = 'cube_Face',
+    CubeAura = 'cube_Aura',
+    CubeHat = 'cube_Hat',
+}
+
 export type BaseSettings = Record<GameSetting, boolean>;
 
 export const SettingChanged = settingChangedEvent.Event;

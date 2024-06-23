@@ -88,6 +88,12 @@ do
 	}
 	_container.CubeAura = CubeAura
 end
+local PlayerAttributes = {
+	HammerTexture = "hammer_Texture",
+	CubeFace = "cube_Face",
+	CubeAura = "cube_Aura",
+	CubeHat = "cube_Hat",
+}
 local SettingChanged = settingChangedEvent.Event
 local Settings = {
 	hideothers = false,
@@ -647,6 +653,7 @@ return {
 	isMainServer = isMainServer,
 	GameSetting = GameSetting,
 	Accessories = Accessories,
+	PlayerAttributes = PlayerAttributes,
 	SettingChanged = SettingChanged,
 	Settings = Settings,
 	DefaultSettings = DefaultSettings,
