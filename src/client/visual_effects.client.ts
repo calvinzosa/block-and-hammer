@@ -10,7 +10,7 @@ import {
     Debris,
     Workspace,
 } from '@rbxts/services';
-import { $print } from 'rbxts-transform-debug';
+import { $dbg, $print, $warn } from 'rbxts-transform-debug';
 
 import {
 	getSetting,
@@ -427,12 +427,10 @@ function newPart(part: Instance) {
 		RunService.Stepped.Wait();
 		
 		const hammerTexture = getHammerTexture();
-		
 		const otherVelocity = otherPart.AssemblyLinearVelocity;
-		const minSpeed = 175;
 		
 		if (otherPart.IsDescendantOf(mapFolder)) {
-			let newVelocity = currentVelocity.sub(otherVelocity).sub(cube.AssemblyLinearVelocity).div(4).Magnitude;
+			let newVelocity = currentVelocity.sub(otherVelocity).sub(cube.AssemblyLinearVelocity.div(4)).Magnitude;
 			if (player.GetAttribute('ERROR_LAND')) newVelocity *= 2;
 			if (hammerTexture === Accessories.HammerTexture.SteelHammer && getSetting(GameSetting.Modifiers)) newVelocity *= 1.5;
 			
@@ -454,17 +452,15 @@ function newPart(part: Instance) {
 						dataString = string.format('shatter,%s', partId);
 					} else {
 						const velocity = head.AssemblyLinearVelocity;
-						const position = otherPart.GetClosestPointOnSurface(head.Position);
+						const position = head.Position;
 						createDebris(velocity, position, otherPart, 1, true);
 						
 						dataString = string.format(
-							'destroy,%d,%d,%d,%d,%d,%d,%s',
+							'destroy,%d,%d,,%d,%d,,%s',
 							math.round(position.X * 1000),
 							math.round(position.Y * 1000),
-							math.round(position.Z * 1000),
 							math.round(velocity.X * 1000),
 							math.round(velocity.Y * 1000),
-							math.round(velocity.Z * 1000),
 							partId
 						);
 					}
@@ -690,7 +686,6 @@ function newPart(part: Instance) {
 				}
 			} else if (newVelocity > 50) {
 				const point = otherPart.GetClosestPointOnSurface(head.Position);
-				const normal = otherPart.Position.sub(head.Position);
 				
 				const headVelocity = head.AssemblyLinearVelocity;
 				const unitVelocity = headVelocity.Unit;
@@ -775,7 +770,7 @@ RunService.Stepped.Connect((_, dt) => {
 			const percent = math.clamp((altitude - 700) / 100, -1, 1);
 			targetTime += 9.5 * (percent + 1) / 2;
 			
-			Workspace.SetAttribute('default_Gravity', 88.1 * (1 - percent) + 20);
+			Workspace.SetAttribute('default_gravity', 88.1 * (1 - percent) + 20);
 		}
 		
 		Lighting.ClockTime = numLerp(Lighting.ClockTime, targetTime, dt * 2);
@@ -794,7 +789,7 @@ RunService.Stepped.Connect((_, dt) => {
 	
 	const previousVelocity = cube.GetAttribute('lastVelocity');
 	if (typeIs(previousVelocity, 'Vector3')) {
-		const relativeVelocity = cube.AssemblyLinearVelocity.sub(lastVelocity);
+		const relativeVelocity = cube.AssemblyLinearVelocity.sub(previousVelocity);
 		
 		if (relativeVelocity.Magnitude > 300) {
 			Events.GroundImpact.FireServer(relativeVelocity, cube.Position);

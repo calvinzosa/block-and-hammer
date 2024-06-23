@@ -490,11 +490,10 @@ local function newPart(part)
 		RunService.Stepped:Wait()
 		local hammerTexture = getHammerTexture()
 		local otherVelocity = otherPart.AssemblyLinearVelocity
-		local minSpeed = 175
 		if otherPart:IsDescendantOf(mapFolder) then
 			local _exp = currentVelocity - otherVelocity
-			local _assemblyLinearVelocity = cube.AssemblyLinearVelocity
-			local newVelocity = ((_exp - _assemblyLinearVelocity) / 4).Magnitude
+			local _arg0 = cube.AssemblyLinearVelocity / 4
+			local newVelocity = (_exp - _arg0).Magnitude
 			local _value_1 = player:GetAttribute("ERROR_LAND")
 			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 				newVelocity *= 2
@@ -527,9 +526,9 @@ local function newPart(part)
 							dataString = string.format("shatter,%s", partId)
 						else
 							local velocity = head.AssemblyLinearVelocity
-							local position = otherPart:GetClosestPointOnSurface(head.Position)
+							local position = head.Position
 							createDebris(velocity, position, otherPart, 1, true)
-							dataString = string.format("destroy,%d,%d,%d,%d,%d,%d,%s", math.round(position.X * 1000), math.round(position.Y * 1000), math.round(position.Z * 1000), math.round(velocity.X * 1000), math.round(velocity.Y * 1000), math.round(velocity.Z * 1000), partId)
+							dataString = string.format("destroy,%d,%d,,%d,%d,,%s", math.round(position.X * 1000), math.round(position.Y * 1000), math.round(velocity.X * 1000), math.round(velocity.Y * 1000), partId)
 						end
 					end
 					if dataString ~= "" and dataString then
@@ -703,8 +702,8 @@ local function newPart(part)
 							local circle = Instance.new("Part")
 							circle.CanCollide = false
 							local _exp_1 = CFrame.lookAlong(point, normal)
-							local _arg0 = CFrame.fromOrientation(0, math.pi / 2, 0)
-							circle.CFrame = _exp_1 * _arg0
+							local _arg0_1 = CFrame.fromOrientation(0, math.pi / 2, 0)
+							circle.CFrame = _exp_1 * _arg0_1
 							circle.Size = Vector3.new(0.001, 1, 1)
 							circle.Shape = Enum.PartType.Cylinder
 							circle.Color = Color3.fromRGB(0, 0, 0)
@@ -733,11 +732,11 @@ local function newPart(part)
 				shakeIntensity.Value = math.clamp(head.AssemblyLinearVelocity.Magnitude / 45, 0.5, 1)
 				if hammerTexture == Accessories.HammerTexture.ExplosiveHammer then
 					if getSetting(GameSetting.Modifiers) then
-						local _assemblyLinearVelocity_1 = cube.AssemblyLinearVelocity
+						local _assemblyLinearVelocity = cube.AssemblyLinearVelocity
 						local _position = cube.Position
 						local _position_1 = head.Position
-						local _arg0 = (_position - _position_1).Unit * 250
-						cube.AssemblyLinearVelocity = _assemblyLinearVelocity_1 + _arg0
+						local _arg0_1 = (_position - _position_1).Unit * 250
+						cube.AssemblyLinearVelocity = _assemblyLinearVelocity + _arg0_1
 					end
 					if getSetting(GameSetting.Effects) then
 						createDebris(head.AssemblyLinearVelocity * 10, head.Position, otherPart, 2.5)
@@ -757,9 +756,6 @@ local function newPart(part)
 				end
 			elseif newVelocity > 50 then
 				local point = otherPart:GetClosestPointOnSurface(head.Position)
-				local _position = otherPart.Position
-				local _position_1 = head.Position
-				local normal = _position - _position_1
 				local headVelocity = head.AssemblyLinearVelocity
 				local unitVelocity = headVelocity.Unit
 				if getSetting(GameSetting.Effects) then
@@ -854,7 +850,7 @@ RunService.Stepped:Connect(function(_, dt)
 		else
 			local percent = math.clamp((altitude - 700) / 100, -1, 1)
 			targetTime += 9.5 * (percent + 1) / 2
-			Workspace:SetAttribute("default_Gravity", 88.1 * (1 - percent) + 20)
+			Workspace:SetAttribute("default_gravity", 88.1 * (1 - percent) + 20)
 		end
 		Lighting.ClockTime = numLerp(Lighting.ClockTime, targetTime, dt * 2)
 	end
@@ -873,9 +869,7 @@ RunService.Stepped:Connect(function(_, dt)
 	currentVelocity = head.AssemblyLinearVelocity
 	local previousVelocity = cube:GetAttribute("lastVelocity")
 	if typeof(previousVelocity) == "Vector3" then
-		local _assemblyLinearVelocity = cube.AssemblyLinearVelocity
-		local _lastVelocity = lastVelocity
-		local relativeVelocity = _assemblyLinearVelocity - _lastVelocity
+		local relativeVelocity = cube.AssemblyLinearVelocity - previousVelocity
 		if relativeVelocity.Magnitude > 300 then
 			Events.GroundImpact:FireServer(relativeVelocity, cube.Position)
 			if getSetting(GameSetting.Effects) then
@@ -968,7 +962,7 @@ RunService.Stepped:Connect(function(_, dt)
 	prevCubePosition = cube.Position
 	cube:SetAttribute("lastVelocity", cube.AssemblyLinearVelocity)
 end)
-print("[src/client/visual_effects.client.ts:904]", "Started running visual_effects.client.ts")
+print("[src/client/visual_effects.client.ts:899]", "Started running visual_effects.client.ts")
 while true do
 	local _value = task.wait(0.05)
 	if not (_value ~= 0 and _value == _value and _value) then
