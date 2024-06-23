@@ -4,8 +4,8 @@ local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts
 local ReplicatedStorage = _services.ReplicatedStorage
 local RunService = _services.RunService
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
-local Accessories = _utils.Accessories
 local computeNameColor = _utils.computeNameColor
+local Accessories = _utils.Accessories
 local getCubeAura = _utils.getCubeAura
 local getCubeHat = _utils.getCubeHat
 local giveBadge = _utils.giveBadge
@@ -726,10 +726,11 @@ local function reloadAccessories(cube, b, hatAccessory, auraAccessory)
 			_result_1.Color = ColorSequence.new(cubeColor)
 		end
 	end)
-	print("[src/shared/accessory_loader.ts:476]", "Updated accessories for ", cube.Name)
+	print("[src/shared/accessory_loader.ts:476]", `Updated accessories for {cube.Name}`)
 end
 return {
 	loadAccessories = loadAccessories,
 	reloadAccessories = reloadAccessories,
+	accessoryList = accessoryList,
 	hammerFunctions = hammerFunctions,
 }

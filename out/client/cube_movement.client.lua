@@ -10,22 +10,22 @@ local StarterGui = _services.StarterGui
 local Workspace = _services.Workspace
 local Players = _services.Players
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
-local numLerp = _utils.numLerp
-local getSetting = _utils.getSetting
-local GameSetting = _utils.GameSetting
-local getHammerTexture = _utils.getHammerTexture
-local Accessories = _utils.Accessories
-local isClientCube = _utils.isClientCube
-local playSound = _utils.playSound
-local randomFloat = _utils.randomFloat
-local waitUntil = _utils.waitUntil
-local tweenTypes = _utils.tweenTypes
-local getCubeHat = _utils.getCubeHat
 local convertStudsToMeters = _utils.convertStudsToMeters
-local getTime = _utils.getTime
-local Settings = _utils.Settings
 local roundDecimalPlaces = _utils.roundDecimalPlaces
+local getHammerTexture = _utils.getHammerTexture
+local isClientCube = _utils.isClientCube
+local GameSetting = _utils.GameSetting
+local Accessories = _utils.Accessories
+local randomFloat = _utils.randomFloat
 local getCubeTime = _utils.getCubeTime
+local getCubeHat = _utils.getCubeHat
+local getSetting = _utils.getSetting
+local tweenTypes = _utils.tweenTypes
+local playSound = _utils.playSound
+local waitUntil = _utils.waitUntil
+local Settings = _utils.Settings
+local numLerp = _utils.numLerp
+local getTime = _utils.getTime
 local Events = {
 	BuildingHammerPlace = ReplicatedStorage:WaitForChild("BuildingHammerPlace"),
 	AddRagdollCount = ReplicatedStorage:WaitForChild("AddRagdollCount"),
@@ -111,7 +111,7 @@ local function mouseRaycast()
 	if _result_2 ~= nil then
 		_result_2 = _result_2.Instance
 	end
-	return { _result, _result_1, _result_2 ~= wallPlane }
+	return _result, _result_1, _result_2 ~= wallPlane
 end
 local function getBuildPosition(headCFrame)
 	local offset = Vector3.new(0, 0, 0)
@@ -834,7 +834,12 @@ RunService.RenderStepped:Connect(function(dt)
 		for _, obstructingPart in Workspace:GetPartBoundsInBox(CFrame.new(start.X, start.Y, distance / -2), Vector3.new(10, 10, distance), params) do
 			local _value_1 = obstructingPart:GetAttribute("CAMERA_TRANSPARENT")
 			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
-				obstructingPart.LocalTransparencyModifier = numLerp(obstructingPart.LocalTransparencyModifier, 0.9, dt * 5)
+				local _condition_7 = obstructingPart:GetAttribute("CAMERA_TRANSPARENCY")
+				if _condition_7 == nil then
+					_condition_7 = 0.9
+				end
+				local transparency = _condition_7
+				obstructingPart.LocalTransparencyModifier = numLerp(obstructingPart.LocalTransparencyModifier, transparency, dt * 5)
 				TweenService:Create(obstructingPart, tweenTypes.linear.short, {
 					LocalTransparencyModifier = 0,
 				}):Play()
@@ -866,10 +871,7 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 		shakeIntensity.Value = math.max(intensity - dt * 3, 0)
 		wallPlane.Position = cubePosition
-		local _binding_1 = mouseRaycast()
-		local position = _binding_1[1]
-		local nonFiltered = _binding_1[2]
-		local hitPart = _binding_1[3]
+		local position, nonFiltered, hitPart = mouseRaycast()
 		if not (typeof(position) == "Vector3") or not (typeof(nonFiltered) == "Vector3") then
 			return nil
 		end
@@ -1037,7 +1039,7 @@ goalPart.Touched:Connect(function(otherPart)
 		player:SetAttribute("finished", true)
 		local _binding = getCubeTime(otherPart)
 		local totalTime = _binding[1]
-		print("[src/client/cube_movement.client.ts:777]", `Completed game in {totalTime} seconds`)
+		print("[src/client/cube_movement.client.ts:779]", `Completed game in {totalTime} seconds`)
 		Events.CompleteGame:FireServer(totalTime)
 		Events.MakeReplayEvent:Fire(string.format("win,%d", totalTime * 1000))
 	end
@@ -1068,20 +1070,20 @@ RunService.Heartbeat:Connect(function(step)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
 		return nil
 	end
-	local slowdownFactor = math.clamp(1 - (step * 40), 0.01, 1)
-	local touching = { cube, cube:FindFirstChild("Head") }
+	local slowdownFactor = math.clamp(1 - (step * 30), 0.01, 1)
 	local params = OverlapParams.new()
 	params.FilterType = Enum.RaycastFilterType.Include
 	params.FilterDescendantsInstances = { mudParts }
-	for _, part in touching do
+	for _, part in { cube, cube:FindFirstChild("Head") } do
 		local _result = part
 		if _result ~= nil then
 			_result = _result:IsA("BasePart")
 		end
-		if not _result then
-			return nil
+		local _condition = _result
+		if _condition then
+			_condition = #Workspace:GetPartsInPart(part, params) > 0
 		end
-		if #Workspace:GetPartsInPart(part, params) > 0 then
+		if _condition then
 			part.AssemblyLinearVelocity = part.AssemblyLinearVelocity * slowdownFactor
 		end
 	end

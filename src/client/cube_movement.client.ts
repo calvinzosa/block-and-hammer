@@ -8,25 +8,26 @@ import {
 	Workspace,
     Players,
 } from '@rbxts/services';
+
 import { $print } from 'rbxts-transform-debug';
 
 import {
-	numLerp,
-	getSetting,
-	GameSetting,
-	getHammerTexture,
-	Accessories,
-	isClientCube,
-	playSound,
-	randomFloat,
-	waitUntil,
-	tweenTypes,
-	getCubeHat,
 	convertStudsToMeters,
-	getTime,
-	Settings,
 	roundDecimalPlaces,
-	getCubeTime
+	getHammerTexture,
+	isClientCube,
+	GameSetting,
+	Accessories,
+	randomFloat,
+	getCubeTime,
+	getCubeHat,
+	getSetting,
+	tweenTypes,
+	playSound,
+	waitUntil,
+	Settings,
+	numLerp,
+	getTime,
 } from 'shared/utils';
 
 const Events = {
@@ -104,7 +105,7 @@ function mouseRaycast() {
 	params.FilterDescendantsInstances = [ mouseVisual, modifierDisablers, effectsFolder ]; // Workspace.FindFirstChild('ray_part')
 	
 	const resultB = Workspace.Raycast(ray.Origin, ray.Direction.Unit.mul(512), params)
-	return [ resultA?.Position, resultB?.Position, resultB?.Instance !== wallPlane ];
+	return $tuple(resultA?.Position, resultB?.Position, resultB?.Instance !== wallPlane);
 }
 
 function getBuildPosition(headCFrame: CFrame) {
@@ -585,7 +586,8 @@ RunService.RenderStepped.Connect((dt) => {
 		
 		for (const obstructingPart of Workspace.GetPartBoundsInBox(new CFrame(start.X, start.Y, distance / -2), new Vector3(10, 10, distance), params)) {
 			if (obstructingPart.GetAttribute('CAMERA_TRANSPARENT')) {
-				obstructingPart.LocalTransparencyModifier = numLerp(obstructingPart.LocalTransparencyModifier, 0.9, dt * 5);
+				const transparency = obstructingPart.GetAttribute('CAMERA_TRANSPARENCY') as number ?? 0.9;
+				obstructingPart.LocalTransparencyModifier = numLerp(obstructingPart.LocalTransparencyModifier, transparency, dt * 5);
 				TweenService.Create(obstructingPart, tweenTypes.linear.short, { LocalTransparencyModifier: 0 }).Play();
 			}
 		}
@@ -805,16 +807,13 @@ UserInputService.InputBegan.Connect((input, processed) => {
 RunService.Heartbeat.Connect((step) => {
 	if (!cube || player.GetAttribute('ERROR_LAND')) return;
 	
-	const slowdownFactor = math.clamp(1 - (step * 40), 0.01, 1);
-	const touching = [ cube, cube.FindFirstChild('Head') ];
+	const slowdownFactor = math.clamp(1 - (step * 30), 0.01, 1);
 	
 	const params = new OverlapParams();
 	params.FilterType = Enum.RaycastFilterType.Include;
 	params.FilterDescendantsInstances = [ mudParts ];
 	
-	for (const part of touching) {
-		if (!part?.IsA('BasePart')) return;
-		
-		if (Workspace.GetPartsInPart(part, params).size() > 0) part.AssemblyLinearVelocity = part.AssemblyLinearVelocity.mul(slowdownFactor);
+	for (const part of [ cube, cube.FindFirstChild('Head') ]) {
+		if (part?.IsA('BasePart') && Workspace.GetPartsInPart(part, params).size() > 0) part.AssemblyLinearVelocity = part.AssemblyLinearVelocity.mul(slowdownFactor);
 	}
 });

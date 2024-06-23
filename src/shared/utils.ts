@@ -9,6 +9,7 @@ import {
 } from '@rbxts/services';
 
 import str from '@rbxts/string-utils';
+import { $warn } from 'rbxts-transform-debug';
 
 const player = Players.LocalPlayer;
 const GUI = player?.WaitForChild('PlayerGui') as (PlayerGui | undefined);
@@ -452,7 +453,7 @@ export function giveBadge(player: Player, badgeId: number): void {
     if (!RunService.IsServer()) return;
     
     if (isTestingServer()) {
-        warn('Badges are disabled in the Testing Server.');
+        $warn('Badges are disabled in the Testing Server.');
         return;
     }
     
@@ -476,9 +477,11 @@ export function giveBadge(player: Player, badgeId: number): void {
 }
 
 export function isTestingServer() {
-	return placeId === 17837400665 || !RunService.IsStudio();
+    if (RunService.IsStudio()) return false;
+	return placeId === 17837400665;
 }
 
 export function isMainServer() {
-	return placeId === 13458875976 || RunService.IsStudio();
+    if (RunService.IsStudio()) return true;
+	return placeId === 13458875976;
 }

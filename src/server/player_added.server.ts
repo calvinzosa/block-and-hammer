@@ -7,12 +7,12 @@ import {
 } from '@rbxts/services';
 
 import {
-    Accessories,
+	convertStudsToMeters,
     PlayerAttributes,
     computeNameColor,
-	convertStudsToMeters,
+    Accessories,
+	giveBadge,
 	getTime,
-	giveBadge
 } from 'shared/utils';
 
 import { reloadAccessories } from 'shared/accessory_loader';

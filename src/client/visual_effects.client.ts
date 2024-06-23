@@ -10,23 +10,23 @@ import {
     Debris,
     Workspace,
 } from '@rbxts/services';
-import { $dbg, $print, $warn } from 'rbxts-transform-debug';
+import { $print } from 'rbxts-transform-debug';
 
 import {
-	getSetting,
+	convertStudsToMeters,
 	getHammerTexture,
+	randomDirection,
+	isClientCube,
+	randomFloat,
 	Accessories,
 	GameSetting,
+	getSetting,
 	tweenTypes,
-	randomFloat,
-	randomDirection,
 	playSound,
 	waitUntil,
 	getPartId,
-	isClientCube,
 	getTime,
-	convertStudsToMeters,
-	numLerp
+	numLerp,
 } from 'shared/utils';
 
 const Events = {

@@ -583,7 +583,7 @@ local function giveBadge(player, badgeId)
 		return nil
 	end
 	if isTestingServer() then
-		warn("Badges are disabled in the Testing Server.")
+		warn("[src/shared/utils.ts:456]", "Badges are disabled in the Testing Server.")
 		return nil
 	end
 	local userId = player.UserId
@@ -611,10 +611,16 @@ local function giveBadge(player, badgeId)
 	end)
 end
 function isTestingServer()
-	return placeId == 17837400665 or not RunService:IsStudio()
+	if RunService:IsStudio() then
+		return false
+	end
+	return placeId == 17837400665
 end
 local function isMainServer()
-	return placeId == 13458875976 or RunService:IsStudio()
+	if RunService:IsStudio() then
+		return true
+	end
+	return placeId == 13458875976
 end
 return {
 	numLerp = numLerp,

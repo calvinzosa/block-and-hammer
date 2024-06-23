@@ -5,8 +5,8 @@ import {
 } from '@rbxts/services';
 
 import {
-	Accessories,
 	computeNameColor,
+	Accessories,
 	getCubeAura,
 	getCubeHat,
 	giveBadge
@@ -26,7 +26,7 @@ export type AccessoryData = {
 	never?: boolean
 };
 
-const accessoryList = require(ReplicatedStorage.WaitForChild('Modules')?.WaitForChild('Accessories') as ModuleScript) as Record<string, AccessoryData>;
+export const accessoryList = require(ReplicatedStorage.WaitForChild('Modules')?.WaitForChild('Accessories') as ModuleScript) as Record<string, AccessoryData>;
 
 function emptyFunction() {
 	return emptyFunction;
@@ -473,5 +473,5 @@ export function reloadAccessories(cube: BasePart, b: Color3 | Player, hatAccesso
 		if (auraAccessory === Accessories.CubeAura.Glow && aura) (aura.FindFirstChild('Glow')?.FindFirstChild('Glow') as ParticleEmitter).Color = new ColorSequence(cubeColor);
 	});
 	
-	$print('Updated accessories for ', cube.Name);
+	$print(`Updated accessories for ${cube.Name}`);
 }
