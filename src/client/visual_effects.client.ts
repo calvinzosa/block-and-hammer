@@ -3,13 +3,13 @@ import {
     ReplicatedStorage,
     GeometryService,
     TweenService,
-    HttpService,
     RunService,
     Lighting,
     Players,
     Debris,
     Workspace,
 } from '@rbxts/services';
+
 import { $print } from 'rbxts-transform-debug';
 
 import {

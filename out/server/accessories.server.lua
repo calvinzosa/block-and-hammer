@@ -7,7 +7,9 @@ local Players = _services.Players
 local TweenService = _services.TweenService
 local Debris = _services.Debris
 local Accessories = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils").Accessories
-local loadAccessories = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "accessory_loader").loadAccessories
+local _accessory_loader = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "accessory_loader")
+local reloadAccessories = _accessory_loader.reloadAccessories
+local loadAccessories = _accessory_loader.loadAccessories
 local Events = {
 	BuildingHammerPlace = ReplicatedStorage:FindFirstChild("BuildingHammerPlace"),
 	LoadPlayerAccessories = ReplicatedStorage:FindFirstChild("LoadPlayerAccessories"),
@@ -53,6 +55,7 @@ Events.LoadPlayerAccessories.Event:Connect(function(player, cube)
 	if type(hammerRemoveFunction) == "function" then
 		removeFunctions[player.UserId] = hammerRemoveFunction
 	end
+	reloadAccessories(cube, player)
 end)
 Events.BuildingHammerPlace.OnServerEvent:Connect(function(player, position, buildType)
 	local _condition = player:GetAttribute("hammer_Texture") ~= Accessories.HammerTexture.BuilderHammer

@@ -202,7 +202,7 @@ export function waitUntil(callback: () => (boolean | undefined), maxTime: number
 
 export function canUseSetting(name: string): boolean {
 	if (name === 'modifiers') {
-		const cube = Workspace.FindFirstChild(`cube{player.UserId}`) as (BasePart | undefined);
+		const cube = Workspace.FindFirstChild(`cube${player.UserId}`) as (BasePart | undefined);
 		
 		const params = new OverlapParams();
 		params.FilterType = Enum.RaycastFilterType.Include;

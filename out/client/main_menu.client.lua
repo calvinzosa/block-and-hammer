@@ -29,7 +29,6 @@ local shadowTitle = shadow:WaitForChild("Title")
 local shadowText = shadow:WaitForChild("Loading")
 local effectsFolder = Workspace:WaitForChild("Effects")
 local didClickButton = false
-player:SetAttribute("in_main_menu", true)
 player.AttributeChanged:Connect(function(attr)
 	local _value = attr == "isNew" and player:GetAttribute(attr)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then

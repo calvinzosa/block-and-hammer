@@ -4,7 +4,7 @@ import {
     Players,
 } from '@rbxts/services';
 
-import { $dbg, $print, $warn } from 'rbxts-transform-debug';
+import { $warn } from 'rbxts-transform-debug';
 
 const player = Players.LocalPlayer;
 

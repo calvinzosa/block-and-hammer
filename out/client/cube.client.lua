@@ -46,6 +46,7 @@ local isSpectating = valueInstances:WaitForChild("is_spectating")
 local spectatePlayer = isSpectating:WaitForChild("player")
 local canMove = valueInstances:WaitForChild("can_move")
 local screenGui = GUI:WaitForChild("ScreenGui")
+local replayGui = GUI:WaitForChild("ReplayGui")
 local timerLabel = screenGui:WaitForChild("Timer")
 local speedometerLabel = screenGui:WaitForChild("Speedometer")
 local altitudeLabel = screenGui:WaitForChild("Altitude")
@@ -548,6 +549,36 @@ RunService.RenderStepped:Connect(function(dt)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
 		return nil
 	end
+	for _, otherPlayer in Players:GetPlayers() do
+		local _altitudeValue = otherPlayer:FindFirstChild("leaderstats")
+		if _altitudeValue ~= nil then
+			_altitudeValue = _altitudeValue:FindFirstChild("Altitude")
+		end
+		local altitudeValue = _altitudeValue
+		local _result = altitudeValue
+		if _result ~= nil then
+			_result = _result:IsA("StringValue")
+		end
+		if _result then
+			local otherCube = Workspace:FindFirstChild(`cube{otherPlayer.UserId}`)
+			local value = "--"
+			local _result_1 = otherCube
+			if _result_1 ~= nil then
+				_result_1 = _result_1:IsA("BasePart")
+			end
+			if _result_1 then
+				local _binding = convertStudsToMeters(otherCube.Position.Y - 1.9)
+				local altitude = _binding[1]
+				local altitudeString = _binding[2]
+				value = altitudeString
+			end
+			local _value_1 = player:GetAttribute("ERROR_LAND")
+			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
+				value = "--"
+			end
+			altitudeValue.Value = value
+		end
+	end
 	local currentHammer = getHammerTexture()
 	local cubeHat = getCubeHat()
 	local _condition = (Workspace:GetAttribute("default_gravity"))
@@ -585,7 +616,7 @@ RunService.RenderStepped:Connect(function(dt)
 			spectatingCube = otherCube
 		end
 	end
-	if not cube then
+	if not cube or cube.Parent ~= Workspace then
 		local localCube = Workspace:FindFirstChild(`cube{player.UserId}`)
 		local _result = localCube
 		if _result ~= nil then
@@ -595,6 +626,56 @@ RunService.RenderStepped:Connect(function(dt)
 			return nil
 		end
 		cube = localCube
+	end
+	if spectatingCube or cube then
+		local targetPlayer = otherPlayer or player
+		local targetCube = spectatingCube or cube
+		local _binding = convertStudsToMeters(targetCube.Position.Y - 1.9)
+		local altitude = _binding[1]
+		local altitudeString = _binding[2]
+		local _binding_1 = convertStudsToMeters(targetCube.AssemblyLinearVelocity.Magnitude)
+		local speed = _binding_1[1]
+		local speedString = _binding_1[2]
+		local cubeTime = getCubeTime(targetCube)
+		local hours, minutes, seconds, milliseconds = getTimeUnits(math.round(cubeTime * 1000))
+		timerLabel.Text = string.format("%02d:%02d.%d", minutes, seconds, math.floor(milliseconds / 100))
+		altitudeLabel.Text = altitudeString
+		speedometerLabel.Text = speedString
+		timerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+		local _value_1 = targetCube:GetAttribute("used_modifiers")
+		if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
+			timerLabel.TextColor3 = Color3.fromRGB(179, 77, 77)
+			local _value_2 = targetPlayer:GetAttribute("finished")
+			if _value_2 ~= 0 and _value_2 == _value_2 and _value_2 ~= "" and _value_2 then
+				timerLabel.TextColor3 = Color3.fromRGB(255, 128, 128)
+			end
+		else
+			local _value_2 = targetPlayer:GetAttribute("finished")
+			if _value_2 ~= 0 and _value_2 == _value_2 and _value_2 ~= "" and _value_2 then
+				timerLabel.TextColor3 = Color3.fromRGB(255, 255, 128)
+			else
+				local _timeValue = targetPlayer:FindFirstChild("leaderstats")
+				if _timeValue ~= nil then
+					_timeValue = _timeValue:FindFirstChild("Time")
+				end
+				local timeValue = _timeValue
+				local _result = timeValue
+				if _result ~= nil then
+					_result = _result:IsA("StringValue")
+				end
+				local _condition_2 = _result
+				if _condition_2 then
+					_condition_2 = timeValue.Value == "--"
+				end
+				if _condition_2 then
+					timerLabel.TextColor3 = Color3.fromRGB(179, 179, 179)
+				end
+			end
+		end
+	else
+		timerLabel.Text = "--:--.-"
+		altitudeLabel.Text = "--"
+		speedometerLabel.Text = "--"
 	end
 	if cube then
 		local head = cube:FindFirstChild("Head")
@@ -678,21 +759,20 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 		local _binding = convertStudsToMeters(cube.Position.Y - 1.9)
 		local altitude = _binding[1]
-		local altitudeString = _binding[2]
-		local _binding_1 = convertStudsToMeters(cube.AssemblyLinearVelocity.Magnitude)
-		local _ = _binding_1[1]
-		local speedString = _binding_1[2]
-		local cubeTime = getCubeTime(cube)
-		local minutes, seconds, milliseconds = select(2, unpack({ getTimeUnits(math.round(cubeTime * 1000)) }))
-		timerLabel.Text = string.format("%02d:%02d.%d", minutes, seconds, math.floor(milliseconds / 100))
-		altitudeLabel.Text = altitudeString
-		speedometerLabel.Text = speedString
-		local windForce = cube:FindFirstChild("WindForce")
-		local _result_3 = windForce
+		local range = cube:FindFirstChild("Range")
+		local _result_3 = range
 		if _result_3 ~= nil then
-			_result_3 = _result_3:IsA("VectorForce")
+			_result_3 = _result_3:IsA("BasePart")
 		end
 		if _result_3 then
+			range.Transparency = if getSetting(GameSetting.ShowRange) then 0.75 else 1
+		end
+		local windForce = cube:FindFirstChild("WindForce")
+		local _result_4 = windForce
+		if _result_4 ~= nil then
+			_result_4 = _result_4:IsA("VectorForce")
+		end
+		if _result_4 then
 			if altitude > 400 and altitude < 500 then
 				windForce.Force = Vector3.new(750, 0, 0)
 			else
@@ -712,7 +792,7 @@ RunService.RenderStepped:Connect(function(dt)
 			end
 		end
 		cube.CollisionGroup = "clientCube"
-		for _1, descendant in cube:GetDescendants() do
+		for _, descendant in cube:GetDescendants() do
 			if descendant:IsA("BasePart") and descendant.CollisionGroup == "cubes" then
 				descendant.CollisionGroup = "clientCube"
 			end
@@ -743,7 +823,7 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 		local hammerTransparency = _condition_6
 		cube.Transparency = numLerp(cube.Transparency, cubeTransparency, dt * 15)
-		for _1, part in { head, arm } do
+		for _, part in { head, arm } do
 			local alpha = dt * 15
 			local _value_1 = cube:GetAttribute("instantHammerTransparency")
 			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
@@ -751,7 +831,7 @@ RunService.RenderStepped:Connect(function(dt)
 				cube:SetAttribute("instantHammerTransparent", nil)
 			end
 			part.Transparency = numLerp(part.Transparency, hammerTransparency, alpha)
-			for _2, descendant in part:GetDescendants() do
+			for _1, descendant in part:GetDescendants() do
 				if descendant:IsA("Decal") or descendant:IsA("Texture") then
 					descendant.Transparency = part.Transparency
 				end
@@ -760,11 +840,11 @@ RunService.RenderStepped:Connect(function(dt)
 		intensity = shakeIntensity.Value
 		if isSpectating.Value and otherPlayer then
 			intensity = 0
-			local _result_4 = screenGui:FindFirstChild("SpectatingGUI")
-			if _result_4 ~= nil then
-				_result_4 = _result_4:FindFirstChild("PlayerName")
+			local _result_5 = screenGui:FindFirstChild("SpectatingGUI")
+			if _result_5 ~= nil then
+				_result_5 = _result_5:FindFirstChild("PlayerName")
 			end
-			local label = _result_4
+			local label = _result_5
 			if label then
 				label.Text = otherPlayer.DisplayName
 			end
@@ -782,9 +862,9 @@ RunService.RenderStepped:Connect(function(dt)
 			force.Force = Vector3.new(0, Workspace.Gravity * cube.AssemblyMass * 2, 0)
 		else
 			alignOrientation.CFrame = CFrame.fromOrientation(0, 0, 0)
-			local _result_4 = cube:FindFirstChild("upsidedown_gravity")
-			if _result_4 ~= nil then
-				_result_4:Destroy()
+			local _result_5 = cube:FindFirstChild("upsidedown_gravity")
+			if _result_5 ~= nil then
+				_result_5:Destroy()
 			end
 		end
 		if time() > 1 then
@@ -808,6 +888,9 @@ RunService.RenderStepped:Connect(function(dt)
 		if spectatingCube then
 			cubePosition = spectatingCube.Position
 			cubeVelocity = spectatingCube.AssemblyAngularVelocity
+		end
+		if not getSetting(GameSetting.ScreenShake) then
+			intensity = 0
 		end
 		local _cubePosition = cubePosition
 		local _vector3 = Vector3.new((if math.random() < 0.5 then 1 else -1) * intensity, (if math.random() < 0.5 then 1 else -1) * intensity, 0)
@@ -833,7 +916,7 @@ RunService.RenderStepped:Connect(function(dt)
 		local params = OverlapParams.new()
 		params.FilterType = Enum.RaycastFilterType.Include
 		params.FilterDescendantsInstances = { mapFolder }
-		for _1, obstructingPart in Workspace:GetPartBoundsInBox(CFrame.new(start.X, start.Y, distance / -2), Vector3.new(10, 10, distance), params) do
+		for _, obstructingPart in Workspace:GetPartBoundsInBox(CFrame.new(start.X, start.Y, distance / -2), Vector3.new(10, 10, distance), params) do
 			local _value_1 = obstructingPart:GetAttribute("CAMERA_TRANSPARENT")
 			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 				local _condition_7 = obstructingPart:GetAttribute("CAMERA_TRANSPARENCY")
@@ -847,16 +930,7 @@ RunService.RenderStepped:Connect(function(dt)
 				}):Play()
 			end
 		end
-		local replayGui = GUI:FindFirstChild("ReplayGui")
-		local _result_4 = replayGui
-		if _result_4 ~= nil then
-			_result_4 = _result_4:IsA("ScreenGui")
-		end
-		local _condition_7 = not _result_4
-		if not _condition_7 then
-			_condition_7 = not replayGui.Enabled
-		end
-		if _condition_7 then
+		if not replayGui.Enabled then
 			local _position = camera.CFrame.Position
 			local _position_1 = cameraCFrame.Position
 			if (_position - _position_1).Magnitude > 50 then
@@ -898,7 +972,7 @@ RunService.RenderStepped:Connect(function(dt)
 				armAlignPosition.MaxForce = 6250
 				armAlignPosition.Responsiveness = 40
 				armAlignOrientation.Responsiveness = 100
-				for _1, effect in effectsFolder:GetDescendants() do
+				for _, effect in effectsFolder:GetDescendants() do
 					if effect:IsA("ParticleEmitter") then
 						effect.TimeScale *= 0.5
 					end
@@ -918,11 +992,11 @@ RunService.RenderStepped:Connect(function(dt)
 				part.Anchored = true
 				part.CanCollide = false
 				part.Position = getBuildPosition(head.CFrame)
-				local _condition_8 = (player:GetAttribute("build_type"))
-				if _condition_8 == nil then
-					_condition_8 = 0
+				local _condition_7 = (player:GetAttribute("build_type"))
+				if _condition_7 == nil then
+					_condition_7 = 0
 				end
-				part.Size = getBuildSize(_condition_8)
+				part.Size = getBuildSize(_condition_7)
 				part.Transparency = 0.7
 				part.Color = Color3.fromRGB(0, 0, 0)
 				part.TopSurface = Enum.SurfaceType.Smooth
@@ -947,7 +1021,7 @@ RunService.RenderStepped:Connect(function(dt)
 			armAlignPosition.MaxForce = 6250
 			armAlignPosition.Responsiveness = 40
 			armAlignOrientation.Responsiveness = 100
-			for _1, effect in effectsFolder:GetDescendants() do
+			for _, effect in effectsFolder:GetDescendants() do
 				if effect:IsA("ParticleEmitter") then
 					effect.TimeScale *= 0.5
 				end
@@ -977,7 +1051,7 @@ RunService.RenderStepped:Connect(function(dt)
 		if canMove.Value then
 			local rotationOffset = CFrame.fromOrientation(math.pi / 2, math.pi / 2, 0)
 			local mouse = UserInputService:GetMouseLocation()
-			for _1, gui in StarterGui:GetGuiObjectsAtPosition(mouse.X, mouse.Y) do
+			for _, gui in StarterGui:GetGuiObjectsAtPosition(mouse.X, mouse.Y) do
 				if gui.Name == "ContextButtonFrame" then
 					return nil
 				end
@@ -999,20 +1073,20 @@ RunService.RenderStepped:Connect(function(dt)
 			(left:FindFirstChild("RagdollTime")).Text = string.format("RagdollTime: %.3fs", ragdollTime);
 			(left:FindFirstChild("CameraShake")).Text = string.format("CameraShake: %.3fs studs", intensity)
 			local totalSounds = 0
-			for _1, sound in Workspace:GetChildren() do
+			for _, sound in Workspace:GetChildren() do
 				if sound:IsA("Sound") and sound.Volume > 0 and sound.IsPlaying then
 					totalSounds += 1
 				end
 			end
 			(left:FindFirstChild("TotalSounds")).Text = string.format("Total Sounds Playing: %d", totalSounds)
 			local _fn_1 = string
-			local _condition_8 = (cube:GetAttribute("destroyed_counter"))
-			if _condition_8 == nil then
-				_condition_8 = 0
+			local _condition_7 = (cube:GetAttribute("destroyed_counter"))
+			if _condition_7 == nil then
+				_condition_7 = 0
 			end
-			(left:FindFirstChild("DestroyedCounter")).Text = _fn_1.format("Destroyed Counter: %d", _condition_8)
+			(left:FindFirstChild("DestroyedCounter")).Text = _fn_1.format("Destroyed Counter: %d", _condition_7)
 			local unanchoredParts = 0
-			for _1, descendant in Workspace:GetDescendants() do
+			for _, descendant in Workspace:GetDescendants() do
 				if descendant:IsA("BasePart") and not descendant:IsA("Terrain") and not descendant.Anchored then
 					unanchoredParts += 1
 				end
@@ -1040,7 +1114,7 @@ goalPart.Touched:Connect(function(otherPart)
 	if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
 		player:SetAttribute("finished", true)
 		local totalTime = getCubeTime(otherPart)
-		print("[src/client/cube.client.ts:778]", `Completed game in {totalTime} seconds`)
+		print("[src/client/cube.client.ts:823]", `Completed game in {totalTime} seconds`)
 		Events.CompleteGame:FireServer(totalTime)
 		Events.MakeReplayEvent:Fire(string.format("win,%d", totalTime * 1000))
 	end

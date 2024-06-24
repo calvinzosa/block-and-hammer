@@ -34,8 +34,6 @@ const effectsFolder = Workspace.WaitForChild('Effects');
 
 let didClickButton = false;
 
-player.SetAttribute('in_main_menu', true)
-
 player.AttributeChanged.Connect((attr) => {
 	if (attr === 'isNew' && player.GetAttribute(attr)) {
 		(screenGui.WaitForChild('TutorialGUI') as Frame).Visible = true;

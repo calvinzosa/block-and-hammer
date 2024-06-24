@@ -12,7 +12,7 @@ import {
 	Accessories
 } from 'shared/utils';
 
-import { loadAccessories } from 'shared/accessory_loader';
+import { reloadAccessories, loadAccessories } from 'shared/accessory_loader';
 
 const Events = {
     'BuildingHammerPlace': ReplicatedStorage.FindFirstChild('BuildingHammerPlace') as RemoteEvent,
@@ -46,8 +46,9 @@ Events.LoadPlayerAccessories.Event.Connect((player, cube) => {
 	);
 	
 	if (player.UserId in removeFunctions) delete removeFunctions[player.UserId];
-	
 	if (typeIs(hammerRemoveFunction, 'function')) removeFunctions[player.UserId] = hammerRemoveFunction;
+	
+	reloadAccessories(cube, player);
 });
 
 Events.BuildingHammerPlace.OnServerEvent.Connect((player, position, buildType) => {

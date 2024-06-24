@@ -193,7 +193,7 @@ local function waitUntil(callback, maxTime)
 end
 local function canUseSetting(name)
 	if name == "modifiers" then
-		local cube = Workspace:FindFirstChild(`cube\{player.UserId\}`)
+		local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
 		local params = OverlapParams.new()
 		params.FilterType = Enum.RaycastFilterType.Include
 		local modifierDisablers = Workspace:FindFirstChild("ForceDisableModifiers")

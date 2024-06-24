@@ -53,6 +53,7 @@ const isSpectating = valueInstances.WaitForChild('is_spectating') as BoolValue;
 const spectatePlayer = isSpectating.WaitForChild('player') as StringValue;
 const canMove = valueInstances.WaitForChild('can_move') as BoolValue;
 const screenGui = GUI.WaitForChild('ScreenGui') as ScreenGui;
+const replayGui = GUI.WaitForChild('ReplayGui') as ScreenGui;
 const timerLabel = screenGui.WaitForChild('Timer') as TextLabel;
 const speedometerLabel = screenGui.WaitForChild('Speedometer') as TextLabel;
 const altitudeLabel = screenGui.WaitForChild('Altitude') as TextLabel;
@@ -63,7 +64,7 @@ const goalPart = mapFolder.WaitForChild('end_area') as BasePart;
 const wallPlane = Workspace.WaitForChild('Wall') as BasePart;
 const flippedGravity = ReplicatedStorage.WaitForChild('flipped_gravity') as BoolValue;
 const mouseVisual = Workspace.WaitForChild('MouseVisual') as BasePart;
-const modifierDisablers = Workspace.WaitForChild('ForceDisableModifiers');
+const modifierDisablers = Workspace.WaitForChild('ForceDisableModifiers') as BasePart;
 
 let cube: BasePart | undefined = undefined;
 
@@ -408,6 +409,23 @@ Events.ClientRagdoll.Event.Connect((seconds:number) => {
 RunService.RenderStepped.Connect((dt) => {
 	if (player.GetAttribute('in_main_menu')) return;
 	
+	for (const otherPlayer of Players.GetPlayers()) {
+		const altitudeValue = otherPlayer.FindFirstChild('leaderstats')?.FindFirstChild('Altitude');
+		if (altitudeValue?.IsA('StringValue')) {
+			const otherCube = Workspace.FindFirstChild(`cube${otherPlayer.UserId}`);
+			
+			let value = '--';
+			if (otherCube?.IsA('BasePart')) {
+				const [ altitude, altitudeString ] = convertStudsToMeters(otherCube.Position.Y - 1.9);
+				value = altitudeString;
+			}
+			
+			if (player.GetAttribute('ERROR_LAND')) value = '--';
+			
+			altitudeValue.Value = value;
+		}
+	}
+	
 	const currentHammer = getHammerTexture();
 	const cubeHat = getCubeHat();
 	
@@ -427,11 +445,41 @@ RunService.RenderStepped.Connect((dt) => {
 		if (otherCube?.IsA('BasePart')) spectatingCube = otherCube;
 	}
 	
-	if (!cube) {
+	if (!cube || cube.Parent !== Workspace) {
 		const localCube = Workspace.FindFirstChild(`cube${player.UserId}`);
 		if (!localCube?.IsA('BasePart')) return;
 		
 		cube = localCube;
+	}
+	
+	if (spectatingCube || cube) {
+		const targetPlayer = otherPlayer ?? player;
+		const targetCube = spectatingCube ?? cube;
+		
+		const [ altitude, altitudeString ] = convertStudsToMeters(targetCube.Position.Y - 1.9);
+		const [ speed, speedString ] = convertStudsToMeters(targetCube.AssemblyLinearVelocity.Magnitude);
+		const [ cubeTime ] = getCubeTime(targetCube);
+		
+		const [ hours, minutes, seconds, milliseconds ] = getTimeUnits(math.round(cubeTime * 1000));
+		
+		timerLabel.Text = string.format('%02d:%02d.%d', minutes, seconds, math.floor(milliseconds / 100));
+		altitudeLabel.Text = altitudeString;
+		speedometerLabel.Text = speedString;
+		
+		timerLabel.TextColor3 = Color3.fromRGB(255, 255, 255);
+		if (targetCube.GetAttribute('used_modifiers')) {
+			timerLabel.TextColor3 = Color3.fromRGB(179, 77, 77);
+			if (targetPlayer.GetAttribute('finished')) timerLabel.TextColor3 = Color3.fromRGB(255, 128, 128);
+		} else if (targetPlayer.GetAttribute('finished')) {
+			timerLabel.TextColor3 = Color3.fromRGB(255, 255, 128);
+		} else {
+			const timeValue = targetPlayer.FindFirstChild('leaderstats')?.FindFirstChild('Time');
+			if (timeValue?.IsA('StringValue') && timeValue.Value === '--') timerLabel.TextColor3 = Color3.fromRGB(179, 179, 179);
+		}
+	} else {
+		timerLabel.Text = '--:--.-';
+		altitudeLabel.Text = '--';
+		speedometerLabel.Text = '--';
 	}
 	
 	if (cube) {
@@ -450,15 +498,10 @@ RunService.RenderStepped.Connect((dt) => {
 		if (!armCFrame?.IsA('Attachment') || !armRotation?.IsA('Attachment')) return;
 		if (!typeIs(startTime, 'number')) return;
 		
-		const [ altitude, altitudeString ] = convertStudsToMeters(cube.Position.Y - 1.9);
-		const [ _, speedString ] = convertStudsToMeters(cube.AssemblyLinearVelocity.Magnitude);
-		const [ cubeTime ] = getCubeTime(cube);
+		const [ altitude ] = convertStudsToMeters(cube.Position.Y - 1.9);
 		
-		const [ minutes, seconds, milliseconds ] = select(2, ...getTimeUnits(math.round(cubeTime * 1000))) as LuaTuple<[ number, number, number ]>;
-		
-		timerLabel.Text = string.format('%02d:%02d.%d', minutes, seconds, math.floor(milliseconds / 100));
-		altitudeLabel.Text = altitudeString;
-		speedometerLabel.Text = speedString;
+		const range = cube.FindFirstChild('Range');
+		if (range?.IsA('BasePart')) range.Transparency = getSetting(GameSetting.ShowRange) ? 0.75 : 1;
 		
 		const windForce = cube.FindFirstChild('WindForce')
 		if (windForce?.IsA('VectorForce')) {
@@ -542,6 +585,7 @@ RunService.RenderStepped.Connect((dt) => {
 			const params = new OverlapParams();
 			params.FilterType = Enum.RaycastFilterType.Include;
 			params.FilterDescendantsInstances = [ modifierDisablers ];
+			
 			if (!wasModifiersEnabled && previousModifiersCheck) {
 				updateModifiers();
 				previousModifiersCheck = false;
@@ -560,6 +604,8 @@ RunService.RenderStepped.Connect((dt) => {
 			cubePosition = spectatingCube.Position;
 			cubeVelocity = spectatingCube.AssemblyAngularVelocity;
 		}
+		
+		if (!getSetting(GameSetting.ScreenShake)) intensity = 0;
 		
 		const cameraPosition = cubePosition.add(new Vector3((math.random() < 0.5 ? 1 : -1) * intensity, (math.random() < 0.5 ? 1 : -1) * intensity, 0));
 		const velocity = math.clamp(cubeVelocity.Magnitude - 50, 0, 100) / 15;
@@ -591,8 +637,7 @@ RunService.RenderStepped.Connect((dt) => {
 			}
 		}
 		
-		const replayGui = GUI.FindFirstChild('ReplayGui');
-		if (!replayGui?.IsA('ScreenGui') || !replayGui.Enabled) {
+		if (!replayGui.Enabled) {
 			if (camera.CFrame.Position.sub(cameraCFrame.Position).Magnitude > 50) camera.CFrame = camera.CFrame.Lerp(cameraCFrame, 0.5);
 			else camera.CFrame = camera.CFrame.Lerp(cameraCFrame, math.clamp(dt * 15, 0, 1));
 		}
