@@ -9,7 +9,7 @@ import {
     Players,
 } from '@rbxts/services';
 
-import { $print } from 'rbxts-transform-debug';
+import { $print, $warn } from 'rbxts-transform-debug';
 
 import {
 	convertStudsToMeters,
@@ -58,6 +58,7 @@ const timerLabel = screenGui.WaitForChild('Timer') as TextLabel;
 const speedometerLabel = screenGui.WaitForChild('Speedometer') as TextLabel;
 const altitudeLabel = screenGui.WaitForChild('Altitude') as TextLabel;
 const mapFolder = Workspace.WaitForChild('Map');
+const propellersFolder = mapFolder.WaitForChild('Propellers') as Folder;
 const mudParts = mapFolder.WaitForChild('MudParts');
 const effectsFolder = Workspace.WaitForChild('Effects') as BasePart;
 const goalPart = mapFolder.WaitForChild('end_area') as BasePart;
@@ -65,8 +66,6 @@ const wallPlane = Workspace.WaitForChild('Wall') as BasePart;
 const flippedGravity = ReplicatedStorage.WaitForChild('flipped_gravity') as BoolValue;
 const mouseVisual = Workspace.WaitForChild('MouseVisual') as BasePart;
 const modifierDisablers = Workspace.WaitForChild('ForceDisableModifiers') as BasePart;
-
-let cube: BasePart | undefined = undefined;
 
 const cooldowns = {
     'explosiveHammer': false,
@@ -86,10 +85,101 @@ const abilityObjects = {
     'grapplingHammerRope': undefined as (Instance | undefined)
 };
 
+const cachedPropellers: Model[] = [  ];
+
+let cube: BasePart | undefined = undefined;
 let wasModifiersEnabled = false;
 let previousModifiersCheck = true;
 let ragdollTime = 0;
 let intensity = 0;
+
+function newPropeller(propeller: Instance) {
+    if (!propeller.IsA('Model')) return;
+    
+	const hitbox = propeller.WaitForChild('Hitbox');
+	if (!hitbox || !typeIs(propeller.GetAttribute('windVelocity'), 'number')) {
+        $warn('An invalid propeller was created.');
+        return;
+    }
+	
+    cachedPropellers.push(propeller);
+}
+
+function updatePropellers(cube: BasePart, dt: number) {
+	for (const [ i, propeller ] of pairs(cachedPropellers)) {
+		const blades = propeller.FindFirstChild('Blades');
+		if (!blades?.IsA('BasePart')) {
+			$warn('A propeller has broke!');
+			cachedPropellers.remove(i);
+			break;
+		}
+		
+		for (const descendant of propeller.GetDescendants()) {
+			if (descendant.IsA('ParticleEmitter')) descendant.Enabled = (blades.AssemblyAngularVelocity.Magnitude >= 5);
+		}
+	}
+	
+	const usedPropellers: Model[] = [  ];
+	
+	let totalCubeForce = Vector3.zero;
+	let totalHeadForce = Vector3.zero;
+	
+	const params = new OverlapParams();
+	params.FilterType = Enum.RaycastFilterType.Include;
+	params.FilterDescendantsInstances = cachedPropellers;
+	
+	for (const [ i, part ] of pairs([ cube, cube.FindFirstChild('Head') ])) {
+		if (!part?.IsA('BasePart')) return;
+		
+		for (const touching of Workspace.GetPartsInPart(part, params)) {
+			const propeller = touching.FindFirstAncestorWhichIsA('Model');
+			if (!propeller || usedPropellers.findIndex((otherPropeller) => otherPropeller === propeller) >= 0 || propeller.GetAttribute('jammed')) continue;
+			
+			if (propeller.GetAttribute('noStack') && usedPropellers.size() !== 0) continue;
+			
+			const hitbox = propeller.FindFirstChild('Hitbox') as BasePart;
+			const blades = propeller.FindFirstChild('Blades') as BasePart;
+			if (blades.AssemblyAngularVelocity.Magnitude < 5) {
+				propeller.SetAttribute('jammed', true);
+				blades.Anchored = true;
+				task.delay(5, () => {
+					blades.Anchored = false;
+					task.delay(0.5, () => propeller.SetAttribute('jammed', undefined));
+				});
+				
+				continue;
+			}
+			
+			const velocity = propeller.GetAttribute('windVelocity') as number;
+			const result = hitbox.CFrame.RightVector.mul(velocity);
+			
+			if (i === 1) totalCubeForce = totalCubeForce.sub(result);
+			else if (i === 2) totalHeadForce = totalHeadForce.sub(result);
+			
+			usedPropellers.push(propeller);
+		}
+	}
+	
+	const gravity = Workspace.GetAttribute('default_gravity') as (number | undefined) ?? 196.2;
+	
+	let cubeMultiplier = 1;
+	let headMultiplier = 1;
+	
+	params.FilterDescendantsInstances = [ mudParts ];
+	
+	for (const [ i, part ] of pairs([ cube, cube.FindFirstChild('Head') ])) {
+		if (part?.IsA('BasePart') && Workspace.GetPartsInPart(part, params).size() > 0) {
+			if (i === 1) cubeMultiplier = 2;
+			else headMultiplier = 2;
+		}
+	}
+	
+	const propellerForce = cube.FindFirstChild('PropellerForce');
+	if (propellerForce?.IsA('VectorForce')) propellerForce.Force = totalCubeForce.mul(gravity).mul(dt * 40 * cubeMultiplier);
+	
+	const headPropeller = cube.FindFirstChild('Head')?.FindFirstChild('PropellerForce');
+	if (headPropeller?.IsA('VectorForce')) headPropeller.Force = totalHeadForce.mul(gravity).mul(dt * 10 * headMultiplier);
+}
 
 function formatDebugWorldNumber(num: number) {
 	const [ integer, decimal ] = math.modf(math.abs(num));
@@ -394,6 +484,9 @@ function updateModifiers() {
 
 task.spawn(updateModifiers);
 
+for (const propeller of propellersFolder.GetChildren()) task.spawn(newPropeller, propeller);
+propellersFolder.ChildAdded.Connect(newPropeller);
+
 player.AttributeChanged.Connect((attr) => {
     if (attr === 'hammer_Texture' || attr === 'client_settings_json') updateModifiers();
 });
@@ -406,7 +499,7 @@ Events.ClientRagdoll.Event.Connect((seconds:number) => {
 	if (currentHat !== Accessories.CubeHat.InstantGyro && previousRagdollTime === 0) Events.AddRagdollCount.FireServer();
 });
 
-RunService.RenderStepped.Connect((dt) => {
+RunService.Heartbeat.Connect((dt) => {
 	if (player.GetAttribute('in_main_menu')) return;
 	
 	for (const otherPlayer of Players.GetPlayers()) {
@@ -647,6 +740,8 @@ RunService.RenderStepped.Connect((dt) => {
 		
 		shakeIntensity.Value = math.max(intensity - dt * 3, 0);
 		wallPlane.Position = cubePosition;
+		
+		updatePropellers(cube, dt);
 		
 		const [ position, nonFiltered, hitPart ] = mouseRaycast();
 		if (!typeIs(position, 'Vector3') || !typeIs(nonFiltered, 'Vector3')) return;
