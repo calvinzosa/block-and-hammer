@@ -25,6 +25,7 @@ local waitUntil = _utils.waitUntil
 local getPartId = _utils.getPartId
 local getTime = _utils.getTime
 local numLerp = _utils.numLerp
+local PlayerAttributes = _utils.PlayerAttributes
 local Events = {
 	DestroyedPart = ReplicatedStorage:WaitForChild("DestroyedPart"),
 	GroundImpact = ReplicatedStorage:WaitForChild("GroundImpact"),
@@ -461,12 +462,12 @@ local function newPart(part)
 		return nil
 	end
 	part:SetAttribute("processed", true)
-	print("[src/client/visual_effects.client.ts:411]", `Cube added: {part.Name} (Client: cube{player.UserId})`)
+	print("[src/client/visual_effects.client.ts:412]", `Cube added: {part.Name} (Client: cube{player.UserId})`)
 	StrokeScale:ScaleBillboardGui(part:WaitForChild("OverheadGUI"), 950)
 	if not isClientCube(part) then
 		return nil
 	end
-	print("[src/client/visual_effects.client.ts:417]", "> Client cube respawned")
+	print("[src/client/visual_effects.client.ts:418]", "> Client cube respawned")
 	cube = part
 	head = cube:WaitForChild("Head")
 	head.Touched:Connect(function(otherPart)
@@ -494,7 +495,7 @@ local function newPart(part)
 			local _exp = currentVelocity - otherVelocity
 			local _arg0 = cube.AssemblyLinearVelocity / 4
 			local newVelocity = (_exp - _arg0).Magnitude
-			local _value_1 = player:GetAttribute("ERROR_LAND")
+			local _value_1 = player:GetAttribute(PlayerAttributes.InErrorLand)
 			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 				newVelocity *= 2
 			end
@@ -739,6 +740,14 @@ local function newPart(part)
 						cube.AssemblyLinearVelocity = _assemblyLinearVelocity + _arg0_1
 					end
 					if getSetting(GameSetting.Effects) then
+						head.Color = Color3.fromRGB(128, 128, 0)
+						task.delay(0, function()
+							if head then
+								TweenService:Create(head, tweenTypes.linear.short, {
+									Color = Color3.fromRGB(255, 0, 0),
+								}):Play()
+							end
+						end)
 						createDebris(head.AssemblyLinearVelocity * 10, head.Position, otherPart, 2.5)
 						local explosion = Instance.new("Explosion")
 						explosion.Position = head.Position
@@ -790,7 +799,7 @@ local function newPart(part)
 			end)
 		elseif otherPart:IsDescendantOf(nonBreakable) then
 			local newVelocity = (currentVelocity - otherVelocity).Magnitude
-			local _value_1 = player:GetAttribute("ERROR_LAND")
+			local _value_1 = player:GetAttribute(PlayerAttributes.InErrorLand)
 			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 				newVelocity *= 2
 			end
@@ -831,7 +840,7 @@ RunService.Stepped:Connect(function(_, dt)
 		end
 	end
 	targetCube = Workspace:FindFirstChild("REPLAY_VIEW") or targetCube
-	local _value = player:GetAttribute("ERROR_LAND")
+	local _value = player:GetAttribute(PlayerAttributes.InErrorLand)
 	if not (_value ~= 0 and _value == _value and _value ~= "" and _value) then
 		Workspace:SetAttribute("default_gravity", 196.2)
 		local targetTime = 14.5
@@ -855,7 +864,7 @@ RunService.Stepped:Connect(function(_, dt)
 		Lighting.ClockTime = numLerp(Lighting.ClockTime, targetTime, dt * 2)
 	end
 	local velocity = targetCube.AssemblyLinearVelocity
-	local _value_1 = player:GetAttribute("in_main_menu")
+	local _value_1 = player:GetAttribute(PlayerAttributes.Client.InMainMenu)
 	local _condition = not (_value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1)
 	if _condition then
 		_condition = screenGui.Enabled
@@ -962,7 +971,7 @@ RunService.Stepped:Connect(function(_, dt)
 	prevCubePosition = cube.Position
 	cube:SetAttribute("lastVelocity", cube.AssemblyLinearVelocity)
 end)
-print("[src/client/visual_effects.client.ts:899]", "Started running visual_effects.client.ts")
+print("[src/client/visual_effects.client.ts:905]", "Started running visual_effects.client.ts")
 while true do
 	local _value = task.wait(0.05)
 	if not (_value ~= 0 and _value == _value and _value) then

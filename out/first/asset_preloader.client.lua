@@ -12,7 +12,7 @@ local shadow = mainMenuGui:WaitForChild("Shadow")
 local shadowLoading = shadow:WaitForChild("Loading")
 shadow.Visible = true
 mainMenuGui.Parent = GUI
-player:SetAttribute("in_main_menu", true)
+player:SetAttribute("inMainMenu", true)
 ReplicatedFirst:RemoveDefaultLoadingScreen()
 print("[src/first/asset_preloader.client.ts:35]", "Created loading screen")
 for _, audioId in AssetIds.Audios do

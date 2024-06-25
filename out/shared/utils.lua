@@ -9,14 +9,16 @@ local RunService = _services.RunService
 local Workspace = _services.Workspace
 local Players = _services.Players
 local str = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "string-utils")
+local Events = {
+	SettingChanged = ReplicatedStorage:WaitForChild("SettingChanged"),
+	MakeReplayEvent = ReplicatedStorage:WaitForChild("MakeReplayEvent"),
+}
 local player = Players.LocalPlayer
 local _result = player
 if _result ~= nil then
 	_result = _result:WaitForChild("PlayerGui")
 end
 local GUI = _result
-local settingChangedEvent = ReplicatedStorage:WaitForChild("SettingChanged")
-local makeReplayEvent = ReplicatedStorage:WaitForChild("MakeReplayEvent")
 local placeId = game.PlaceId
 local RNG = Random.new()
 local GameSetting = {
@@ -30,16 +32,61 @@ local GameSetting = {
 	Modifiers = "modifiers",
 	CSG = "csg",
 }
+local PlayerAttributes = {}
+do
+	local _container = PlayerAttributes
+	local IsNew = "isNew"
+	_container.IsNew = IsNew
+	local HasDataLoaded = "DataLoaded"
+	_container.HasDataLoaded = HasDataLoaded
+	local InErrorLand = "inErrorLand"
+	_container.InErrorLand = InErrorLand
+	local HasModifiers = "modifiers"
+	_container.HasModifiers = HasModifiers
+	local Impacts = "impacts"
+	_container.Impacts = Impacts
+	local CompletedGame = "completedGame"
+	_container.CompletedGame = CompletedGame
+	local HammerTexture = "hammer_Texture"
+	_container.HammerTexture = HammerTexture
+	local CubeColor = "cubeColor"
+	_container.CubeColor = CubeColor
+	local CubeHat = "cube_Hat"
+	_container.CubeHat = CubeHat
+	local CubeFace = "cube_Face"
+	_container.CubeFace = CubeFace
+	local CubeAura = "cube_Aura"
+	_container.CubeAura = CubeAura
+	local TotalTime = "totalTime"
+	_container.TotalTime = TotalTime
+	local TotalRagdolls = "totalRagdolls"
+	_container.TotalRagdolls = TotalRagdolls
+	local TotalRestarts = "totalRestarts"
+	_container.TotalRestarts = TotalRestarts
+	local TotalWins = "totalWins"
+	_container.TotalWins = TotalWins
+	local TotalModdedWins = "totalModdedWins"
+	_container.TotalModdedWins = TotalModdedWins
+	local BadgeDebounce = "badgeDebounce"
+	_container.BadgeDebounce = BadgeDebounce
+	local HasCrashLandingBadge = "hasCrashLandingBadge"
+	_container.HasCrashLandingBadge = HasCrashLandingBadge
+	local HasGravityBadge = "hasGravityBadge"
+	_container.HasGravityBadge = HasGravityBadge
+	local HasSpeedBadge = "hasSpeedBadge"
+	_container.HasSpeedBadge = HasSpeedBadge
+	local Device = "device"
+	_container.Device = Device
+	local Client = {
+		InMainMenu = "inMainMenu",
+		InTutorial = "inTutorial",
+		SettingsJSON = "clientSettingsJSON",
+	}
+	_container.Client = Client
+end
 local Accessories = {}
 do
 	local _container = Accessories
-	local AccessoryName = {
-		hammer_Texture = "HammerTexture",
-		cube_Hat = "CubeHat",
-		cube_Face = "CubeFace",
-		cube_Aura = "CubeAura",
-	}
-	_container.AccessoryName = AccessoryName
 	local HammerTexture = {
 		NoHammerTexture = "No Hammer Texture",
 		RealGoldenHammer = "REAL Golden Hammer",
@@ -88,13 +135,6 @@ do
 	}
 	_container.CubeAura = CubeAura
 end
-local PlayerAttributes = {
-	HammerTexture = "hammer_Texture",
-	CubeFace = "cube_Face",
-	CubeAura = "cube_Aura",
-	CubeHat = "cube_Hat",
-}
-local SettingChanged = settingChangedEvent.Event
 local Settings = {
 	hideothers = false,
 	showrange = false,
@@ -113,6 +153,7 @@ local tweenTypes = {
 		medium = TweenInfo.new(2.5, Enum.EasingStyle.Linear),
 		long = TweenInfo.new(5, Enum.EasingStyle.Linear),
 	},
+	instant = TweenInfo.new(0),
 }
 local filterFunctions = {
 	startsWith = function(value, _, pattern)
@@ -200,11 +241,12 @@ local function canUseSetting(name)
 		if modifierDisablers ~= nil then
 			params.FilterDescendantsInstances = { modifierDisablers }
 		end
-		local _condition = player:GetAttribute("ERROR_LAND")
+		local _condition = player:GetAttribute(PlayerAttributes.InErrorLand)
 		if not (_condition ~= 0 and _condition == _condition and _condition ~= "" and _condition) then
-			_condition = player:GetAttribute("in_tutorial")
+			_condition = player:GetAttribute(PlayerAttributes.Client.InTutorial)
 		end
-		local _condition_1 = _condition
+		local areaCondition = _condition
+		local _condition_1 = areaCondition
 		if not (_condition_1 ~= 0 and _condition_1 == _condition_1 and _condition_1 ~= "" and _condition_1) then
 			_condition_1 = (player and cube and #Workspace:GetPartsInPart(cube, params) > 0)
 		end
@@ -247,7 +289,7 @@ local function setSetting(name, value)
 		return nil
 	end
 	Settings[name] = value
-	settingChangedEvent:Fire(name, value)
+	Events.SettingChanged:Fire(name, value)
 end
 local function getSettingAlias(name)
 	local _condition = settingAlias[name]
@@ -279,11 +321,11 @@ local function getHammerTexture(player)
 	if player == nil then
 		player = Players.LocalPlayer
 	end
-	local _value = player:GetAttribute("in_tutorial")
+	local _value = player:GetAttribute(PlayerAttributes.Client.InTutorial)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
 		return Accessories.HammerTexture.NoHammerTexture
 	end
-	return (player:GetAttribute("hammer_Texture")) or Accessories.HammerTexture.NoHammerTexture
+	return (player:GetAttribute(PlayerAttributes.HammerTexture)) or Accessories.HammerTexture.NoHammerTexture
 end
 local function getCubeFace(player)
 	if player == nil then
@@ -292,11 +334,11 @@ local function getCubeFace(player)
 	if player == nil then
 		player = Players.LocalPlayer
 	end
-	local _value = player:GetAttribute("in_tutorial")
+	local _value = player:GetAttribute(PlayerAttributes.Client.InTutorial)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
 		return Accessories.CubeFace.DefaultFace
 	end
-	return (player:GetAttribute("cube_Face")) or Accessories.CubeFace.DefaultFace
+	return (player:GetAttribute(PlayerAttributes.CubeFace)) or Accessories.CubeFace.DefaultFace
 end
 local function getCubeHat(player)
 	if player == nil then
@@ -305,21 +347,21 @@ local function getCubeHat(player)
 	if player == nil then
 		player = Players.LocalPlayer
 	end
-	local _value = player:GetAttribute("in_tutorial")
+	local _value = player:GetAttribute(PlayerAttributes.Client.InTutorial)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
 		return Accessories.CubeHat.NoHat
 	end
-	return (player:GetAttribute("cube_Hat")) or Accessories.CubeHat.NoHat
+	return (player:GetAttribute(PlayerAttributes.CubeHat)) or Accessories.CubeHat.NoHat
 end
 local function getCubeAura(player)
 	if player == nil then
 		player = Players.LocalPlayer
 	end
-	local _value = player:GetAttribute("in_tutorial")
+	local _value = player:GetAttribute(PlayerAttributes.Client.InTutorial)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
 		return Accessories.CubeAura.NoAura
 	end
-	return (player:GetAttribute("cube_Aura")) or Accessories.CubeAura.NoAura
+	return (player:GetAttribute(PlayerAttributes.CubeAura)) or Accessories.CubeAura.NoAura
 end
 local function isClientCube(cube)
 	local _result_1 = cube
@@ -364,16 +406,16 @@ local function playSound(name, properties, ignoreReplay)
 			end
 		end
 	end
-	local _value = player:GetAttribute("ERROR_LAND")
+	local _value = player:GetAttribute(PlayerAttributes.InErrorLand)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
 		sound.PlaybackSpeed *= 0.5
 	end
 	sound.Volume = math.min(sound.Volume, 1.5)
 	sound.Parent = Workspace
 	if not ignoreReplay then
-		makeReplayEvent:Fire(dataString)
+		Events.MakeReplayEvent:Fire(dataString)
 	end
-	if player:GetAttribute("hammer_Texture") == "404 Hammer" and getSetting(GameSetting.Modifiers) then
+	if player:GetAttribute(PlayerAttributes.HammerTexture) == "404 Hammer" and getSetting(GameSetting.Modifiers) then
 		sound.PlaybackSpeed *= 0.5
 		local pitchShift = Instance.new("PitchShiftSoundEffect")
 		pitchShift.Octave = 2
@@ -583,19 +625,19 @@ local function giveBadge(player, badgeId)
 		return nil
 	end
 	if isTestingServer() then
-		warn("[src/shared/utils.ts:457]", "Badges are disabled in the Testing Server.")
+		warn("[src/shared/utils.ts:486]", "Badges are disabled in the Testing Server.")
 		return nil
 	end
 	local userId = player.UserId
 	task.spawn(function()
 		while true do
-			local _value = player:GetAttribute("badgeDebounce")
+			local _value = player:GetAttribute(PlayerAttributes.BadgeDebounce)
 			if not (_value ~= 0 and _value == _value and _value ~= "" and _value) then
 				break
 			end
 			player.AttributeChanged:Wait()
 		end
-		player:SetAttribute("badgeDebounce", true)
+		player:SetAttribute(PlayerAttributes.BadgeDebounce, true)
 		local success = false
 		repeat
 			do
@@ -607,7 +649,7 @@ local function giveBadge(player, badgeId)
 			end
 		until success
 		task.wait(1)
-		player:SetAttribute("badgeDebounce", nil)
+		player:SetAttribute(PlayerAttributes.BadgeDebounce, nil)
 	end)
 end
 function isTestingServer()
@@ -658,9 +700,8 @@ return {
 	isTestingServer = isTestingServer,
 	isMainServer = isMainServer,
 	GameSetting = GameSetting,
-	Accessories = Accessories,
 	PlayerAttributes = PlayerAttributes,
-	SettingChanged = SettingChanged,
+	Accessories = Accessories,
 	Settings = Settings,
 	DefaultSettings = DefaultSettings,
 	tweenTypes = tweenTypes,

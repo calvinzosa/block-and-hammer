@@ -12,6 +12,7 @@ import {
     Accessories,
     getSetting,
     numLerp,
+    PlayerAttributes,
 } from 'shared/utils';
 
 enum Music {
@@ -67,8 +68,8 @@ RunService.RenderStepped.Connect((dt) => {
 	const currentHammer = getHammerTexture(targetPlayer);
 	
 	let activeMusic = undefined as (Music | undefined);
-    if (player.GetAttribute('in_main_menu')) activeMusic = Music.Jamming;
-    else if (player.GetAttribute('in_tutorial')) activeMusic = Music.CrystalCave;
+    if (player.GetAttribute(PlayerAttributes.Client.InMainMenu)) activeMusic = Music.Jamming;
+    else if (player.GetAttribute(PlayerAttributes.Client.InTutorial)) activeMusic = Music.CrystalCave;
 	else if (targetCube?.IsA('BasePart')) {
         const [ altitude ] = convertStudsToMeters(targetCube.Position.Y - 1.9);
         if (altitude < 100) activeMusic = Music.StartingOff;
@@ -80,11 +81,11 @@ RunService.RenderStepped.Connect((dt) => {
         else activeMusic = Music.Garden;
     }
     
-    const isMusicEnabled = getSetting(GameSetting.Music) && !targetPlayer.GetAttribute('ERROR_LAND');
+    const isMusicEnabled = getSetting(GameSetting.Music) && !targetPlayer.GetAttribute(PlayerAttributes.InErrorLand);
     for (const [ name, sound ] of pairs(sounds)) {
         let targetVolume = (name === activeMusic && isMusicEnabled) ? (sound.GetAttribute('originalVolume') as number) : 0;
         
         sound.Volume = numLerp(sound.Volume, targetVolume, dt * 5);
-        sound.PlaybackSpeed = (currentHammer === Accessories.HammerTexture.Hammer404 && targetPlayer.GetAttribute('modifiers')) ? 0.5 : 1;
+        sound.PlaybackSpeed = (currentHammer === Accessories.HammerTexture.Hammer404 && targetPlayer.GetAttribute(PlayerAttributes.HasModifiers)) ? 0.5 : 1;
     }
 });

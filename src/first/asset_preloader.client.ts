@@ -28,7 +28,7 @@ const shadowLoading = shadow.WaitForChild('Loading') as TextLabel;
 shadow.Visible = true;
 mainMenuGui.Parent = GUI;
 
-player.SetAttribute('in_main_menu', true);
+player.SetAttribute('inMainMenu', true);
 
 ReplicatedFirst.RemoveDefaultLoadingScreen();
 

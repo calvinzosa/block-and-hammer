@@ -27,6 +27,7 @@ import {
 	getPartId,
 	getTime,
 	numLerp,
+	PlayerAttributes,
 } from 'shared/utils';
 
 const Events = {
@@ -431,7 +432,7 @@ function newPart(part: Instance) {
 		
 		if (otherPart.IsDescendantOf(mapFolder)) {
 			let newVelocity = currentVelocity.sub(otherVelocity).sub(cube.AssemblyLinearVelocity.div(4)).Magnitude;
-			if (player.GetAttribute('ERROR_LAND')) newVelocity *= 2;
+			if (player.GetAttribute(PlayerAttributes.InErrorLand)) newVelocity *= 2;
 			if (hammerTexture === Accessories.HammerTexture.SteelHammer && getSetting(GameSetting.Modifiers)) newVelocity *= 1.5;
 			
 			if (newVelocity > 165) {
@@ -662,6 +663,11 @@ function newPart(part: Instance) {
 					if (getSetting(GameSetting.Modifiers)) cube.AssemblyLinearVelocity = cube.AssemblyLinearVelocity.add(cube.Position.sub(head.Position).Unit.mul(250));
 					
 					if (getSetting(GameSetting.Effects)) {
+						head.Color = Color3.fromRGB(128, 128, 0);
+						task.delay(0, () => {
+							if (head) TweenService.Create(head, tweenTypes.linear.short, { Color: Color3.fromRGB(255, 0, 0) }).Play();
+						});
+						
 						createDebris(head.AssemblyLinearVelocity.mul(10), head.Position, otherPart, 2.5);
 						
 						const explosion = new Instance('Explosion');
@@ -720,7 +726,7 @@ function newPart(part: Instance) {
 			task.delay(0.25, () => debounce = false);
 		} else if (otherPart.IsDescendantOf(nonBreakable)) {
 			let newVelocity = currentVelocity.sub(otherVelocity).Magnitude;
-			if (player.GetAttribute('ERROR_LAND')) newVelocity *= 2;
+			if (player.GetAttribute(PlayerAttributes.InErrorLand)) newVelocity *= 2;
 			
 			if (newVelocity > 50) playSound('fabric_hit', { PlaybackSpeed: randomFloat(0.9, 1), Volume: head.AssemblyLinearVelocity.Magnitude / 30 });
 			
@@ -755,7 +761,7 @@ RunService.Stepped.Connect((_, dt) => {
 	
 	targetCube = Workspace.FindFirstChild('REPLAY_VIEW') as (BasePart | undefined) ?? targetCube;
 	
-	if (!player.GetAttribute('ERROR_LAND')) {
+	if (!player.GetAttribute(PlayerAttributes.InErrorLand)) {
 		Workspace.SetAttribute('default_gravity', 196.2);
 		
 		let targetTime = 14.5;
@@ -777,7 +783,7 @@ RunService.Stepped.Connect((_, dt) => {
 	}
 	
 	const velocity = targetCube.AssemblyLinearVelocity;
-	if (!player.GetAttribute('in_main_menu') && screenGui.Enabled) {
+	if (!player.GetAttribute(PlayerAttributes.Client.InMainMenu) && screenGui.Enabled) {
 		camera.FieldOfView = 70 + math.max(velocity.Magnitude - 100, 0) / 5;
 		
 		const percent = getSetting(GameSetting.Sounds) ? math.max((velocity.Magnitude - 100) / 300, 0) : 0;

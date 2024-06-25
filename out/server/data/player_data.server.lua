@@ -9,6 +9,7 @@ local RunService = _services.RunService
 local Players = _services.Players
 local Workspace = _services.Workspace
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
+local PlayerAttributes = _utils.PlayerAttributes
 local decodeJSONObject = _utils.decodeJSONObject
 local encodeObjectToJSON = _utils.encodeObjectToJSON
 local getCubeTime = _utils.getCubeTime
@@ -161,19 +162,19 @@ local function playerAdded(player)
 					return cube.Anchored
 				end)
 			end
-			print("[src/server/player_data.server.ts:161]", `Loaded data for player {player.Name} ({player.UserId}) | Total Data Chunks: {totalDataChunks}`)
+			print("[src/server/data/player_data.server.ts:162]", `Loaded data for player {player.Name} ({player.UserId}) | Total Data Chunks: {totalDataChunks}`)
 		else
-			print("[src/server/player_data.server.ts:162]", `No data was found for player {player.Name} ({player.UserId})`)
+			print("[src/server/data/player_data.server.ts:163]", `No data was found for player {player.Name} ({player.UserId})`)
 		end
 	else
-		warn("[src/server/player_data.server.ts:164]", `Unable to load data for player {player.Name}`)
+		warn("[src/server/data/player_data.server.ts:165]", `Unable to load data for player {player.Name}`)
 		player:Kick(`Unable to load data, please try again later | Error Message: {errorMessage}`)
 		return nil
 	end
-	player:SetAttribute("DATA_LOADED", true)
+	player:SetAttribute(PlayerAttributes.HasDataLoaded, true)
 end
 local function playerRemoved(player)
-	local _value = player:GetAttribute("DATA_LOADED")
+	local _value = player:GetAttribute(PlayerAttributes.HasDataLoaded)
 	local _condition = not (_value ~= 0 and _value == _value and _value ~= "" and _value)
 	if not _condition then
 		_condition = (RunService:IsStudio() and time() < 5) or isTestingServer()
@@ -248,10 +249,10 @@ local function playerRemoved(player)
 			end
 		end)
 		if success then
-			print("[src/server/player_data.server.ts:234]", `Saved data for player {player.Name} ({player.UserId}) succesfully.`)
+			print("[src/server/data/player_data.server.ts:235]", `Saved data for player {player.Name} ({player.UserId}) succesfully.`)
 			break
 		else
-			warn("[src/server/player_data.server.ts:236]", `Could not save data for player {player.Name} ({player.UserId})! | Retrying {5 - retryAttempt} more time(s) | Error: {errorMessage}`)
+			warn("[src/server/data/player_data.server.ts:237]", `Could not save data for player {player.Name} ({player.UserId})! | Retrying {5 - retryAttempt} more time(s) | Error: {errorMessage}`)
 		end
 	end
 end
@@ -289,9 +290,9 @@ Events.SaveSettingsJSON.OnServerEvent:Connect(function(player, settingsJSON)
 	end)
 	if success then
 		player:SetAttribute("settings_json", encodedData)
-		print("[src/server/player_data.server.ts:272]", `Updated setting data for player {player.Name}`)
+		print("[src/server/data/player_data.server.ts:273]", `Updated setting data for player {player.Name}`)
 	else
-		warn("[src/server/player_data.server.ts:273]", `Unable to convert setting data for player {player.Name} into JSON`)
+		warn("[src/server/data/player_data.server.ts:274]", `Unable to convert setting data for player {player.Name} into JSON`)
 	end
 end)
 Events.ForceEquip.Event:Connect(function(player, name)

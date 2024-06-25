@@ -738,7 +738,7 @@ local function reloadAccessories(cube, b, hatAccessory, auraAccessory)
 			_result_1.Color = ColorSequence.new(cubeColor)
 		end
 	end)
-	print("[src/shared/accessory_loader.ts:481]", `Updated accessories for {cube.Name}`)
+	print("[src/shared/accessory_loader.ts:492]", `Updated accessories for {cube.Name}`)
 end
 return {
 	loadAccessories = loadAccessories,

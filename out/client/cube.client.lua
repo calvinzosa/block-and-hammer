@@ -13,6 +13,8 @@ local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "ut
 local convertStudsToMeters = _utils.convertStudsToMeters
 local roundDecimalPlaces = _utils.roundDecimalPlaces
 local getHammerTexture = _utils.getHammerTexture
+local PlayerAttributes = _utils.PlayerAttributes
+local getTimeUnits = _utils.getTimeUnits
 local isClientCube = _utils.isClientCube
 local GameSetting = _utils.GameSetting
 local Accessories = _utils.Accessories
@@ -26,7 +28,6 @@ local waitUntil = _utils.waitUntil
 local Settings = _utils.Settings
 local numLerp = _utils.numLerp
 local getTime = _utils.getTime
-local getTimeUnits = _utils.getTimeUnits
 local Events = {
 	BuildingHammerPlace = ReplicatedStorage:WaitForChild("BuildingHammerPlace"),
 	AddRagdollCount = ReplicatedStorage:WaitForChild("AddRagdollCount"),
@@ -54,17 +55,18 @@ local mapFolder = Workspace:WaitForChild("Map")
 local propellersFolder = mapFolder:WaitForChild("Propellers")
 local mudParts = mapFolder:WaitForChild("MudParts")
 local effectsFolder = Workspace:WaitForChild("Effects")
-local goalPart = mapFolder:WaitForChild("end_area")
+local winArea = mapFolder:WaitForChild("WinArea")
 local wallPlane = Workspace:WaitForChild("Wall")
 local flippedGravity = ReplicatedStorage:WaitForChild("flipped_gravity")
 local mouseVisual = Workspace:WaitForChild("MouseVisual")
 local modifierDisablers = Workspace:WaitForChild("ForceDisableModifiers")
-local cooldowns = {
-	explosiveHammer = false,
-	shotgun = false,
-	inverterHammer = false,
+local AbilityCooldowns = {
+	ExplosiveHammer = false,
+	Shotgun = false,
+	InverterHammer = false,
+	BuildingHammer = false,
 }
-local actionNames = {
+local ActionNames = {
 	BuildingHammer = {
 		Place = "building_hammer-place",
 		Switch = "building_hammer-switch",
@@ -83,8 +85,13 @@ local actionNames = {
 		Invert = "inverter_hammer-invert",
 	},
 }
-local abilityObjects = {
-	grapplingHammerRope = nil,
+local AbilityObjects = {
+	GrapplingHammerRope = nil,
+}
+local AbilityVariables = {
+	BuildingHammer = {
+		BuildType = 0,
+	},
 }
 local cachedPropellers = {}
 local cube = nil
@@ -103,7 +110,7 @@ local function newPropeller(propeller)
 		_condition = not (type(_arg0) == "number")
 	end
 	if _condition then
-		warn("[src/client/cube.client.ts:101]", "An invalid propeller was created.")
+		warn("[src/client/cube.client.ts:107]", "An invalid propeller was created.")
 		return nil
 	end
 	local _propeller = propeller
@@ -117,7 +124,7 @@ local function updatePropellers(cube, dt)
 			_result = _result:IsA("BasePart")
 		end
 		if not _result then
-			warn("[src/client/cube.client.ts:112]", "A propeller has broke!")
+			warn("[src/client/cube.client.ts:118]", "A propeller has broke!")
 			table.remove(cachedPropellers, i + 1)
 			break
 		end
@@ -275,11 +282,7 @@ local function mouseRaycast()
 end
 local function getBuildPosition(headCFrame)
 	local offset = Vector3.new(0, 0, 0)
-	local _condition = player:GetAttribute("build_type")
-	if _condition == nil then
-		_condition = 0
-	end
-	local buildType = _condition
+	local buildType = AbilityVariables.BuildingHammer.BuildType
 	if buildType == 0 then
 		local _lookVector = headCFrame.LookVector
 		local _vector3 = Vector3.new(1, 2, 1)
@@ -293,8 +296,9 @@ local function getBuildPosition(headCFrame)
 	local _offset = offset
 	return _position + _offset
 end
-local function getBuildSize(buildType)
+local function getBuildSize()
 	local size = Vector3.zero
+	local buildType = AbilityVariables.BuildingHammer.BuildType
 	if buildType == 0 then
 		size = Vector3.new(7, 1, 7)
 	elseif buildType == 1 then
@@ -303,14 +307,14 @@ local function getBuildSize(buildType)
 	return size
 end
 local function updateModifiers()
-	for hammer, actions in pairs(actionNames) do
+	for hammer, actions in pairs(ActionNames) do
 		for abilityName, actionName in pairs(actions) do
 			ContextActionService:UnbindAction(actionName)
 		end
 	end
-	if abilityObjects.grapplingHammerRope ~= nil then
-		abilityObjects.grapplingHammerRope:Destroy()
-		abilityObjects.grapplingHammerRope = nil
+	if AbilityObjects.GrapplingHammerRope ~= nil then
+		AbilityObjects.GrapplingHammerRope:Destroy()
+		AbilityObjects.GrapplingHammerRope = nil
 	end
 	local currentHammer = getHammerTexture()
 	if getSetting(GameSetting.Modifiers) then
@@ -319,13 +323,8 @@ local function updateModifiers()
 				if not cube then
 					return nil
 				end
-				if action == actionNames.BuildingHammer.Place then
-					local _condition = state == Enum.UserInputState.Begin
-					if _condition then
-						local _value = player:GetAttribute("place_cooldown")
-						_condition = not (_value ~= 0 and _value == _value and _value ~= "" and _value)
-					end
-					if _condition then
+				if action == ActionNames.BuildingHammer.Place then
+					if state == Enum.UserInputState.Begin and not AbilityCooldowns.BuildingHammer then
 						local head = cube:FindFirstChild("Head")
 						local _result = head
 						if _result ~= nil then
@@ -335,16 +334,11 @@ local function updateModifiers()
 							return nil
 						end
 						head.AssemblyAngularVelocity = Vector3.zero
-						local _fn = Events.BuildingHammerPlace
-						local _exp = getBuildPosition(head.CFrame)
-						local _condition_1 = player:GetAttribute("build_type")
-						if _condition_1 == nil then
-							_condition_1 = 0
-						end
-						_fn:FireServer(_exp, _condition_1)
-						player:SetAttribute("place_cooldown", true)
+						Events.BuildingHammerPlace:FireServer(getBuildPosition(head.CFrame), AbilityVariables.BuildingHammer.BuildType)
+						AbilityCooldowns.BuildingHammer = true
 						task.delay(0.4, function()
-							return player:SetAttribute("place_cooldown", nil)
+							AbilityCooldowns.BuildingHammer = false
+							return AbilityCooldowns.BuildingHammer
 						end)
 					end
 				end
@@ -353,34 +347,30 @@ local function updateModifiers()
 				if not cube then
 					return nil
 				end
-				if action == actionNames.BuildingHammer.Switch then
+				if action == ActionNames.BuildingHammer.Switch then
 					if state == Enum.UserInputState.Begin then
-						local _condition = (player:GetAttribute("build_type"))
-						if _condition == nil then
-							_condition = 0
-						end
-						local newType = _condition + 1
+						local newType = AbilityVariables.BuildingHammer.BuildType + 1
 						if newType > 1 then
 							newType = 0
 						end
-						player:SetAttribute("build_type", newType)
+						AbilityVariables.BuildingHammer.BuildType = newType
 					end
 				end
 			end
-			ContextActionService:BindAction(actionNames.BuildingHammer.Place, place, true, Enum.KeyCode.E)
-			ContextActionService:SetTitle(actionNames.BuildingHammer.Place, "Place")
-			ContextActionService:BindAction(actionNames.BuildingHammer.Switch, switchType, true, Enum.KeyCode.E)
-			ContextActionService:SetTitle(actionNames.BuildingHammer.Switch, "switch")
+			ContextActionService:BindAction(ActionNames.BuildingHammer.Place, place, true, Enum.KeyCode.E)
+			ContextActionService:SetTitle(ActionNames.BuildingHammer.Place, "Place")
+			ContextActionService:BindAction(ActionNames.BuildingHammer.Switch, switchType, true, Enum.KeyCode.E)
+			ContextActionService:SetTitle(ActionNames.BuildingHammer.Switch, "switch")
 		elseif currentHammer == Accessories.HammerTexture.GrapplingHammer then
 			local function activate(action, state, input)
 				if not cube or not isClientCube(cube) then
 					return nil
 				end
-				if abilityObjects.grapplingHammerRope then
-					abilityObjects.grapplingHammerRope:Destroy()
-					abilityObjects.grapplingHammerRope = nil
+				if AbilityObjects.GrapplingHammerRope then
+					AbilityObjects.GrapplingHammerRope:Destroy()
+					AbilityObjects.GrapplingHammerRope = nil
 				end
-				if action == actionNames.GrapplingHammer.Activate then
+				if action == ActionNames.GrapplingHammer.Activate then
 					local head = cube:FindFirstChild("Head")
 					local axisLock = Workspace:FindFirstChild("AxisLock")
 					local _rightAttachment = head
@@ -442,7 +432,7 @@ local function updateModifiers()
 						rope.Attachment0 = rightAttachment
 						rope.Attachment1 = target
 						rope.Parent = head
-						abilityObjects.grapplingHammerRope = rope
+						AbilityObjects.GrapplingHammerRope = rope
 						head.Massless = false
 						playSound("grapple", {
 							PlaybackSpeed = randomFloat(0.9, 1.1),
@@ -456,10 +446,10 @@ local function updateModifiers()
 				if not cube or not isClientCube(cube) then
 					return nil
 				end
-				if action == actionNames.GrapplingHammer.Scroll then
+				if action == ActionNames.GrapplingHammer.Scroll then
 					if state == Enum.UserInputState.Change then
 						local head = cube:FindFirstChild("Head")
-						local rope = abilityObjects.grapplingHammerRope
+						local rope = AbilityObjects.GrapplingHammerRope
 						if not head or not head:IsA("BasePart") or not rope or not rope:IsA("RopeConstraint") then
 							return nil
 						end
@@ -474,15 +464,15 @@ local function updateModifiers()
 					end
 				end
 			end
-			ContextActionService:BindAction(actionNames.GrapplingHammer.Activate, activate, true, Enum.KeyCode.E)
-			ContextActionService:SetTitle(actionNames.GrapplingHammer.Activate, "Grapple")
-			ContextActionService:BindAction(actionNames.GrapplingHammer.Activate, scroll, false, Enum.UserInputType.MouseWheel)
+			ContextActionService:BindAction(ActionNames.GrapplingHammer.Activate, activate, true, Enum.KeyCode.E)
+			ContextActionService:SetTitle(ActionNames.GrapplingHammer.Activate, "Grapple")
+			ContextActionService:BindAction(ActionNames.GrapplingHammer.Activate, scroll, false, Enum.UserInputType.MouseWheel)
 		elseif currentHammer == Accessories.HammerTexture.Shotgun then
 			local function fire(action, state, input)
 				if not cube or not isClientCube(cube) then
 					return nil
 				end
-				if action == actionNames.Shotgun.Fire and not cooldowns.shotgun then
+				if action == ActionNames.Shotgun.Fire and not AbilityCooldowns.Shotgun then
 					if state == Enum.UserInputState.Begin then
 						local arm = cube:FindFirstChild("Arm")
 						local shotgun = cube:FindFirstChild("Shotgun")
@@ -501,10 +491,10 @@ local function updateModifiers()
 						if _condition then
 							return nil
 						end
-						cooldowns.shotgun = true
+						AbilityCooldowns.Shotgun = true
 						task.delay(1.5, function()
-							cooldowns.shotgun = false
-							return cooldowns.shotgun
+							AbilityCooldowns.Shotgun = false
+							return AbilityCooldowns.Shotgun
 						end)
 						local velocity = cube.AssemblyAngularVelocity
 						local _rightVector = arm.CFrame.RightVector
@@ -584,14 +574,14 @@ local function updateModifiers()
 					end
 				end
 			end
-			ContextActionService:BindAction(actionNames.Shotgun.Fire, fire, true, Enum.KeyCode.E)
-			ContextActionService:SetTitle(actionNames.Shotgun.Fire, "Fire")
+			ContextActionService:BindAction(ActionNames.Shotgun.Fire, fire, true, Enum.KeyCode.E)
+			ContextActionService:SetTitle(ActionNames.Shotgun.Fire, "Fire")
 		elseif currentHammer == Accessories.HammerTexture.ExplosiveHammer then
 			local function explode(name, state, input)
 				if not cube or not isClientCube(cube) then
 					return nil
 				end
-				if name == actionNames.ExplosiveHammer.Explode and not cooldowns.explosiveHammer then
+				if name == ActionNames.ExplosiveHammer.Explode and not AbilityCooldowns.ExplosiveHammer then
 					if state == Enum.UserInputState.Begin then
 						local head = cube:FindFirstChild("Head")
 						local _result = head
@@ -602,34 +592,38 @@ local function updateModifiers()
 							return nil
 						end
 						local didSet = false
-						cooldowns.explosiveHammer = true
+						AbilityCooldowns.ExplosiveHammer = true
 						task.delay(2, function()
 							if not didSet then
 								didSet = true
-								cooldowns.explosiveHammer = false
+								AbilityCooldowns.ExplosiveHammer = false
 							end
 						end)
 						task.spawn(function()
 							waitUntil(function()
-								return not cooldowns.explosiveHammer
+								return not AbilityCooldowns.ExplosiveHammer
 							end)
 							if not didSet then
 								TweenService:Create(head, TweenInfo.new(0), {
 									Color = Color3.fromRGB(255, 0, 0),
-								})
+								}):Play()
 							end
 							didSet = true
 						end)
-						local velocity = cube.AssemblyAngularVelocity
+						head.Color = Color3.fromRGB(255, 175, 0)
+						TweenService:Create(head, TweenInfo.new(2, Enum.EasingStyle.Linear), {
+							Color = Color3.fromRGB(255, 0, 0),
+						}):Play()
+						local velocity = cube.AssemblyLinearVelocity
 						local _position = cube.Position
 						local _position_1 = head.Position
 						local force = (_position - _position_1).Unit * 600
-						cube.AssemblyAngularVelocity = velocity + force
+						cube.AssemblyLinearVelocity = velocity + force
 						local explosion = Instance.new("Explosion")
 						explosion.Position = head.Position
 						explosion.BlastRadius = 0
 						explosion.BlastPressure = 0
-						explosion.Parent = Workspace:FindFirstChild("Effects")
+						explosion.Parent = effectsFolder
 						for i = 1, 15 do
 							playSound("explosion", {
 								PlaybackSpeed = randomFloat(0.9, 1),
@@ -639,14 +633,14 @@ local function updateModifiers()
 					end
 				end
 			end
-			ContextActionService:BindAction(actionNames.ExplosiveHammer.Explode, explode, true, Enum.KeyCode.E)
-			ContextActionService:SetTitle(actionNames.ExplosiveHammer.Explode, "💥")
+			ContextActionService:BindAction(ActionNames.ExplosiveHammer.Explode, explode, true, Enum.KeyCode.E)
+			ContextActionService:SetTitle(ActionNames.ExplosiveHammer.Explode, "💥")
 		elseif currentHammer == Accessories.HammerTexture.InverterHammer then
 			local function invert(action, state, input)
 				if not cube or not isClientCube(cube) then
 					return nil
 				end
-				if action == actionNames.InverterHammer.Invert and not cooldowns.inverterHammer then
+				if action == ActionNames.InverterHammer.Invert and not AbilityCooldowns.InverterHammer then
 					if state == Enum.UserInputState.Begin then
 						local head = cube:FindFirstChild("Head")
 						local arm = cube:FindFirstChild("Arm")
@@ -665,23 +659,23 @@ local function updateModifiers()
 						if _condition then
 							return nil
 						end
-						cooldowns.inverterHammer = true
+						AbilityCooldowns.InverterHammer = true
 						task.delay(0.5, function()
-							cooldowns.inverterHammer = false
-							return cooldowns.inverterHammer
+							AbilityCooldowns.InverterHammer = false
+							return AbilityCooldowns.InverterHammer
 						end)
 						arm.Color = Color3.fromRGB(0, 0, 0)
 						TweenService:Create(arm, tweenTypes.linear.short, {
 							Color = Color3.fromRGB(7, 114, 172),
 						}):Play()
 						flippedGravity.Value = not flippedGravity.Value
-						ContextActionService:SetTitle(actionNames.InverterHammer.Invert, if flippedGravity.Value then "⬇️" else "⬆️")
+						ContextActionService:SetTitle(ActionNames.InverterHammer.Invert, if flippedGravity.Value then "⬇️" else "⬆️")
 						playSound("invert")
 					end
 				end
 			end
-			ContextActionService:BindAction(actionNames.InverterHammer.Invert, invert, true, Enum.KeyCode.E)
-			ContextActionService:SetTitle(actionNames.InverterHammer.Invert, "⬆️")
+			ContextActionService:BindAction(ActionNames.InverterHammer.Invert, invert, true, Enum.KeyCode.E)
+			ContextActionService:SetTitle(ActionNames.InverterHammer.Invert, "⬆️")
 		end
 	end
 end
@@ -691,7 +685,7 @@ for _, propeller in propellersFolder:GetChildren() do
 end
 propellersFolder.ChildAdded:Connect(newPropeller)
 player.AttributeChanged:Connect(function(attr)
-	if attr == "hammer_Texture" or attr == "client_settings_json" then
+	if attr == PlayerAttributes.HammerTexture or attr == PlayerAttributes.Client.SettingsJSON then
 		updateModifiers()
 	end
 end)
@@ -704,7 +698,7 @@ Events.ClientRagdoll.Event:Connect(function(seconds)
 	end
 end)
 RunService.Heartbeat:Connect(function(dt)
-	local _value = player:GetAttribute("in_main_menu")
+	local _value = player:GetAttribute(PlayerAttributes.Client.InMainMenu)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
 		return nil
 	end
@@ -731,7 +725,7 @@ RunService.Heartbeat:Connect(function(dt)
 				local altitudeString = _binding[2]
 				value = altitudeString
 			end
-			local _value_1 = player:GetAttribute("ERROR_LAND")
+			local _value_1 = player:GetAttribute(PlayerAttributes.InErrorLand)
 			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 				value = "--"
 			end
@@ -749,7 +743,7 @@ RunService.Heartbeat:Connect(function(dt)
 		if cubeHat == Accessories.CubeHat.AstronautHelmet then
 			Workspace.Gravity = 5
 		else
-			local _value_1 = currentHammer == Accessories.HammerTexture.Hammer404 or player:GetAttribute("ERROR_LAND")
+			local _value_1 = currentHammer == Accessories.HammerTexture.Hammer404 or player:GetAttribute(PlayerAttributes.InErrorLand)
 			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 				Workspace.Gravity /= 2
 			end
@@ -804,12 +798,12 @@ RunService.Heartbeat:Connect(function(dt)
 		local _value_1 = targetCube:GetAttribute("used_modifiers")
 		if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 			timerLabel.TextColor3 = Color3.fromRGB(179, 77, 77)
-			local _value_2 = targetPlayer:GetAttribute("finished")
+			local _value_2 = targetPlayer:GetAttribute(PlayerAttributes.CompletedGame)
 			if _value_2 ~= 0 and _value_2 == _value_2 and _value_2 ~= "" and _value_2 then
 				timerLabel.TextColor3 = Color3.fromRGB(255, 128, 128)
 			end
 		else
-			local _value_2 = targetPlayer:GetAttribute("finished")
+			local _value_2 = targetPlayer:GetAttribute(PlayerAttributes.CompletedGame)
 			if _value_2 ~= 0 and _value_2 == _value_2 and _value_2 ~= "" and _value_2 then
 				timerLabel.TextColor3 = Color3.fromRGB(255, 255, 128)
 			else
@@ -1142,8 +1136,7 @@ RunService.Heartbeat:Connect(function(dt)
 				maxRange = 8.5
 			elseif currentHammer == Accessories.HammerTexture.BuilderHammer then
 				maxRange = 15
-				local _value_1 = player:GetAttribute("place_cooldown")
-				if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
+				if AbilityCooldowns.BuildingHammer then
 					head.Color = Color3.fromRGB(255, 128, 128)
 				else
 					head.Color = Color3.fromRGB(26, 26, 26)
@@ -1152,11 +1145,7 @@ RunService.Heartbeat:Connect(function(dt)
 				part.Anchored = true
 				part.CanCollide = false
 				part.Position = getBuildPosition(head.CFrame)
-				local _condition_7 = (player:GetAttribute("build_type"))
-				if _condition_7 == nil then
-					_condition_7 = 0
-				end
-				part.Size = getBuildSize(_condition_7)
+				part.Size = getBuildSize()
 				part.Transparency = 0.7
 				part.Color = Color3.fromRGB(0, 0, 0)
 				part.TopSurface = Enum.SurfaceType.Smooth
@@ -1176,7 +1165,7 @@ RunService.Heartbeat:Connect(function(dt)
 				maxRange = 18
 			end
 		end
-		local _value_1 = player:GetAttribute("ERROR_LAND")
+		local _value_1 = player:GetAttribute(PlayerAttributes.InErrorLand)
 		if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 			armAlignPosition.MaxForce = 6250
 			armAlignPosition.Responsiveness = 40
@@ -1262,27 +1251,27 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 	end
 end)
-goalPart.Touched:Connect(function(otherPart)
+winArea.Touched:Connect(function(otherPart)
 	local _condition = otherPart:GetAttribute("isCube")
 	if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
 		_condition = isClientCube(otherPart)
 		if _condition then
-			local _value = player:GetAttribute("finished")
+			local _value = player:GetAttribute(PlayerAttributes.CompletedGame)
 			_condition = not (_value ~= 0 and _value == _value and _value ~= "" and _value)
 		end
 	end
 	if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
-		player:SetAttribute("finished", true)
+		player:SetAttribute(PlayerAttributes.CompletedGame, true)
 		local totalTime = getCubeTime(otherPart)
-		print("[src/client/cube.client.ts:918]", `Completed game in {totalTime} seconds`)
+		print("[src/client/cube.client.ts:929]", `Completed game in {totalTime} seconds`)
 		Events.CompleteGame:FireServer(totalTime)
 		Events.MakeReplayEvent:Fire(string.format("win,%d", totalTime * 1000))
 	end
 end)
 Events.ClientReset.Event:Connect(function()
-	player:SetAttribute("finished", nil)
-	for key in pairs(cooldowns) do
-		cooldowns[key] = false
+	player:SetAttribute(PlayerAttributes.CompletedGame, nil)
+	for key in pairs(AbilityCooldowns) do
+		AbilityCooldowns[key] = false
 	end
 	ragdollTime = 0
 end)
@@ -1301,7 +1290,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	end
 end)
 RunService.Heartbeat:Connect(function(step)
-	local _value = not cube or player:GetAttribute("ERROR_LAND")
+	local _value = not cube or player:GetAttribute(PlayerAttributes.InErrorLand)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
 		return nil
 	end

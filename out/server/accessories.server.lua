@@ -6,7 +6,9 @@ local Workspace = _services.Workspace
 local Players = _services.Players
 local TweenService = _services.TweenService
 local Debris = _services.Debris
-local Accessories = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils").Accessories
+local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
+local Accessories = _utils.Accessories
+local PlayerAttributes = _utils.PlayerAttributes
 local _accessory_loader = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "accessory_loader")
 local reloadAccessories = _accessory_loader.reloadAccessories
 local loadAccessories = _accessory_loader.loadAccessories
@@ -33,7 +35,7 @@ Events.LoadPlayerAccessories.Event:Connect(function(player, cube)
 		return nil
 	end
 	while true do
-		local _value = player:GetAttribute("DATA_LOADED")
+		local _value = player:GetAttribute(PlayerAttributes.HasDataLoaded)
 		if not not (_value ~= 0 and _value == _value and _value ~= "" and _value) then
 			break
 		end
@@ -44,10 +46,10 @@ Events.LoadPlayerAccessories.Event:Connect(function(player, cube)
 	end
 	local hasRemoveFunction = (removeFunctions[player.UserId] ~= nil)
 	local hammerRemoveFunction = loadAccessories(cube, {
-		face = player:GetAttribute("cube_Face"),
-		hammer = player:GetAttribute("hammer_Texture"),
-		hat = player:GetAttribute("cube_Hat"),
-		aura = player:GetAttribute("cube_Aura"),
+		face = player:GetAttribute(PlayerAttributes.CubeFace),
+		hammer = player:GetAttribute(PlayerAttributes.HammerTexture),
+		hat = player:GetAttribute(PlayerAttributes.CubeHat),
+		aura = player:GetAttribute(PlayerAttributes.CubeAura),
 	}, player, if hasRemoveFunction then removeFunctions[player.UserId] else nil)
 	if removeFunctions[player.UserId] ~= nil then
 		removeFunctions[player.UserId] = nil
@@ -58,7 +60,7 @@ Events.LoadPlayerAccessories.Event:Connect(function(player, cube)
 	reloadAccessories(cube, player)
 end)
 Events.BuildingHammerPlace.OnServerEvent:Connect(function(player, position, buildType)
-	local _condition = player:GetAttribute("hammer_Texture") ~= Accessories.HammerTexture.BuilderHammer
+	local _condition = player:GetAttribute(PlayerAttributes.HammerTexture) ~= Accessories.HammerTexture.BuilderHammer
 	if not _condition then
 		local _position = position
 		_condition = not (typeof(_position) == "Vector3")
@@ -92,7 +94,7 @@ Events.BuildingHammerPlace.OnServerEvent:Connect(function(player, position, buil
 		return nil
 	end
 	local part = Instance.new("Part")
-	part.Name = `part\{player.UserId\}`
+	part.Name = `part{player.UserId}`
 	part.Anchored = true
 	part.Position = position
 	part.BrickColor = BrickColor.random()

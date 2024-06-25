@@ -9,7 +9,8 @@ import {
 } from '@rbxts/services';
 
 import {
-	Accessories
+	Accessories,
+	PlayerAttributes
 } from 'shared/utils';
 
 import { reloadAccessories, loadAccessories } from 'shared/accessory_loader';
@@ -27,7 +28,7 @@ const removeFunctions: Record<number, () => void | undefined> = {  };
 Events.LoadPlayerAccessories.Event.Connect((player, cube) => {
     if (!typeIs(player, 'Instance') || !player.IsA('Player') || !typeIs(cube, 'Instance') || !cube.IsA('BasePart')) return;
     
-	while (!player.GetAttribute('DATA_LOADED')) task.wait();
+	while (!player.GetAttribute(PlayerAttributes.HasDataLoaded)) task.wait();
 	
     if (cube.Parent !== Workspace) return;
 	
@@ -36,10 +37,10 @@ Events.LoadPlayerAccessories.Event.Connect((player, cube) => {
 	const hammerRemoveFunction = loadAccessories(
 		cube,
 		{
-			face: player.GetAttribute('cube_Face') as (string | undefined),
-			hammer: player.GetAttribute('hammer_Texture') as (string | undefined),
-			hat: player.GetAttribute('cube_Hat') as (string | undefined),
-			aura: player.GetAttribute('cube_Aura') as (string | undefined)
+			face: player.GetAttribute(PlayerAttributes.CubeFace) as (string | undefined),
+			hammer: player.GetAttribute(PlayerAttributes.HammerTexture) as (string | undefined),
+			hat: player.GetAttribute(PlayerAttributes.CubeHat) as (string | undefined),
+			aura: player.GetAttribute(PlayerAttributes.CubeAura) as (string | undefined)
 		},
 		player,
 		hasRemoveFunction ? removeFunctions[player.UserId] : undefined
@@ -52,14 +53,14 @@ Events.LoadPlayerAccessories.Event.Connect((player, cube) => {
 });
 
 Events.BuildingHammerPlace.OnServerEvent.Connect((player, position, buildType) => {
-	if (player.GetAttribute('hammer_Texture') !== Accessories.HammerTexture.BuilderHammer || !typeIs(position, 'Vector3') || !typeIs(buildType, 'number')) return;
+	if (player.GetAttribute(PlayerAttributes.HammerTexture) !== Accessories.HammerTexture.BuilderHammer || !typeIs(position, 'Vector3') || !typeIs(buildType, 'number')) return;
 	
 	const cube = Workspace.FindFirstChild(`cube${player.UserId}`);
 	const head = cube?.FindFirstChild('Head')
 	if (!cube?.IsA('BasePart') || !head?.IsA('BasePart')) return;
 	
 	const part = new Instance('Part');
-	part.Name = `part{player.UserId}`;
+	part.Name = `part${player.UserId}`;
 	part.Anchored = true;
 	part.Position = position;
 	part.BrickColor = BrickColor.random();

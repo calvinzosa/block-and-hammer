@@ -15,6 +15,8 @@ import {
 	convertStudsToMeters,
 	roundDecimalPlaces,
 	getHammerTexture,
+	PlayerAttributes,
+	getTimeUnits,
 	isClientCube,
 	GameSetting,
 	Accessories,
@@ -28,7 +30,6 @@ import {
 	Settings,
 	numLerp,
 	getTime,
-	getTimeUnits,
 } from 'shared/utils';
 
 const Events = {
@@ -61,28 +62,33 @@ const mapFolder = Workspace.WaitForChild('Map');
 const propellersFolder = mapFolder.WaitForChild('Propellers') as Folder;
 const mudParts = mapFolder.WaitForChild('MudParts');
 const effectsFolder = Workspace.WaitForChild('Effects') as BasePart;
-const goalPart = mapFolder.WaitForChild('end_area') as BasePart;
+const winArea = mapFolder.WaitForChild('WinArea') as BasePart;
 const wallPlane = Workspace.WaitForChild('Wall') as BasePart;
 const flippedGravity = ReplicatedStorage.WaitForChild('flipped_gravity') as BoolValue;
 const mouseVisual = Workspace.WaitForChild('MouseVisual') as BasePart;
 const modifierDisablers = Workspace.WaitForChild('ForceDisableModifiers') as BasePart;
 
-const cooldowns = {
-    'explosiveHammer': false,
-    'shotgun': false,
-    'inverterHammer': false
+const AbilityCooldowns = {
+    ExplosiveHammer: false,
+    Shotgun: false,
+    InverterHammer: false,
+	BuildingHammer: false,
 };
 
-const actionNames = {
-    'BuildingHammer': { 'Place': 'building_hammer-place', 'Switch': 'building_hammer-switch' },
-    'GrapplingHammer': { 'Activate': 'grappling_hammer-activate', 'Scroll': 'grappling_hammer-scroll' },
-    'ExplosiveHammer': { 'Explode': 'explosive_hammer-explode' },
-    'Shotgun': { 'Fire': 'shotgun-fire' },
-    'InverterHammer': { 'Invert': 'inverter_hammer-invert' }
+const ActionNames = {
+    BuildingHammer: { Place: 'building_hammer-place', Switch: 'building_hammer-switch' },
+    GrapplingHammer: { Activate: 'grappling_hammer-activate', Scroll: 'grappling_hammer-scroll' },
+    ExplosiveHammer: { Explode: 'explosive_hammer-explode' },
+    Shotgun: { Fire: 'shotgun-fire' },
+    InverterHammer: { Invert: 'inverter_hammer-invert' },
 };
 
-const abilityObjects = {
-    'grapplingHammerRope': undefined as (Instance | undefined)
+const AbilityObjects = {
+    GrapplingHammerRope: undefined as (Instance | undefined),
+};
+
+const AbilityVariables = {
+	BuildingHammer: { BuildType: 0 },
 };
 
 const cachedPropellers: Model[] = [  ];
@@ -206,15 +212,17 @@ function mouseRaycast() {
 function getBuildPosition(headCFrame: CFrame) {
 	let offset: Vector3 = new Vector3(0, 0, 0);
     
-	const buildType = player.GetAttribute('build_type') ?? 0;
+	const buildType = AbilityVariables.BuildingHammer.BuildType;
 	if (buildType === 0) offset = headCFrame.LookVector.mul(new Vector3(1, 2, 1));
     else if (buildType === 1) offset = headCFrame.LookVector.mul(new Vector3(2, 1, 1));
 	
 	return headCFrame.Position.add(offset);
 }
 
-function getBuildSize(buildType: number) {
+function getBuildSize() {
 	let size = Vector3.zero;
+	
+	const buildType = AbilityVariables.BuildingHammer.BuildType;
     if (buildType === 0) size = new Vector3(7, 1, 7);
     else if (buildType === 1) size = new Vector3(1, 7, 7);
     
@@ -222,15 +230,15 @@ function getBuildSize(buildType: number) {
 }
 
 function updateModifiers() {
-    for (const [ hammer, actions ] of pairs(actionNames)) {
+    for (const [ hammer, actions ] of pairs(ActionNames)) {
         for (const [ abilityName, actionName ] of pairs(actions)) {
             ContextActionService.UnbindAction(actionName as string);
         }
     }
 	
-    if (abilityObjects.grapplingHammerRope !== undefined) {
-        abilityObjects.grapplingHammerRope.Destroy();
-        abilityObjects.grapplingHammerRope = undefined;
+    if (AbilityObjects.GrapplingHammerRope !== undefined) {
+        AbilityObjects.GrapplingHammerRope.Destroy();
+        AbilityObjects.GrapplingHammerRope = undefined;
     }
 	
 	const currentHammer = getHammerTexture();
@@ -240,16 +248,16 @@ function updateModifiers() {
             function place(action: string, state: Enum.UserInputState, input: InputObject) {
                 if (!cube) return;
                 
-                if (action === actionNames.BuildingHammer.Place) {
-                    if (state === Enum.UserInputState.Begin && !player.GetAttribute('place_cooldown')) {
+                if (action === ActionNames.BuildingHammer.Place) {
+                    if (state === Enum.UserInputState.Begin && !AbilityCooldowns.BuildingHammer) {
                         const head = cube.FindFirstChild('Head') as (BasePart | undefined);
                         if (!head?.IsA('BasePart')) return;
                         
                         head.AssemblyAngularVelocity = Vector3.zero;
-                        Events.BuildingHammerPlace.FireServer(getBuildPosition(head.CFrame), player.GetAttribute('build_type') ?? 0);
+                        Events.BuildingHammerPlace.FireServer(getBuildPosition(head.CFrame), AbilityVariables.BuildingHammer.BuildType);
                         
-                        player.SetAttribute('place_cooldown', true);
-                        task.delay(0.4, () => player.SetAttribute('place_cooldown', undefined));
+						AbilityCooldowns.BuildingHammer = true;
+                        task.delay(0.4, () => AbilityCooldowns.BuildingHammer = false);
                     }
                 }
             }
@@ -257,31 +265,31 @@ function updateModifiers() {
             function switchType(action: string, state: Enum.UserInputState, input: InputObject) {
                 if (!cube) return;
                 
-                if (action === actionNames.BuildingHammer.Switch) {
+                if (action === ActionNames.BuildingHammer.Switch) {
                     if (state === Enum.UserInputState.Begin) {
-                        let newType = ((player.GetAttribute('build_type') as number | undefined) ?? 0) + 1;
+                        let newType = AbilityVariables.BuildingHammer.BuildType + 1;
                         if (newType > 1) newType = 0;
                         
-                        player.SetAttribute('build_type', newType);
+						AbilityVariables.BuildingHammer.BuildType = newType;
                     }
                 }
             }
             
-            ContextActionService.BindAction(actionNames.BuildingHammer.Place, place, true, Enum.KeyCode.E);
-            ContextActionService.SetTitle(actionNames.BuildingHammer.Place, 'Place');
+            ContextActionService.BindAction(ActionNames.BuildingHammer.Place, place, true, Enum.KeyCode.E);
+            ContextActionService.SetTitle(ActionNames.BuildingHammer.Place, 'Place');
             
-            ContextActionService.BindAction(actionNames.BuildingHammer.Switch, switchType, true, Enum.KeyCode.E);
-            ContextActionService.SetTitle(actionNames.BuildingHammer.Switch, 'switch');
+            ContextActionService.BindAction(ActionNames.BuildingHammer.Switch, switchType, true, Enum.KeyCode.E);
+            ContextActionService.SetTitle(ActionNames.BuildingHammer.Switch, 'switch');
         } else if (currentHammer === Accessories.HammerTexture.GrapplingHammer) {
             function activate(action: string, state: Enum.UserInputState, input: InputObject) {
                 if (!cube || !isClientCube(cube)) return;
                 
-                if (abilityObjects.grapplingHammerRope) {
-                    abilityObjects.grapplingHammerRope.Destroy();
-                    abilityObjects.grapplingHammerRope = undefined;
+                if (AbilityObjects.GrapplingHammerRope) {
+                    AbilityObjects.GrapplingHammerRope.Destroy();
+                    AbilityObjects.GrapplingHammerRope = undefined;
                 }
                 
-                if (action === actionNames.GrapplingHammer.Activate) {
+                if (action === ActionNames.GrapplingHammer.Activate) {
                     const head = cube.FindFirstChild('Head');
                     const axisLock = Workspace.FindFirstChild('AxisLock');
                     const rightAttachment = head?.FindFirstChild('RightAttachment');
@@ -319,7 +327,7 @@ function updateModifiers() {
                         rope.Attachment0 = rightAttachment;
                         rope.Attachment1 = target;
                         rope.Parent = head;
-                        abilityObjects.grapplingHammerRope = rope;
+                        AbilityObjects.GrapplingHammerRope = rope;
                         
                         head.Massless = false;
                         
@@ -333,10 +341,10 @@ function updateModifiers() {
             function scroll(action: string, state: Enum.UserInputState, input: InputObject) {
                 if (!cube || !isClientCube(cube)) return;
                 
-                if (action === actionNames.GrapplingHammer.Scroll) {
+                if (action === ActionNames.GrapplingHammer.Scroll) {
                     if (state === Enum.UserInputState.Change) {
                         const head = cube.FindFirstChild('Head');
-                        const rope = abilityObjects.grapplingHammerRope;
+                        const rope = AbilityObjects.GrapplingHammerRope;
                         if (!head || !head.IsA('BasePart') || !rope || !rope.IsA('RopeConstraint')) return;
                         
                         let delta = math.sign(input.Position.Z);
@@ -348,22 +356,22 @@ function updateModifiers() {
                 }
             }
             
-            ContextActionService.BindAction(actionNames.GrapplingHammer.Activate, activate, true, Enum.KeyCode.E);
-            ContextActionService.SetTitle(actionNames.GrapplingHammer.Activate, 'Grapple');
+            ContextActionService.BindAction(ActionNames.GrapplingHammer.Activate, activate, true, Enum.KeyCode.E);
+            ContextActionService.SetTitle(ActionNames.GrapplingHammer.Activate, 'Grapple');
             
-            ContextActionService.BindAction(actionNames.GrapplingHammer.Activate, scroll, false, Enum.UserInputType.MouseWheel);
+            ContextActionService.BindAction(ActionNames.GrapplingHammer.Activate, scroll, false, Enum.UserInputType.MouseWheel);
         } else if (currentHammer === Accessories.HammerTexture.Shotgun) {
             function fire(action: string, state: Enum.UserInputState, input: InputObject) {
                 if (!cube || !isClientCube(cube)) return;
                 
-                if (action === actionNames.Shotgun.Fire && !cooldowns.shotgun) {
+                if (action === ActionNames.Shotgun.Fire && !AbilityCooldowns.Shotgun) {
                     if (state === Enum.UserInputState.Begin) {
                         const arm = cube.FindFirstChild('Arm')
                         const shotgun = cube.FindFirstChild('Shotgun');
                         if (!arm?.IsA('BasePart') || !shotgun?.IsA('Model')) return;
                         
-                        cooldowns.shotgun = true;
-                        task.delay(1.5, () => cooldowns.shotgun = false);
+                        AbilityCooldowns.Shotgun = true;
+                        task.delay(1.5, () => AbilityCooldowns.Shotgun = false);
                         
                         const velocity = cube.AssemblyAngularVelocity;
                         const force = arm.CFrame.RightVector.mul(Workspace.Gravity * -0.7);
@@ -408,76 +416,79 @@ function updateModifiers() {
                 }
             }
             
-            ContextActionService.BindAction(actionNames.Shotgun.Fire, fire, true, Enum.KeyCode.E);
-            ContextActionService.SetTitle(actionNames.Shotgun.Fire, 'Fire');
+            ContextActionService.BindAction(ActionNames.Shotgun.Fire, fire, true, Enum.KeyCode.E);
+            ContextActionService.SetTitle(ActionNames.Shotgun.Fire, 'Fire');
         } else if (currentHammer === Accessories.HammerTexture.ExplosiveHammer) {
             function explode(name: string, state: Enum.UserInputState, input: InputObject) {
                 if (!cube || !isClientCube(cube)) return;
                 
-                if (name === actionNames.ExplosiveHammer.Explode && !cooldowns.explosiveHammer) {
+                if (name === ActionNames.ExplosiveHammer.Explode && !AbilityCooldowns.ExplosiveHammer) {
                     if (state === Enum.UserInputState.Begin) {
                         const head = cube.FindFirstChild('Head');
                         if (!head?.IsA('BasePart')) return;
                         
                         let didSet = false;
-                        cooldowns.explosiveHammer = true;
+                        AbilityCooldowns.ExplosiveHammer = true;
                         task.delay(2, () => {
                             if (!didSet) {
                                 didSet = true;
-                                cooldowns.explosiveHammer = false;
+                                AbilityCooldowns.ExplosiveHammer = false;
                             }
                         });
                         
                         task.spawn(() => {
-                            waitUntil(() => !cooldowns.explosiveHammer);
+                            waitUntil(() => !AbilityCooldowns.ExplosiveHammer);
                             
-                            if (!didSet) TweenService.Create(head, new TweenInfo(0), { Color: Color3.fromRGB(255, 0, 0) });
+                            if (!didSet) TweenService.Create(head, new TweenInfo(0), { Color: Color3.fromRGB(255, 0, 0) }).Play();
                             didSet = true;
                         });
+						
+						head.Color = Color3.fromRGB(255, 175, 0);
+						TweenService.Create(head, new TweenInfo(2, Enum.EasingStyle.Linear), { Color: Color3.fromRGB(255, 0, 0) }).Play();
                         
-                        const velocity = cube.AssemblyAngularVelocity;
+                        const velocity = cube.AssemblyLinearVelocity;
                         const force = cube.Position.sub(head.Position).Unit.mul(600);
-                        cube.AssemblyAngularVelocity = velocity.add(force);
+                        cube.AssemblyLinearVelocity = velocity.add(force);
                         
                         const explosion = new Instance('Explosion');
                         explosion.Position = head.Position;
                         explosion.BlastRadius = 0;
                         explosion.BlastPressure = 0;
-                        explosion.Parent = Workspace.FindFirstChild('Effects');
+                        explosion.Parent = effectsFolder;
                         
 						for (const i of $range(1, 15)) playSound('explosion', { PlaybackSpeed: randomFloat(0.9, 1), Volume: head.AssemblyAngularVelocity.Magnitude / 50 });
                     }
                 }
             }
             
-            ContextActionService.BindAction(actionNames.ExplosiveHammer.Explode, explode, true, Enum.KeyCode.E);
-            ContextActionService.SetTitle(actionNames.ExplosiveHammer.Explode, '💥');
+            ContextActionService.BindAction(ActionNames.ExplosiveHammer.Explode, explode, true, Enum.KeyCode.E);
+            ContextActionService.SetTitle(ActionNames.ExplosiveHammer.Explode, '💥');
         } else if (currentHammer === Accessories.HammerTexture.InverterHammer) {
             function invert(action: string, state: Enum.UserInputState, input: InputObject) {
                 if (!cube || !isClientCube(cube)) return;
                 
-                if (action === actionNames.InverterHammer.Invert && !cooldowns.inverterHammer) {
+                if (action === ActionNames.InverterHammer.Invert && !AbilityCooldowns.InverterHammer) {
                     if (state === Enum.UserInputState.Begin) {
                         const head = cube.FindFirstChild('Head');
                         const arm = cube.FindFirstChild('Arm');
                         if (!head?.IsA('BasePart') || !arm?.IsA('BasePart')) return;
                         
-                        cooldowns.inverterHammer = true;
-                        task.delay(0.5, () => cooldowns.inverterHammer = false);
+                        AbilityCooldowns.InverterHammer = true;
+                        task.delay(0.5, () => AbilityCooldowns.InverterHammer = false);
                         
                         arm.Color = Color3.fromRGB(0, 0, 0);
                         TweenService.Create(arm, tweenTypes.linear.short, { Color: Color3.fromRGB(7, 114, 172) }).Play();
                         
                         flippedGravity.Value = !flippedGravity.Value;
-                        ContextActionService.SetTitle(actionNames.InverterHammer.Invert, flippedGravity.Value ? '⬇️' : '⬆️');
+                        ContextActionService.SetTitle(ActionNames.InverterHammer.Invert, flippedGravity.Value ? '⬇️' : '⬆️');
                         
                         playSound('invert');
                     }
                 }
             }
 			
-			ContextActionService.BindAction(actionNames.InverterHammer.Invert, invert, true, Enum.KeyCode.E)
-			ContextActionService.SetTitle(actionNames.InverterHammer.Invert, '⬆️')
+			ContextActionService.BindAction(ActionNames.InverterHammer.Invert, invert, true, Enum.KeyCode.E)
+			ContextActionService.SetTitle(ActionNames.InverterHammer.Invert, '⬆️')
         }
     }
 }
@@ -488,7 +499,7 @@ for (const propeller of propellersFolder.GetChildren()) task.spawn(newPropeller,
 propellersFolder.ChildAdded.Connect(newPropeller);
 
 player.AttributeChanged.Connect((attr) => {
-    if (attr === 'hammer_Texture' || attr === 'client_settings_json') updateModifiers();
+    if (attr === PlayerAttributes.HammerTexture || attr === PlayerAttributes.Client.SettingsJSON) updateModifiers();
 });
 
 Events.ClientRagdoll.Event.Connect((seconds:number) => {
@@ -500,7 +511,7 @@ Events.ClientRagdoll.Event.Connect((seconds:number) => {
 });
 
 RunService.Heartbeat.Connect((dt) => {
-	if (player.GetAttribute('in_main_menu')) return;
+	if (player.GetAttribute(PlayerAttributes.Client.InMainMenu)) return;
 	
 	for (const otherPlayer of Players.GetPlayers()) {
 		const altitudeValue = otherPlayer.FindFirstChild('leaderstats')?.FindFirstChild('Altitude');
@@ -513,7 +524,7 @@ RunService.Heartbeat.Connect((dt) => {
 				value = altitudeString;
 			}
 			
-			if (player.GetAttribute('ERROR_LAND')) value = '--';
+			if (player.GetAttribute(PlayerAttributes.InErrorLand)) value = '--';
 			
 			altitudeValue.Value = value;
 		}
@@ -526,7 +537,7 @@ RunService.Heartbeat.Connect((dt) => {
 	if (getSetting(GameSetting.Modifiers)) {
 		if (cubeHat === Accessories.CubeHat.AstronautHelmet) {
 			Workspace.Gravity = 5;
-		} else if (currentHammer === Accessories.HammerTexture.Hammer404 || player.GetAttribute('ERROR_LAND')) {
+		} else if (currentHammer === Accessories.HammerTexture.Hammer404 || player.GetAttribute(PlayerAttributes.InErrorLand)) {
 			Workspace.Gravity /= 2;
 		}
 	}
@@ -562,8 +573,8 @@ RunService.Heartbeat.Connect((dt) => {
 		timerLabel.TextColor3 = Color3.fromRGB(255, 255, 255);
 		if (targetCube.GetAttribute('used_modifiers')) {
 			timerLabel.TextColor3 = Color3.fromRGB(179, 77, 77);
-			if (targetPlayer.GetAttribute('finished')) timerLabel.TextColor3 = Color3.fromRGB(255, 128, 128);
-		} else if (targetPlayer.GetAttribute('finished')) {
+			if (targetPlayer.GetAttribute(PlayerAttributes.CompletedGame)) timerLabel.TextColor3 = Color3.fromRGB(255, 128, 128);
+		} else if (targetPlayer.GetAttribute(PlayerAttributes.CompletedGame)) {
 			timerLabel.TextColor3 = Color3.fromRGB(255, 255, 128);
 		} else {
 			const timeValue = targetPlayer.FindFirstChild('leaderstats')?.FindFirstChild('Time');
@@ -778,14 +789,14 @@ RunService.Heartbeat.Connect((dt) => {
 			} else if (currentHammer === Accessories.HammerTexture.BuilderHammer) {
 				maxRange = 15;
 				
-				if (player.GetAttribute('place_cooldown')) head.Color = Color3.fromRGB(255, 128, 128);
+				if (AbilityCooldowns.BuildingHammer) head.Color = Color3.fromRGB(255, 128, 128);
 				else head.Color = Color3.fromRGB(26, 26, 26);
 				
 				const part = new Instance('Part');
 				part.Anchored = true;
 				part.CanCollide = false;
 				part.Position = getBuildPosition(head.CFrame);
-				part.Size = getBuildSize((player.GetAttribute('build_type') as number | undefined) ?? 0);
+				part.Size = getBuildSize();
 				part.Transparency = 0.7;
 				part.Color = Color3.fromRGB(0, 0, 0);
 				part.TopSurface = Enum.SurfaceType.Smooth;
@@ -807,7 +818,7 @@ RunService.Heartbeat.Connect((dt) => {
 			}
 		}
 		
-		if (player.GetAttribute('ERROR_LAND')) {
+		if (player.GetAttribute(PlayerAttributes.InErrorLand)) {
 			armAlignPosition.MaxForce = 6250;
 			armAlignPosition.Responsiveness = 40;
 			armAlignOrientation.Responsiveness = 100;
@@ -910,9 +921,9 @@ RunService.Heartbeat.Connect((dt) => {
 	}
 });
 
-goalPart.Touched.Connect((otherPart) => {
-	if (otherPart.GetAttribute('isCube') && isClientCube(otherPart) && !player.GetAttribute('finished')) {
-		player.SetAttribute('finished', true);
+winArea.Touched.Connect((otherPart) => {
+	if (otherPart.GetAttribute('isCube') && isClientCube(otherPart) && !player.GetAttribute(PlayerAttributes.CompletedGame)) {
+		player.SetAttribute(PlayerAttributes.CompletedGame, true);
 		
 		const [ totalTime ] = getCubeTime(otherPart);
 		$print(`Completed game in ${totalTime} seconds`);
@@ -923,9 +934,8 @@ goalPart.Touched.Connect((otherPart) => {
 });
 
 Events.ClientReset.Event.Connect(() => {
-	player.SetAttribute('finished', undefined);
-	
-	for (const [ key ] of pairs(cooldowns)) cooldowns[key] = false;
+	player.SetAttribute(PlayerAttributes.CompletedGame, undefined);
+	for (const [ key ] of pairs(AbilityCooldowns)) AbilityCooldowns[key] = false;
 	
 	ragdollTime = 0;
 });
@@ -944,7 +954,7 @@ UserInputService.InputBegan.Connect((input, processed) => {
 });
 
 RunService.Heartbeat.Connect((step) => {
-	if (!cube || player.GetAttribute('ERROR_LAND')) return;
+	if (!cube || player.GetAttribute(PlayerAttributes.InErrorLand)) return;
 	
 	const slowdownFactor = math.clamp(1 - (step * 30), 0.01, 1);
 	

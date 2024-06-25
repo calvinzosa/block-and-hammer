@@ -13,6 +13,7 @@ import {
     Accessories,
 	giveBadge,
 	getTime,
+	getTimeUnits,
 } from 'shared/utils';
 
 import { reloadAccessories } from 'shared/accessory_loader';
@@ -20,18 +21,23 @@ import { Admins } from 'shared/admins';
 
 const Events = {
     'SetModifiersSetting': ReplicatedStorage.FindFirstChild('SetModifiersSetting') as RemoteEvent,
+	'SaySystemMessage': ReplicatedStorage.FindFirstChild('SaySystemMessage') as RemoteEvent,
     'AddRagdollCount': ReplicatedStorage.FindFirstChild('AddRagdollCount') as RemoteEvent,
     'SetDeviceType': ReplicatedStorage.FindFirstChild('SetDeviceType') as RemoteEvent,
+	'CompleteGame': ReplicatedStorage.FindFirstChild('CompleteGame') as RemoteEvent,
+	'GroundImpact': ReplicatedStorage.FindFirstChild('GroundImpact') as RemoteEvent,
     'FlipGravity': ReplicatedStorage.FindFirstChild('FlipGravity') as RemoteEvent,
 	'Reset': ReplicatedStorage.FindFirstChild('Reset') as RemoteEvent,
 	
 	'LoadPlayerAccessories': ReplicatedStorage.FindFirstChild('LoadPlayerAccessories') as BindableEvent,
+	'UpdatePlayerTime': ReplicatedStorage.FindFirstChild('UpdatePlayerTime') as BindableEvent,
 	'ForceReset': ReplicatedStorage.FindFirstChild('ForceReset') as BindableEvent,
 };
 
+const badgeDebounce: Record<number, boolean> = {  };
+
 const mapFolder = Workspace.FindFirstChild('Map') as Folder;
 const trappedArea = mapFolder.FindFirstChild('trapped_area') as BasePart;
-
 const cubeTemplate = ReplicatedStorage.FindFirstChild('Cube') as BasePart;
 
 function createCube(player: Player, firstTime: boolean) {
@@ -50,7 +56,7 @@ function createCube(player: Player, firstTime: boolean) {
 	
     (overheadGui.FindFirstChild('Username') as TextLabel).Text = `${player.DisplayName} (@${player.Name})`;
     
-    const device = player.GetAttribute('device');
+    const device = player.GetAttribute(PlayerAttributes.Device);
     if (device === 0) (icons.FindFirstChild('Desktop') as ImageLabel).Visible = true;
     else if (device === 1) (icons.FindFirstChild('Mobile') as ImageLabel).Visible = true;
 	
@@ -61,9 +67,9 @@ function createCube(player: Player, firstTime: boolean) {
 	
 	icons.Visible = true;
 	
-	if (player.GetAttribute('modifiers')) cube.SetAttribute('used_modifiers', true);
+	if (player.GetAttribute(PlayerAttributes.HasModifiers)) cube.SetAttribute('used_modifiers', true);
 	
-	player.SetAttribute('total_time', undefined);
+	player.SetAttribute(PlayerAttributes.TotalTime, undefined);
 	cube.SetAttribute('start_time', getTime());
 	cube.Parent = Workspace;
 	
@@ -80,10 +86,10 @@ function createCube(player: Player, firstTime: boolean) {
 		if (otherPart === trappedArea) giveBadge(player, 2146259996);
 	});
 	
-	if (!firstTime) player.SetAttribute('finished', false);
-	while (!player.GetAttribute('DATA_LOADED')) task.wait();
+	if (!firstTime) player.SetAttribute(PlayerAttributes.CompletedGame, false);
+	while (!player.GetAttribute(PlayerAttributes.HasDataLoaded)) task.wait();
 	
-	const cubeColor = player.GetAttribute('CUBE_COLOR')
+	const cubeColor = player.GetAttribute(PlayerAttributes.CubeColor);
 	if (typeIs(cubeColor, 'Color3')) cube.Color = cubeColor;
 	
 	Events.LoadPlayerAccessories.Fire(player, cube);
@@ -105,7 +111,7 @@ function playerAdded(player: Player) {
 	task.spawn(() => {
 		if (!BadgeService.UserHasBadgeAsync(player.UserId, 1967915839777317)) {
 			giveBadge(player, 1967915839777317);
-			player.SetAttribute('isNew', true);
+			player.SetAttribute(PlayerAttributes.IsNew, true);
 		}
 		
 		giveBadge(player, 4410861265533965);
@@ -131,19 +137,19 @@ function resetPlayer(player: Player, fullReset: any) {
 		cube.SetAttribute('finishTotalTime', undefined);
 		cube.SetAttribute('destroyed_counter', 0);
 		
-		player.SetAttribute('finished', undefined);
-		if (!player.GetAttribute('modifiers')) cube.SetAttribute('used_modifiers', undefined);
+		player.SetAttribute(PlayerAttributes.CompletedGame, undefined);
+		if (!player.GetAttribute(PlayerAttributes.HasModifiers)) cube.SetAttribute('used_modifiers', undefined);
 		
 		cube.SetAttribute('start_time', getTime());
 	} else createCube(player, false);
 	
-	player.SetAttribute('totalRestarts', (player.GetAttribute('totalRestarts') as number ?? 0) + 1);
+	player.SetAttribute(PlayerAttributes.TotalRestarts, (player.GetAttribute(PlayerAttributes.TotalRestarts) as number ?? 0) + 1);
 }
 
 Events.SetModifiersSetting.OnServerEvent.Connect((player, isEnabled) => {
 	if (!typeIs(isEnabled, 'boolean')) return;
 	
-	player.SetAttribute('modifiers', isEnabled);
+	player.SetAttribute(PlayerAttributes.HasModifiers, isEnabled);
 	const cube = Workspace.FindFirstChild(`cube${player.UserId}`);
 	if (cube) cube.SetAttribute('used_modifiers', true);
 });
@@ -152,7 +158,7 @@ Events.SetDeviceType.OnServerEvent.Connect((player, device) => {
 	if (!typeIs(device, 'number')) return;
 	
 	if (device === 0 || device === 1) {
-		player.SetAttribute('device', device)
+		player.SetAttribute(PlayerAttributes.Device, device);
 		
 		const cube = Workspace.FindFirstChild(`cube{player.UserId}`)
 		if (cube) {
@@ -171,7 +177,57 @@ Events.SetDeviceType.OnServerEvent.Connect((player, device) => {
 });
 
 Events.AddRagdollCount.OnServerEvent.Connect((player) => {
-	player.SetAttribute('totalRagdolls', (player.GetAttribute('totalRagdolls') as number ?? 0) + 1);
+	player.SetAttribute(PlayerAttributes.TotalRagdolls, (player.GetAttribute(PlayerAttributes.TotalRagdolls) as (number | undefined) ?? 0) + 1);
+});
+
+Events.GroundImpact.OnServerEvent.Connect((player, velocity, position) => {
+	if (!typeIs(velocity, 'Vector3') || !typeIs(position, 'Vector3')) return;
+	
+	const newImpacts = (player.GetAttribute(PlayerAttributes.Impacts) as (number | undefined) ?? 0) + 1;
+	player.SetAttribute(PlayerAttributes.Impacts, newImpacts);
+	
+	if (!(player.UserId in badgeDebounce)) {
+		badgeDebounce[player.UserId] = true;
+		task.delay(5, () => delete badgeDebounce[player.UserId]);
+		
+		if (newImpacts >= 15 && !player.GetAttribute(PlayerAttributes.HasCrashLandingBadge)) player.SetAttribute(PlayerAttributes.HasCrashLandingBadge, true);
+	}
+});
+
+Events.CompleteGame.OnServerEvent.Connect((player, givenTime) => {
+	const cube = Workspace.FindFirstChild(`cube${player.UserId}`);
+	if (!cube?.IsA('BasePart') || !typeIs(givenTime, 'number')) return;
+	
+	const totalTime = math.min(givenTime, 3599.999);
+	
+	cube.SetAttribute('finishTotalTime', totalTime);
+	player.SetAttribute('finished', true);
+	
+	const [ hours, minutes, seconds, milliseconds ] = getTimeUnits(totalTime * 1000);
+	const formattedTime = string.format('%02d:%02d.%03d', minutes, seconds, milliseconds);
+	
+	if (cube.GetAttribute('used_modifiers')) {
+		Events.SaySystemMessage.FireClient(player, `nice! you completed a modded run in: ${formattedTime}`);
+		Events.UpdatePlayerTime.Fire(player.UserId, totalTime, 1);
+		
+		player.SetAttribute(PlayerAttributes.TotalModdedWins, (player.GetAttribute(PlayerAttributes.TotalModdedWins) as (number | undefined) ?? 0) + 1);
+		return;
+	} else {
+		Events.UpdatePlayerTime.Fire(player.UserId, totalTime, 0);
+		
+		player.SetAttribute(PlayerAttributes.TotalWins, (player.GetAttribute(PlayerAttributes.TotalWins) as (number | undefined) ?? 0) + 1);
+	}
+	
+	giveBadge(player, 2146411244);
+	
+	if (cube.GetAttribute('destroyed_counter') === 0) {
+		Events.SaySystemMessage.FireClient(player, `nice! you completed a pacifist run in: ${formattedTime}`);
+		giveBadge(player, 2146295992);
+	} else Events.SaySystemMessage.FireClient(player, `nice! you completed a normal run in: ${formattedTime}`);
+	
+	cube.SetAttribute('start_time', getTime() - totalTime);
+	
+	if (totalTime < 210) giveBadge(player, 2146538368);
 });
 
 Players.PlayerAdded.Connect(playerAdded);
@@ -185,20 +241,20 @@ RunService.Stepped.Connect(() => {
 		if (cube) {
 			const [ altitude ] = convertStudsToMeters(cube.Position.Y - 1.9);
 			if (altitude > 800) {
-				if (player.GetAttribute('gravityBadge') === undefined) {
-					player.SetAttribute('gravityBadge', true);
+				if (player.GetAttribute(PlayerAttributes.HasGravityBadge) === undefined) {
+					player.SetAttribute(PlayerAttributes.HasGravityBadge, true);
 					giveBadge(player, 1719451122385638);
 					continue;
 				}
-			} else if (player.GetAttribute('gravityBadge') !== undefined) player.SetAttribute('gravityBadge', undefined);
+			} else if (player.GetAttribute(PlayerAttributes.HasGravityBadge) !== undefined) player.SetAttribute(PlayerAttributes.HasGravityBadge, undefined);
 			
 			const [ speed ] = convertStudsToMeters(math.abs(cube.AssemblyLinearVelocity.X));
 			if (speed > 70) {
-				if (player.GetAttribute('speedBadge') === undefined) {
-					player.SetAttribute('speedBadge', true);
+				if (player.GetAttribute(PlayerAttributes.HasSpeedBadge) === undefined) {
+					player.SetAttribute(PlayerAttributes.HasSpeedBadge, true);
 					giveBadge(player, 2146687990);
 				}
-			} else if (player.GetAttribute('speedBadge')) player.SetAttribute('speedBadge', undefined);
+			} else if (player.GetAttribute(PlayerAttributes.HasSpeedBadge)) player.SetAttribute(PlayerAttributes.HasSpeedBadge, undefined);
 		}
 	}
 });

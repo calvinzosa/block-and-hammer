@@ -11,11 +11,14 @@ import {
 import str from '@rbxts/string-utils';
 import { $warn } from 'rbxts-transform-debug';
 
+const Events = {
+    SettingChanged: ReplicatedStorage.WaitForChild('SettingChanged') as BindableEvent,
+    MakeReplayEvent: ReplicatedStorage.WaitForChild('MakeReplayEvent') as BindableEvent,
+}
+
 const player = Players.LocalPlayer;
 const GUI = player?.WaitForChild('PlayerGui') as (PlayerGui | undefined);
 
-const settingChangedEvent = ReplicatedStorage.WaitForChild('SettingChanged') as BindableEvent;
-const makeReplayEvent = ReplicatedStorage.WaitForChild('MakeReplayEvent') as BindableEvent;
 const placeId = game.PlaceId;
 
 const RNG = new Random();
@@ -33,15 +36,48 @@ export enum GameSetting {
     'TimerGUI' = 'timergui',
     'Modifiers' = 'modifiers',
     'CSG' = 'csg',
-}
+};
+
+export namespace PlayerAttributes {
+    export const IsNew = 'isNew';
+    export const HasDataLoaded = 'DataLoaded';
+    export const InErrorLand = 'inErrorLand';
+    export const HasModifiers = 'modifiers';
+    export const Impacts = 'impacts';
+    
+    export const CompletedGame = 'completedGame';
+    export const HammerTexture = 'hammer_Texture';
+    export const CubeColor = 'cubeColor';
+    export const CubeHat = 'cube_Hat';
+    export const CubeFace = 'cube_Face';
+    export const CubeAura = 'cube_Aura';
+    
+    export const TotalTime = 'totalTime';
+    export const TotalRagdolls = 'totalRagdolls';
+    export const TotalRestarts = 'totalRestarts';
+    export const TotalWins = 'totalWins';
+    export const TotalModdedWins = 'totalModdedWins';
+    
+    export const BadgeDebounce = 'badgeDebounce';
+    export const HasCrashLandingBadge = 'hasCrashLandingBadge';
+    export const HasGravityBadge = 'hasGravityBadge';
+    export const HasSpeedBadge = 'hasSpeedBadge';
+    
+    export const Device = 'device';
+    
+    export enum Client {
+        InMainMenu = 'inMainMenu',
+        InTutorial = 'inTutorial',
+        SettingsJSON = 'clientSettingsJSON',
+    };
+};
 
 export namespace Accessories {
-    export enum AccessoryName {
-        'hammer_Texture' = 'HammerTexture',
-        'cube_Hat' = 'CubeHat',
-        'cube_Face' = 'CubeFace',
-        'cube_Aura' = 'CubeAura',
-    }
+    export type Type =
+        | 'hammer_Texture'
+        | 'cube_Hat'
+        | 'cube_Face'
+        | 'cube_Aura';
     
     export enum HammerTexture {
         NoHammerTexture = 'No Hammer Texture',
@@ -61,7 +97,7 @@ export namespace Accessories {
         GrapplingHammer = 'Grappling Hammer',
         SteelHammer = 'Steel Hammer',
         LongHammer = 'Long Hammer',
-    }
+    };
     
     export enum CubeHat {
         NoHat = 'No Hat',
@@ -74,7 +110,7 @@ export namespace Accessories {
         PartyHat = 'Party Hat',
         Tophat = 'Tophat',
         FreeAccessory = 'Free Accessory',
-    }
+    };
     
     export enum CubeFace {
         DefaultFace = 'Default Face',
@@ -82,25 +118,16 @@ export namespace Accessories {
         Sad = 'Sad',
         Si = 'Si',
         Tsu = 'Tsu',
-    }
+    };
     
     export enum CubeAura {
         NoAura = 'No Aura',
         Glow = 'Glow',
         Fire = 'Fire',
-    }
-}
-
-export enum PlayerAttributes {
-    HammerTexture = 'hammer_Texture',
-    CubeFace = 'cube_Face',
-    CubeAura = 'cube_Aura',
-    CubeHat = 'cube_Hat',
-}
+    };
+};
 
 export type BaseSettings = Record<GameSetting, boolean>;
-
-export const SettingChanged = settingChangedEvent.Event;
 
 export const Settings: BaseSettings = {
     'hideothers': false,
@@ -120,8 +147,9 @@ export const tweenTypes = {
     'linear': {
         'short': new TweenInfo(1, Enum.EasingStyle.Linear),
         'medium': new TweenInfo(2.5, Enum.EasingStyle.Linear),
-        'long': new TweenInfo(5, Enum.EasingStyle.Linear)
-    }
+        'long': new TweenInfo(5, Enum.EasingStyle.Linear),
+    },
+    'instant': new TweenInfo(0),
 };
 
 export const filterFunctions = {
@@ -210,7 +238,8 @@ export function canUseSetting(name: string): boolean {
         const modifierDisablers = Workspace.FindFirstChild('ForceDisableModifiers') as (Instance | undefined);
         if (modifierDisablers !== undefined) params.FilterDescendantsInstances = [ modifierDisablers ];
 		
-		if ((player.GetAttribute('ERROR_LAND') || player.GetAttribute('in_tutorial')) || (player && cube && Workspace.GetPartsInPart(cube, params).size() > 0)) return false;
+        const areaCondition = player.GetAttribute(PlayerAttributes.InErrorLand) || player.GetAttribute(PlayerAttributes.Client.InTutorial);
+		if (areaCondition || (player && cube && Workspace.GetPartsInPart(cube, params).size() > 0)) return false;
     }
 	
 	if (name === 'hideothers' && GUI?.FindFirstChild('ReplayGui') && (GUI.FindFirstChild('ReplayGui') as (ScreenGui | undefined))?.Enabled) return true;
@@ -230,7 +259,7 @@ export function setSetting(name: GameSetting, value: boolean): void {
     if (!canUseSetting(name)) return;
 	
     Settings[name] = value;
-	settingChangedEvent.Fire(name, value)
+	Events.SettingChanged.Fire(name, value);
 }
 
 export function getSettingAlias(name: GameSetting): string {
@@ -248,29 +277,29 @@ export function fixSettings(): void {
 export function getHammerTexture(player: Player | undefined = undefined): Accessories.HammerTexture {
     if (player === undefined) player = Players.LocalPlayer;
     
-    if (player.GetAttribute('in_tutorial')) return Accessories.HammerTexture.NoHammerTexture;
-    return (player.GetAttribute('hammer_Texture') as Accessories.HammerTexture) ?? Accessories.HammerTexture.NoHammerTexture;
+    if (player.GetAttribute(PlayerAttributes.Client.InTutorial)) return Accessories.HammerTexture.NoHammerTexture;
+    return (player.GetAttribute(PlayerAttributes.HammerTexture) as Accessories.HammerTexture) ?? Accessories.HammerTexture.NoHammerTexture;
 }
 
 export function getCubeFace(player: Player | undefined = undefined): Accessories.CubeFace {
     if (player === undefined) player = Players.LocalPlayer;
     
-    if (player.GetAttribute('in_tutorial')) return Accessories.CubeFace.DefaultFace;
-    return (player.GetAttribute('cube_Face') as Accessories.CubeFace) ?? Accessories.CubeFace.DefaultFace;
+    if (player.GetAttribute(PlayerAttributes.Client.InTutorial)) return Accessories.CubeFace.DefaultFace;
+    return (player.GetAttribute(PlayerAttributes.CubeFace) as Accessories.CubeFace) ?? Accessories.CubeFace.DefaultFace;
 }
 
 export function getCubeHat(player: Player | undefined = undefined): Accessories.CubeHat {
     if (player === undefined) player = Players.LocalPlayer;
     
-    if (player.GetAttribute('in_tutorial')) return Accessories.CubeHat.NoHat;
-    return (player.GetAttribute('cube_Hat') as Accessories.CubeHat) ?? Accessories.CubeHat.NoHat;
+    if (player.GetAttribute(PlayerAttributes.Client.InTutorial)) return Accessories.CubeHat.NoHat;
+    return (player.GetAttribute(PlayerAttributes.CubeHat) as Accessories.CubeHat) ?? Accessories.CubeHat.NoHat;
 }
 
 export function getCubeAura(player: Player | undefined): Accessories.CubeAura {
     if (player === undefined) player = Players.LocalPlayer;
     
-    if (player.GetAttribute('in_tutorial')) return Accessories.CubeAura.NoAura;
-    return (player.GetAttribute('cube_Aura') as Accessories.CubeAura) ?? Accessories.CubeAura.NoAura;
+    if (player.GetAttribute(PlayerAttributes.Client.InTutorial)) return Accessories.CubeAura.NoAura;
+    return (player.GetAttribute(PlayerAttributes.CubeAura) as Accessories.CubeAura) ?? Accessories.CubeAura.NoAura;
 }
 
 export function isClientCube(cube: BasePart | undefined): boolean {
@@ -294,13 +323,13 @@ export function playSound(name: string, properties: Record<string, DictValue> = 
         }
     }
     
-    if (player.GetAttribute('ERROR_LAND')) sound.PlaybackSpeed *= 0.5;
+    if (player.GetAttribute(PlayerAttributes.InErrorLand)) sound.PlaybackSpeed *= 0.5;
     sound.Volume = math.min(sound.Volume, 1.5);
     sound.Parent = Workspace;
     
-    if (!ignoreReplay) makeReplayEvent.Fire(dataString);
+    if (!ignoreReplay) Events.MakeReplayEvent.Fire(dataString);
     
-    if (player.GetAttribute('hammer_Texture') === '404 Hammer' && getSetting(GameSetting.Modifiers)) {
+    if (player.GetAttribute(PlayerAttributes.HammerTexture) === '404 Hammer' && getSetting(GameSetting.Modifiers)) {
         sound.PlaybackSpeed *= 0.5;
         
         const pitchShift = new Instance('PitchShiftSoundEffect');
@@ -460,9 +489,8 @@ export function giveBadge(player: Player, badgeId: number): void {
     
     const userId = player.UserId;
     task.spawn(() => {
-        while (player.GetAttribute('badgeDebounce')) player.AttributeChanged.Wait();
-        
-        player.SetAttribute('badgeDebounce', true);
+        while (player.GetAttribute(PlayerAttributes.BadgeDebounce)) player.AttributeChanged.Wait();
+        player.SetAttribute(PlayerAttributes.BadgeDebounce, true);
         
         let success = false;
         
@@ -473,7 +501,7 @@ export function giveBadge(player: Player, badgeId: number): void {
         } while (!success);
         
         task.wait(1);
-        player.SetAttribute('badgeDebounce', undefined);
+        player.SetAttribute(PlayerAttributes.BadgeDebounce, undefined);
     });
 }
 

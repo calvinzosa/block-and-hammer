@@ -8,15 +8,16 @@ local RunService = _services.RunService
 local Workspace = _services.Workspace
 local Players = _services.Players
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
-local GameSetting = _utils.GameSetting
-local Settings = _utils.Settings
-local canUseSetting = _utils.canUseSetting
-local fixSettings = _utils.fixSettings
-local getSetting = _utils.getSetting
+local PlayerAttributes = _utils.PlayerAttributes
 local getSettingAlias = _utils.getSettingAlias
 local getSettingOrder = _utils.getSettingOrder
-local getTime = _utils.getTime
+local canUseSetting = _utils.canUseSetting
+local fixSettings = _utils.fixSettings
+local GameSetting = _utils.GameSetting
+local getSetting = _utils.getSetting
 local setSetting = _utils.setSetting
+local Settings = _utils.Settings
+local getTime = _utils.getTime
 local Events = {
 	SetModifiersSetting = ReplicatedStorage:WaitForChild("SetModifiersSetting"),
 	LoadSettingsJSON = ReplicatedStorage:WaitForChild("LoadSettingsJSON"),
@@ -32,6 +33,7 @@ local debounces = {
 }
 local player = Players.LocalPlayer
 local GUI = player:WaitForChild("PlayerGui")
+local effectsFolder = Workspace:WaitForChild("Effects")
 local guiTemplates = ReplicatedStorage:WaitForChild("GUI")
 local valueInstances = GUI:WaitForChild("Values")
 local isSpectating = valueInstances:WaitForChild("is_spectating")
@@ -67,14 +69,14 @@ local function resetCharacter(fullReset)
 		fullReset = false
 	end
 	local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
-	local _value = player:GetAttribute("ERROR_LAND")
+	local _value = player:GetAttribute(PlayerAttributes.InErrorLand)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
 		if cube then
 			cube:PivotTo(CFrame.new(0, 14, 0))
 		end
 		return nil
 	end
-	local _value_1 = player:GetAttribute("in_tutorial")
+	local _value_1 = player:GetAttribute(PlayerAttributes.Client.InTutorial)
 	if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 		if cube then
 			cube:Destroy()
@@ -104,6 +106,7 @@ local function resetCharacter(fullReset)
 			end
 		end
 	end
+	effectsFolder:ClearAllChildren()
 end
 local function updateSettingButtons()
 	for _, button in settingButtons:GetChildren() do
@@ -148,7 +151,7 @@ local function updateSettingButtons()
 		end
 	end
 	fixSettings()
-	player:SetAttribute("client_settings_json", HttpService:JSONEncode(Settings))
+	player:SetAttribute(PlayerAttributes.Client.SettingsJSON, HttpService:JSONEncode(Settings))
 end
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then
@@ -267,7 +270,7 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 	end
 	if (currentTime - lastChange) > 5 and not areSettingsSaved and not settingsGui.Visible then
-		print("[src/client/menu_gui.client.ts:230]", `Saved settings: {HttpService:JSONEncode(Settings)}`)
+		print("[src/client/menu_gui.client.ts:233]", `Saved settings: {HttpService:JSONEncode(Settings)}`)
 		Events.SaveSettingsJSON:FireServer(Settings)
 		areSettingsSaved = true
 	end
@@ -286,9 +289,9 @@ Events.LoadSettingsJSON.OnClientEvent:Connect(function(settingsJSON)
 			Events.SetModifiersSetting:FireServer(true)
 		end
 		updateSettingButtons()
-		print("[src/client/menu_gui.client.ts:248]", `Loaded settings data: {settingsJSON}`)
+		print("[src/client/menu_gui.client.ts:251]", `Loaded settings data: {settingsJSON}`)
 	else
-		warn("[src/client/menu_gui.client.ts:249]", "Unable to decode settings data")
+		warn("[src/client/menu_gui.client.ts:252]", "Unable to decode settings data")
 	end
 end);
 (menuButtons:WaitForChild("Reset")).MouseButton1Click:Connect(function()
@@ -396,7 +399,7 @@ end);
 	end
 end);
 (menuButtons:WaitForChild("Tutorial")).MouseButton1Click:Connect(function()
-	local _value = player:GetAttribute("ERROR_LAND")
+	local _value = player:GetAttribute(PlayerAttributes.InErrorLand)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
 		return nil
 	end

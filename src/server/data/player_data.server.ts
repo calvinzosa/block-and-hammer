@@ -11,6 +11,7 @@ import {
 import { $print, $warn } from 'rbxts-transform-debug';
 
 import {
+    PlayerAttributes,
     decodeJSONObject,
     encodeObjectToJSON,
     getCubeTime,
@@ -166,11 +167,11 @@ function playerAdded(player: Player) {
         return;
     }
     
-    player.SetAttribute('DATA_LOADED', true);
+    player.SetAttribute(PlayerAttributes.HasDataLoaded, true);
 }
 
 function playerRemoved(player:Player) {
-    if (!player.GetAttribute('DATA_LOADED') || (RunService.IsStudio() && time() < 5) || isTestingServer()) return;
+    if (!player.GetAttribute(PlayerAttributes.HasDataLoaded) || (RunService.IsStudio() && time() < 5) || isTestingServer()) return;
 	
     const playerId = tostring(player.UserId);
     

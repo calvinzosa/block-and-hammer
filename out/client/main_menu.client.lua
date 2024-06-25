@@ -14,12 +14,14 @@ local getPlayerRank = _utils.getPlayerRank
 local playSound = _utils.playSound
 local Accessories = _utils.Accessories
 local tweenTypes = _utils.tweenTypes
+local PlayerAttributes = _utils.PlayerAttributes
 local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera")
 local GUI = player:WaitForChild("PlayerGui")
 local canMove = GUI:WaitForChild("Values"):WaitForChild("can_move")
 local menuGui = GUI:WaitForChild("MainMenuGui")
 local screenGui = GUI:WaitForChild("ScreenGui")
+local tutorialGui = screenGui:WaitForChild("TutorialGUI")
 local playButton = menuGui:WaitForChild("Play")
 local editButton = menuGui:WaitForChild("Edit")
 local titleLabel = menuGui:WaitForChild("Title")
@@ -30,17 +32,22 @@ local shadowText = shadow:WaitForChild("Loading")
 local effectsFolder = Workspace:WaitForChild("Effects")
 local didClickButton = false
 player.AttributeChanged:Connect(function(attr)
-	local _value = attr == "isNew" and player:GetAttribute(attr)
+	local _value = attr == PlayerAttributes.IsNew and player:GetAttribute(attr)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
-		(screenGui:WaitForChild("TutorialGUI")).Visible = true
+		tutorialGui.Visible = true
 		canMove.Value = false
 	end
 end)
+local _value = player:GetAttribute(PlayerAttributes.IsNew)
+if _value ~= 0 and _value == _value and _value ~= "" and _value then
+	tutorialGui.Visible = true
+	canMove.Value = false
+end
 menuGui.Enabled = true
 screenGui.Enabled = false
 while true do
-	local _value = menuGui:GetAttribute("done")
-	if not not (_value ~= 0 and _value == _value and _value ~= "" and _value) then
+	local _value_1 = menuGui:GetAttribute("done")
+	if not not (_value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1) then
 		break
 	end
 	menuGui.AttributeChanged:Wait()
@@ -50,8 +57,8 @@ repeat
 		shadowText.Text = "retrieving player data" .. string.rep(".", math.round(getTime() * 5 % 3))
 		task.wait()
 	end
-	local _value = player:GetAttribute("DATA_LOADED")
-until _value ~= 0 and _value == _value and _value ~= "" and _value
+	local _value_1 = player:GetAttribute(PlayerAttributes.HasDataLoaded)
+until _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1
 shadowText.Text = "done!"
 shadow:TweenSize(UDim2.fromScale(0, 0), Enum.EasingDirection.In, Enum.EasingStyle.Sine, 0.5)
 local menuAssets = Workspace:WaitForChild("MainMenuAssets")
@@ -59,7 +66,7 @@ local hammer = menuAssets:WaitForChild("Hammer")
 UserInputService.InputBegan:Once(function()
 	local currentHammer = getHammerTexture()
 	local arm = hammer:WaitForChild("Arm")
-	local head = hammer:WaitForChild("Arm")
+	local head = hammer:WaitForChild("Head")
 	if currentHammer == Accessories.HammerTexture.Hammer404 then
 		for _, part in { head, arm } do
 			for _1, face in Enum.NormalId:GetEnumItems() do
@@ -148,8 +155,8 @@ connection = RunService.RenderStepped:Connect(function()
 	if cube then
 		cube.Anchored = true
 	end
-	local _value = player:GetAttribute("in_main_menu")
-	local _condition = not (_value ~= 0 and _value == _value and _value ~= "" and _value)
+	local _value_1 = player:GetAttribute(PlayerAttributes.Client.InMainMenu)
+	local _condition = not (_value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1)
 	if _condition then
 		_condition = connection
 	end
@@ -185,11 +192,11 @@ playButton.MouseButton1Click:Once(function()
 		menuGui.Enabled = false
 		return menuGui.Enabled
 	end)
-	player:SetAttribute("in_main_menu", nil)
+	player:SetAttribute(PlayerAttributes.Client.InMainMenu, nil)
 end)
 editButton.MouseButton1Click:Once(function()
-	local _value = editButton:GetAttribute("disabled")
-	if _value ~= 0 and _value == _value and _value ~= "" and _value then
+	local _value_1 = editButton:GetAttribute("disabled")
+	if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 		return nil
 	end
 	if not didClickButton then

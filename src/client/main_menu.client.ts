@@ -13,7 +13,8 @@ import {
     getPlayerRank,
     playSound,
     Accessories,
-    tweenTypes
+    tweenTypes,
+    PlayerAttributes
 } from 'shared/utils';
 
 const player = Players.LocalPlayer;
@@ -23,6 +24,7 @@ const GUI = player.WaitForChild('PlayerGui') as PlayerGui;
 const canMove = GUI.WaitForChild('Values').WaitForChild('can_move') as BoolValue;
 const menuGui = GUI.WaitForChild('MainMenuGui') as ScreenGui;
 const screenGui = GUI.WaitForChild('ScreenGui') as ScreenGui;
+const tutorialGui = screenGui.WaitForChild('TutorialGUI') as Frame;
 const playButton = menuGui.WaitForChild('Play') as TextButton;
 const editButton = menuGui.WaitForChild('Edit') as TextButton;
 const titleLabel = menuGui.WaitForChild('Title') as TextLabel;
@@ -35,11 +37,16 @@ const effectsFolder = Workspace.WaitForChild('Effects');
 let didClickButton = false;
 
 player.AttributeChanged.Connect((attr) => {
-	if (attr === 'isNew' && player.GetAttribute(attr)) {
-		(screenGui.WaitForChild('TutorialGUI') as Frame).Visible = true;
+	if (attr === PlayerAttributes.IsNew && player.GetAttribute(attr)) {
+		tutorialGui.Visible = true;
 		canMove.Value = false;
     }
 });
+
+if (player.GetAttribute(PlayerAttributes.IsNew)) {
+    tutorialGui.Visible = true;
+    canMove.Value = false;
+}
 
 menuGui.Enabled = true;
 screenGui.Enabled = false;
@@ -49,7 +56,7 @@ while (!menuGui.GetAttribute('done')) menuGui.AttributeChanged.Wait();
 do {
 	shadowText.Text = 'retrieving player data' + string.rep('.', math.round(getTime() * 5 % 3));
 	task.wait();
-} while (!player.GetAttribute('DATA_LOADED'));
+} while (!player.GetAttribute(PlayerAttributes.HasDataLoaded));
 shadowText.Text = 'done!';
 
 shadow.TweenSize(UDim2.fromScale(0, 0), Enum.EasingDirection.In, Enum.EasingStyle.Sine, 0.5);
@@ -61,7 +68,7 @@ UserInputService.InputBegan.Once(() => {
 	const currentHammer = getHammerTexture();
 	
     const arm = hammer.WaitForChild('Arm') as BasePart;
-    const head = hammer.WaitForChild('Arm') as BasePart;
+    const head = hammer.WaitForChild('Head') as BasePart;
     
 	if (currentHammer === Accessories.HammerTexture.Hammer404) {
         for (const part of [ head, arm ]) {
@@ -129,11 +136,12 @@ connection = RunService.RenderStepped.Connect(() => {
     const cube = Workspace.FindFirstChild(`cube${player.UserId}`) as BasePart | undefined;
     if (cube) cube.Anchored = true;
     
-    if (!player.GetAttribute('in_main_menu') && connection) {
+    if (!player.GetAttribute(PlayerAttributes.Client.InMainMenu) && connection) {
         connection.Disconnect();
         screenGui.Enabled = true;
         menuGui.Enabled = false;
         if (cube) cube.Anchored = false;
+        
         return;
     }
     
@@ -156,7 +164,7 @@ playButton.MouseButton1Click.Once(() => {
     TweenService.Create(shadow, tweenTypes.linear.short, { Size: UDim2.fromScale(0, 0) }).Play();
     task.delay(1, () => menuGui.Enabled = false);
     
-    player.SetAttribute('in_main_menu', undefined);
+    player.SetAttribute(PlayerAttributes.Client.InMainMenu, undefined);
 });
 
 editButton.MouseButton1Click.Once(() => {

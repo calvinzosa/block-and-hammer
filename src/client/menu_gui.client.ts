@@ -10,15 +10,16 @@ import {
 import { $print, $warn } from 'rbxts-transform-debug';
 
 import {
-	GameSetting,
-    Settings,
-    canUseSetting,
-    fixSettings,
-    getSetting,
+    PlayerAttributes,
     getSettingAlias,
     getSettingOrder,
-    getTime,
+    canUseSetting,
+    fixSettings,
+	GameSetting,
+    getSetting,
 	setSetting,
+    Settings,
+    getTime,
 } from 'shared/utils';
 
 const Events = {
@@ -40,6 +41,7 @@ const debounces = {
 const player = Players.LocalPlayer;
 const GUI = player.WaitForChild('PlayerGui') as PlayerGui;
 
+const effectsFolder = Workspace.WaitForChild('Effects') as Folder;
 const guiTemplates = ReplicatedStorage.WaitForChild('GUI') as Folder;
 const valueInstances = GUI.WaitForChild('Values') as ScreenGui;
 const isSpectating = valueInstances.WaitForChild('is_spectating') as BoolValue;
@@ -76,16 +78,17 @@ let lastClickTime = 0;
 function resetCharacter(fullReset: boolean = false) {
     let cube = Workspace.FindFirstChild(`cube${player.UserId}`) as (BasePart | undefined);
     
-	if (player.GetAttribute('ERROR_LAND')) {
+	if (player.GetAttribute(PlayerAttributes.InErrorLand)) {
 		if (cube) cube.PivotTo(new CFrame(0, 14, 0));
 		return;
     }
 	
-	if (player.GetAttribute('in_tutorial')) {
+	if (player.GetAttribute(PlayerAttributes.Client.InTutorial)) {
 		if (cube) {
             cube.Destroy();
             cube = undefined;
         }
+		
 		Events.EndTutorial.FireServer();
     }
 	
@@ -102,6 +105,8 @@ function resetCharacter(fullReset: boolean = false) {
             if (descendant.IsA('BasePart')) descendant.AssemblyLinearVelocity = Vector3.zero;
         }
     }
+	
+	effectsFolder.ClearAllChildren();
 }
 
 function updateSettingButtons() {
@@ -145,7 +150,7 @@ function updateSettingButtons() {
 	}
 	
 	fixSettings();
-	player.SetAttribute('client_settings_json', HttpService.JSONEncode(Settings));
+	player.SetAttribute(PlayerAttributes.Client.SettingsJSON, HttpService.JSONEncode(Settings));
 }
 
 UserInputService.InputBegan.Connect((input, processed) => {
@@ -172,9 +177,7 @@ UserInputService.InputBegan.Connect((input, processed) => {
 });
 
 UserInputService.InputEnded.Connect((input, processed) => {
-	if (input.KeyCode === Enum.KeyCode.R && UserInputService.IsKeyDown(Enum.KeyCode.LeftControl) && !processed) {
-		resetCharacter(UserInputService.IsKeyDown(Enum.KeyCode.LeftShift));
-	}
+	if (input.KeyCode === Enum.KeyCode.R && UserInputService.IsKeyDown(Enum.KeyCode.LeftControl) && !processed) resetCharacter(UserInputService.IsKeyDown(Enum.KeyCode.LeftShift));
 });
 
 RunService.RenderStepped.Connect((dt) => {
@@ -335,7 +338,7 @@ Events.LoadSettingsJSON.OnClientEvent.Connect((settingsJSON: string) => {
 });
 
 (menuButtons.WaitForChild('Tutorial') as TextButton).MouseButton1Click.Connect(() => {
-	if (player.GetAttribute('ERROR_LAND')) return;
+	if (player.GetAttribute(PlayerAttributes.InErrorLand)) return;
 	
 	menuOpen.Value = false;
 	tutorialConfirmation.Visible = true;

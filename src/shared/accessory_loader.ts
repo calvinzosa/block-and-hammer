@@ -15,7 +15,7 @@ import {
 import { $print } from 'rbxts-transform-debug';
 
 export type AccessoryData = {
-	acc_type: 'cube_Hat' | 'hammer_Texture' | 'cube_Face' | 'cube_Aura',
+	acc_type: Accessories.Type,
 	icon: string,
 	badge_id: number
 	badge_name: string,
@@ -23,7 +23,18 @@ export type AccessoryData = {
 	data: string | number | Instance,
 	description: string,
 	modifier: boolean,
-	never?: boolean
+	never?: boolean,
+	
+	spritesheet_data?: {
+		tileWidth: number,
+		tileHeight: number,
+		rows: number,
+		columns: number,
+		loopDelay: number,
+		fps: number,
+	},
+	
+	copy_cube_color?: boolean,
 };
 
 export const accessoryList = require(ReplicatedStorage.WaitForChild('Modules')?.WaitForChild('Accessories') as ModuleScript) as Record<string, AccessoryData>;

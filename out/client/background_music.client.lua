@@ -12,6 +12,7 @@ local GameSetting = _utils.GameSetting
 local Accessories = _utils.Accessories
 local getSetting = _utils.getSetting
 local numLerp = _utils.numLerp
+local PlayerAttributes = _utils.PlayerAttributes
 local Music = {
 	Jamming = "Jamming",
 	StartingOff = "StartingOff",
@@ -67,11 +68,11 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 	local currentHammer = getHammerTexture(targetPlayer)
 	local activeMusic = nil
-	local _value = player:GetAttribute("in_main_menu")
+	local _value = player:GetAttribute(PlayerAttributes.Client.InMainMenu)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
 		activeMusic = Music.Jamming
 	else
-		local _value_1 = player:GetAttribute("in_tutorial")
+		local _value_1 = player:GetAttribute(PlayerAttributes.Client.InTutorial)
 		if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 			activeMusic = Music.CrystalCave
 		else
@@ -102,14 +103,14 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 	local _condition = getSetting(GameSetting.Music)
 	if _condition then
-		local _value_1 = targetPlayer:GetAttribute("ERROR_LAND")
+		local _value_1 = targetPlayer:GetAttribute(PlayerAttributes.InErrorLand)
 		_condition = not (_value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1)
 	end
 	local isMusicEnabled = _condition
 	for name, sound in pairs(sounds) do
 		local targetVolume = if (name == activeMusic and isMusicEnabled) then (sound:GetAttribute("originalVolume")) else 0
 		sound.Volume = numLerp(sound.Volume, targetVolume, dt * 5)
-		local _value_1 = (currentHammer == Accessories.HammerTexture.Hammer404 and targetPlayer:GetAttribute("modifiers"))
+		local _value_1 = (currentHammer == Accessories.HammerTexture.Hammer404 and targetPlayer:GetAttribute(PlayerAttributes.HasModifiers))
 		sound.PlaybackSpeed = if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then 0.5 else 1
 	end
 end)
