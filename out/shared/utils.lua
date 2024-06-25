@@ -19,8 +19,19 @@ if _result ~= nil then
 	_result = _result:WaitForChild("PlayerGui")
 end
 local GUI = _result
+local forceTestingServer = ReplicatedStorage:WaitForChild("ForceTestingServer")
 local placeId = game.PlaceId
 local RNG = Random.new()
+local GameData = {}
+do
+	local _container = GameData
+	local CreatorId = 156926145
+	_container.CreatorId = CreatorId
+	local MainPlaceId = 13458875976
+	_container.MainPlaceId = MainPlaceId
+	local TestingPlaceId = 17837400665
+	_container.TestingPlaceId = TestingPlaceId
+end
 local PlayerAttributes = {}
 do
 	local _container = PlayerAttributes
@@ -625,7 +636,7 @@ local function giveBadge(player, badgeId)
 		return nil
 	end
 	if isTestingServer() then
-		warn("[src/shared/utils.ts:486]", "Badges are disabled in the Testing Server.")
+		warn("[src/shared/utils.ts:494]", "Badges are disabled in the Testing Server.")
 		return nil
 	end
 	local userId = player.UserId
@@ -654,15 +665,15 @@ local function giveBadge(player, badgeId)
 end
 function isTestingServer()
 	if RunService:IsStudio() then
-		return false
+		return forceTestingServer.Value
 	end
-	return placeId == 17837400665
+	return placeId == GameData.TestingPlaceId
 end
 local function isMainServer()
 	if RunService:IsStudio() then
-		return true
+		return not forceTestingServer.Value
 	end
-	return placeId == 13458875976
+	return placeId == GameData.MainPlaceId
 end
 return {
 	numLerp = numLerp,
@@ -699,6 +710,7 @@ return {
 	giveBadge = giveBadge,
 	isTestingServer = isTestingServer,
 	isMainServer = isMainServer,
+	GameData = GameData,
 	PlayerAttributes = PlayerAttributes,
 	Accessories = Accessories,
 	GameSetting = GameSetting,

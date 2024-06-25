@@ -9,7 +9,7 @@ import {
 } from '@rbxts/services';
 
 import str from '@rbxts/string-utils';
-import { $print, $warn } from 'rbxts-transform-debug';
+import { $warn } from 'rbxts-transform-debug';
 
 const Events = {
     SettingChanged: ReplicatedStorage.WaitForChild('SettingChanged') as BindableEvent,
@@ -19,12 +19,20 @@ const Events = {
 const player = Players.LocalPlayer;
 const GUI = player?.WaitForChild('PlayerGui') as (PlayerGui | undefined);
 
+const forceTestingServer = ReplicatedStorage.WaitForChild('ForceTestingServer') as BoolValue;
 const placeId = game.PlaceId;
 
 const RNG = new Random();
 
 export type DictKey = string | number | symbol;
 export type DictValue = string | number | symbol;
+
+export namespace GameData {
+    export const CreatorId = 156926145;
+    
+    export const MainPlaceId = 13458875976;
+    export const TestingPlaceId = 17837400665;
+}
 
 export namespace PlayerAttributes {
     export const IsNew = 'isNew';
@@ -506,11 +514,11 @@ export function giveBadge(player: Player, badgeId: number): void {
 }
 
 export function isTestingServer(): boolean {
-    if (RunService.IsStudio()) return false;
-	return placeId === 17837400665;
+    if (RunService.IsStudio()) return forceTestingServer.Value;
+	return placeId === GameData.TestingPlaceId;
 }
 
 export function isMainServer(): boolean {
-    if (RunService.IsStudio()) return true;
-	return placeId === 13458875976;
+    if (RunService.IsStudio()) return !forceTestingServer.Value;
+	return placeId === GameData.MainPlaceId;
 }
