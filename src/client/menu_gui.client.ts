@@ -5,6 +5,7 @@ import {
     RunService,
     Workspace,
     Players,
+	Lighting,
 } from '@rbxts/services';
 
 import { $print, $warn } from 'rbxts-transform-debug';
@@ -141,8 +142,8 @@ function updateSettingButtons() {
 			button.MouseButton1Click.Connect(() => {
 				const currentValue = !getSetting(name as GameSetting);
 				setSetting(name as GameSetting, currentValue);
-				if (name === 'modifiers') Events.SetModifiersSetting.FireServer(getSetting(GameSetting.Modifiers));
-				else if (name === 'timergui') (screenGui.FindFirstChild('Timer') as TextLabel).Visible = getSetting(GameSetting.TimerGUI);
+				if (name === GameSetting.Modifiers) Events.SetModifiersSetting.FireServer(getSetting(GameSetting.Modifiers));
+				else if (name === GameSetting.TimerGUI) (screenGui.FindFirstChild('Timer') as TextLabel).Visible = getSetting(GameSetting.TimerGUI);
 				
 				button.Text = `${alias}: ${currentValue ? '✅' : '❌'}`;
 			});
@@ -437,11 +438,11 @@ function changePlaceVersion() {
 	const value = (ReplicatedStorage.FindFirstChild('PlaceVersion') as IntValue).Value;
 	
 	let text = tostring(value);
-	if (value === 0) text = 'DEV';
+	if (value === -1) text = 'DEV';
 	else if (value === -2) text = 'TESTING';
 	
 	placeVersion.Text = `block and hammer - v${value}`;
 }
 
-(ReplicatedStorage.WaitForChild('PlaceVersion') as IntValue).Changed.Connect(changePlaceVersion);
 changePlaceVersion();
+(ReplicatedStorage.WaitForChild('PlaceVersion') as IntValue).Changed.Connect(changePlaceVersion);

@@ -16,6 +16,7 @@ import {
 import {
     accessoryList
 } from 'shared/accessory_loader';
+import { $dbg } from 'rbxts-transform-debug';
 
 const Events = {
     EquipAccessory: ReplicatedStorage.WaitForChild('EquipAccessory') as RemoteFunction,
@@ -42,8 +43,12 @@ function updateGui() {
 	title.Text = 'select an accessory!';
 	description.Text = '';
 	equipButton.Visible = false;
-	
 	selectedAccessory = undefined;
+	
+	for (const button of items.GetChildren()) {
+		if (button.IsA('ImageButton')) button.Destroy();
+	}
+	
     for (const [ name, accessory ] of pairs(accessoryList)) {
         if (accessory.never) continue;
         
@@ -84,13 +89,14 @@ function updateGui() {
 						} else task.wait(0.5);
 					}
 					
+					accessoryButton.Visible = true;
 					if (hasBadge) {
 						canEquipIt = true;
-						shadow.Visible = true;
+						shadow.Visible = false;
 					} else {
+						shadow.Visible = true;
 						shadow.Text = accessory.badge_name;
 						if (!accessory.always_show) accessoryButton.Visible = false;
-						else accessoryButton.Visible = true;
 					}
 				});
 			} else {
@@ -108,7 +114,6 @@ function updateGui() {
 				accessoryButton.SetAttribute('connected', true);
 				
 				accessoryButton.MouseButton1Click.Connect(() => {
-					selectedAccessory = accessoryButton;
 					title.Text = name;
 					description.Text = accessory.description ?? '[ No Description Found ]';
 					
@@ -117,6 +122,7 @@ function updateGui() {
 						equipButton.TextColor3 = Color3.fromRGB(255, 255, 255);
 						equipButton.BackgroundTransparency = 0.6;
 						equipButton.AutoButtonColor = true;
+						selectedAccessory = accessoryButton;
 					} else {
 						equipButton.TextColor3 = Color3.fromRGB(175, 175, 175);
 						equipButton.BackgroundTransparency = 0.5;
@@ -137,9 +143,9 @@ accessoriesGui.GetPropertyChangedSignal('Visible').Connect(() => {
 });
 
 equipButton.MouseButton1Click.Connect(() => {
-    const outline = selectedAccessory?.FindFirstChild('UIStroke');
-    if (!selectedAccessory || !outline?.IsA('UIStroke') || !outline.Enabled) return;
-    
+	const outline = selectedAccessory?.FindFirstChild('UIStroke');
+    if (!selectedAccessory || !outline?.IsA('UIStroke')) return;
+	
 	const name = selectedAccessory.Name;
     if (!(name in accessoryList)) return;
     
@@ -169,49 +175,48 @@ equipButton.MouseButton1Click.Connect(() => {
 });
 
 RunService.RenderStepped.Connect(() => {
-    if (!accessoriesGui.Visible) {
-        for (const button of items.GetChildren()) {
-            if (!button.IsA('ImageButton') || button.GetAttribute('loopDebounce') || !(button.Name in accessoryList)) continue;
-            
-            const data = accessoryList[button.Name];
-            
-            if (data.spritesheet_data) {
-				const tileWidth = data.spritesheet_data.tileWidth;
-				const tileHeight = data.spritesheet_data.tileHeight;
-				const maxRow = data.spritesheet_data.rows;
-				const maxColumn = data.spritesheet_data.columns;
-				const loopDelay = data.spritesheet_data.loopDelay;
-				const fps = data.spritesheet_data.fps;
-                
-                const currentTime = time();
-                const lastChange = button.GetAttribute('lastChange') as (number | undefined) ?? (currentTime - 1);
-                if ((currentTime - lastChange) < (1 / fps)) continue;
-                
-                button.SetAttribute('lastChange', currentTime);
-                
-                let x = button.GetAttribute('spritesheetX') as (number | undefined) ?? -tileWidth;
-                let y = button.GetAttribute('spritesheetY') as (number | undefined) ?? 0;
-                
-                x += tileWidth;
-                if (x >= maxColumn * tileWidth) {
-                    y += tileHeight;
-                    x = 0;
-                    
-                    if (y >= maxRow * tileHeight) {
-                        y = 0;
-                        if (loopDelay > 0) {
-                            button.SetAttribute('loopDebounce', true);
-                            task.delay(loopDelay, () => button.SetAttribute('loopDebounce', undefined));
-                        }
-                    }
-                }
-                
-                button.SetAttribute('spritesheetX', x);
-                button.SetAttribute('spritesheetY', y);
-                
-                button.ImageRectSize = new Vector2(tileWidth, tileHeight);
-                button.ImageRectOffset = new Vector2(x, y);
-            }
-        }
-    }
+    if (!accessoriesGui.Visible) return;
+	
+	for (const button of items.GetChildren()) {
+		if (!button.IsA('ImageButton') || button.GetAttribute('loopDebounce') || !(button.Name in accessoryList)) continue;
+		
+		const data = accessoryList[button.Name];
+		if (data.spritesheet_data) {
+			const tileWidth = data.spritesheet_data.tileWidth;
+			const tileHeight = data.spritesheet_data.tileHeight;
+			const maxRow = data.spritesheet_data.rows;
+			const maxColumn = data.spritesheet_data.columns;
+			const loopDelay = data.spritesheet_data.loopDelay;
+			const fps = data.spritesheet_data.fps;
+			
+			const currentTime = time();
+			const lastChange = button.GetAttribute('lastChange') as (number | undefined) ?? (currentTime - 1);
+			if ((currentTime - lastChange) < (1 / fps)) continue;
+			
+			button.SetAttribute('lastChange', currentTime);
+			
+			let x = button.GetAttribute('spritesheetX') as (number | undefined) ?? -tileWidth;
+			let y = button.GetAttribute('spritesheetY') as (number | undefined) ?? 0;
+			
+			x += tileWidth;
+			if (x >= maxColumn * tileWidth) {
+				y += tileHeight;
+				x = 0;
+				
+				if (y >= maxRow * tileHeight) {
+					y = 0;
+					if (loopDelay > 0) {
+						button.SetAttribute('loopDebounce', true);
+						task.delay(loopDelay, () => button.SetAttribute('loopDebounce', undefined));
+					}
+				}
+			}
+			
+			button.SetAttribute('spritesheetX', x);
+			button.SetAttribute('spritesheetY', y);
+			
+			button.ImageRectSize = new Vector2(tileWidth, tileHeight);
+			button.ImageRectOffset = new Vector2(x, y);
+		}
+	}
 });

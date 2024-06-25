@@ -9,6 +9,7 @@ local RunService = _services.RunService
 local StarterGui = _services.StarterGui
 local Workspace = _services.Workspace
 local Players = _services.Players
+local TextChatService = _services.TextChatService
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
 local convertStudsToMeters = _utils.convertStudsToMeters
 local roundDecimalPlaces = _utils.roundDecimalPlaces
@@ -31,6 +32,7 @@ local getTime = _utils.getTime
 local Events = {
 	BuildingHammerPlace = ReplicatedStorage:WaitForChild("BuildingHammerPlace"),
 	AddRagdollCount = ReplicatedStorage:WaitForChild("AddRagdollCount"),
+	ShowChatBubble = ReplicatedStorage:WaitForChild("ShowChatBubble"),
 	CompleteGame = ReplicatedStorage:WaitForChild("CompleteGame"),
 	StartClientTutorial = ReplicatedStorage:WaitForChild("StartClientTutorial"),
 	ClientCreateDebris = ReplicatedStorage:WaitForChild("ClientCreateDebris"),
@@ -48,6 +50,7 @@ local spectatePlayer = isSpectating:WaitForChild("player")
 local canMove = valueInstances:WaitForChild("can_move")
 local screenGui = GUI:WaitForChild("ScreenGui")
 local replayGui = GUI:WaitForChild("ReplayGui")
+local debugInfo = screenGui:WaitForChild("DebugInfo")
 local timerLabel = screenGui:WaitForChild("Timer")
 local speedometerLabel = screenGui:WaitForChild("Speedometer")
 local altitudeLabel = screenGui:WaitForChild("Altitude")
@@ -110,7 +113,7 @@ local function newPropeller(propeller)
 		_condition = not (type(_arg0) == "number")
 	end
 	if _condition then
-		warn("[src/client/cube.client.ts:107]", "An invalid propeller was created.")
+		warn("[src/client/cube.client.ts:110]", "An invalid propeller was created.")
 		return nil
 	end
 	local _propeller = propeller
@@ -124,7 +127,7 @@ local function updatePropellers(cube, dt)
 			_result = _result:IsA("BasePart")
 		end
 		if not _result then
-			warn("[src/client/cube.client.ts:118]", "A propeller has broke!")
+			warn("[src/client/cube.client.ts:121]", "A propeller has broke!")
 			table.remove(cachedPropellers, i + 1)
 			break
 		end
@@ -618,7 +621,9 @@ local function updateModifiers()
 						local _position = cube.Position
 						local _position_1 = head.Position
 						local force = (_position - _position_1).Unit * 600
-						cube.AssemblyLinearVelocity = velocity + force
+						if force.X == force.X and force.Y == force.Y and force.Z == force.Z then
+							cube.AssemblyLinearVelocity = velocity + force
+						end
 						local explosion = Instance.new("Explosion")
 						explosion.Position = head.Position
 						explosion.BlastRadius = 0
@@ -793,7 +798,7 @@ RunService.Heartbeat:Connect(function(dt)
 		local hours, minutes, seconds, milliseconds = getTimeUnits(math.round(cubeTime * 1000))
 		timerLabel.Text = string.format("%02d:%02d.%d", minutes, seconds, math.floor(milliseconds / 100))
 		altitudeLabel.Text = altitudeString
-		speedometerLabel.Text = speedString
+		speedometerLabel.Text = `{speedString}/s`
 		timerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 		local _value_1 = targetCube:GetAttribute("used_modifiers")
 		if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
@@ -950,6 +955,13 @@ RunService.Heartbeat:Connect(function(dt)
 				descendant.CollisionGroup = "clientCube"
 			end
 		end
+		local previousRagdollTime = ragdollTime
+		ragdollTime = math.max(ragdollTime - dt, 0)
+		cube:SetAttribute("ragdollTime", ragdollTime)
+		if getSetting(GameSetting.Modifiers) and cubeHat == Accessories.CubeHat.InstantGyro then
+			ragdollTime = 0
+			previousRagdollTime = 0
+		end
 		if ragdollTime > 0 and (not getSetting(GameSetting.Modifiers) or cubeHat ~= Accessories.CubeHat.InstantGyro) then
 			alignOrientation.Enabled = false
 			arm.CanCollide = true
@@ -963,8 +975,10 @@ RunService.Heartbeat:Connect(function(dt)
 			armAlignPosition.Enabled = true
 			armAlignOrientation.Enabled = true
 		end
-		ragdollTime = math.max(ragdollTime - dt, 0)
-		cube:SetAttribute("ragdollTime", ragdollTime)
+		if ragdollTime == 0 and previousRagdollTime > 0 then
+			print("[src/client/cube.client.ts:657]", "Pivot hammer back to cube")
+			arm.CFrame = cube.CFrame
+		end
 		local _condition_5 = (cube:GetAttribute("transparency"))
 		if _condition_5 == nil then
 			_condition_5 = 0
@@ -1212,8 +1226,7 @@ RunService.Heartbeat:Connect(function(dt)
 				armRotation.WorldCFrame = CFrame.lookAt(cube.Position * plane, head.Position * plane, Vector3.zAxis) * rotationOffset
 			end
 		end
-		local debugInfo = screenGui:FindFirstChild("DebugInfo")
-		if debugInfo and debugInfo.Visible then
+		if debugInfo.Visible then
 			local left = debugInfo:FindFirstChild("Left")
 			local right = debugInfo:FindFirstChild("Right");
 			(left:FindFirstChild("FPS")).Text = string.format("FPS: %.3f", 1 / dt);
@@ -1263,7 +1276,7 @@ winArea.Touched:Connect(function(otherPart)
 	if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
 		player:SetAttribute(PlayerAttributes.CompletedGame, true)
 		local totalTime = getCubeTime(otherPart)
-		print("[src/client/cube.client.ts:929]", `Completed game in {totalTime} seconds`)
+		print("[src/client/cube.client.ts:941]", `Completed game in {totalTime} seconds`)
 		Events.CompleteGame:FireServer(totalTime)
 		Events.MakeReplayEvent:Fire(string.format("win,%d", totalTime * 1000))
 	end
@@ -1278,15 +1291,15 @@ end)
 Events.StartClientTutorial.Event:Connect(function()
 	task.delay(0.1, updateModifiers)
 end)
+Events.ShowChatBubble.OnClientEvent:Connect(function(bubbleAttachment, content)
+	TextChatService:DisplayBubble(bubbleAttachment, content)
+end)
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then
 		return nil
 	end
 	if input.KeyCode == Enum.KeyCode.I and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-		local debugInfo = screenGui:FindFirstChild("DebugInfo")
-		if debugInfo then
-			debugInfo.Visible = not debugInfo.Visible
-		end
+		debugInfo.Visible = not debugInfo.Visible
 	end
 end)
 RunService.Heartbeat:Connect(function(step)

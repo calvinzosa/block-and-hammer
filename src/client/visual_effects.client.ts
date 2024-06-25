@@ -660,15 +660,21 @@ function newPart(part: Instance) {
 				
 				shakeIntensity.Value = math.clamp(head.AssemblyLinearVelocity.Magnitude / 45, 0.5, 1);
 				if (hammerTexture === Accessories.HammerTexture.ExplosiveHammer) {
-					if (getSetting(GameSetting.Modifiers)) cube.AssemblyLinearVelocity = cube.AssemblyLinearVelocity.add(cube.Position.sub(head.Position).Unit.mul(250));
+					const direction = cube.Position.sub(head.Position);
+					if (direction.Magnitude === 0) return;
+					
+					if (getSetting(GameSetting.Modifiers)) cube.AssemblyLinearVelocity = cube.AssemblyLinearVelocity.add(direction.Unit.mul(250));
 					
 					if (getSetting(GameSetting.Effects)) {
+						const velocity = head.AssemblyLinearVelocity.mul(10);
+						if (velocity.Magnitude === 0) return;
+						
 						head.Color = Color3.fromRGB(128, 128, 0);
-						task.delay(0, () => {
+						task.delay(0.01, () => {
 							if (head) TweenService.Create(head, tweenTypes.linear.short, { Color: Color3.fromRGB(255, 0, 0) }).Play();
 						});
 						
-						createDebris(head.AssemblyLinearVelocity.mul(10), head.Position, otherPart, 2.5);
+						createDebris(velocity, head.Position, otherPart, 2.5);
 						
 						const explosion = new Instance('Explosion');
 						explosion.Position = head.Position;
@@ -855,7 +861,7 @@ RunService.Stepped.Connect((_, dt) => {
 					const OuterInfo = new TweenInfo(math.min(relativeVelocity.Magnitude / 30, 10), Enum.EasingStyle.Linear);
 					for (const part of createdParts) {
 						TweenService.Create(part, OuterInfo, { Size: Vector3.zero, Transparency: 1 }).Play();
-						Debris.AddItem(part, Info.Time);
+						Debris.AddItem(part, OuterInfo.Time);
 					}
 				});
 			}

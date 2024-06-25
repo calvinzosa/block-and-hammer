@@ -6,6 +6,7 @@ local BadgeService = _services.BadgeService
 local RunService = _services.RunService
 local Workspace = _services.Workspace
 local Players = _services.Players
+local Chat = _services.Chat
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
 local convertStudsToMeters = _utils.convertStudsToMeters
 local PlayerAttributes = _utils.PlayerAttributes
@@ -15,11 +16,14 @@ local giveBadge = _utils.giveBadge
 local getTime = _utils.getTime
 local getTimeUnits = _utils.getTimeUnits
 local reloadAccessories = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "accessory_loader").reloadAccessories
+local startsWith = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "string-utils").startsWith
 local Admins = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "admins").Admins
 local Events = {
+	SayMessageRequest = ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents"):WaitForChild("SayMessageRequest"),
 	SetModifiersSetting = ReplicatedStorage:FindFirstChild("SetModifiersSetting"),
 	SaySystemMessage = ReplicatedStorage:FindFirstChild("SaySystemMessage"),
 	AddRagdollCount = ReplicatedStorage:FindFirstChild("AddRagdollCount"),
+	ShowChatBubble = ReplicatedStorage:FindFirstChild("ShowChatBubble"),
 	SetDeviceType = ReplicatedStorage:FindFirstChild("SetDeviceType"),
 	CompleteGame = ReplicatedStorage:FindFirstChild("CompleteGame"),
 	GroundImpact = ReplicatedStorage:FindFirstChild("GroundImpact"),
@@ -45,6 +49,8 @@ local function createCube(player, firstTime)
 	local cube = cubeTemplate:Clone()
 	cube.Name = `cube{player.UserId}`
 	cube.Color = computeNameColor(player.Name)
+	cube.Parent = Workspace
+	local head = cube:FindFirstChild("Head")
 	local overheadGui = cube:FindFirstChild("OverheadGUI")
 	local icons = overheadGui:FindFirstChild("Icons");
 	(overheadGui:FindFirstChild("Username")).Text = `{player.DisplayName} (@{player.Name})`
@@ -85,8 +91,6 @@ local function createCube(player, firstTime)
 	end
 	player:SetAttribute(PlayerAttributes.TotalTime, nil)
 	cube:SetAttribute("start_time", getTime())
-	cube.Parent = Workspace
-	local head = cube:FindFirstChild("Head")
 	task.spawn(function()
 		while not { cube:CanSetNetworkOwnership() } do
 			task.wait()
@@ -309,6 +313,47 @@ Events.CompleteGame.OnServerEvent:Connect(function(player, givenTime)
 		giveBadge(player, 2146538368)
 	end
 end)
+Events.SayMessageRequest.OnServerEvent:Connect(function(player, message, channel)
+	local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
+	local _bubbleAttachment = cube
+	if _bubbleAttachment ~= nil then
+		_bubbleAttachment = _bubbleAttachment:FindFirstChild("BubbleOrigin")
+	end
+	local bubbleAttachment = _bubbleAttachment
+	local _result = cube
+	if _result ~= nil then
+		_result = _result:IsA("BasePart")
+	end
+	local _condition = not _result
+	if not _condition then
+		local _result_1 = bubbleAttachment
+		if _result_1 ~= nil then
+			_result_1 = _result_1:IsA("BasePart")
+		end
+		_condition = not _result_1
+		if not _condition then
+			local _message = message
+			_condition = not (type(_message) == "string")
+			if not _condition then
+				local _channel = channel
+				_condition = not (type(_channel) == "string")
+			end
+		end
+	end
+	if _condition then
+		return nil
+	end
+	if startsWith(message, "/w ") or channel ~= "All" then
+		return nil
+	end
+	for _, otherPlayer in Players:GetPlayers() do
+		local filteredMessage = Chat:FilterStringAsync(message, player, otherPlayer)
+		Events.ShowChatBubble:FireClient(otherPlayer, bubbleAttachment, filteredMessage)
+	end
+end)
+for _, player in Players:GetPlayers() do
+	playerAdded(player)
+end
 Players.PlayerAdded:Connect(playerAdded)
 Events.Reset.OnServerEvent:Connect(resetPlayer)
 Events.ForceReset.Event:Connect(resetPlayer)

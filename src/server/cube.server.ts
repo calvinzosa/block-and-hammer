@@ -4,6 +4,7 @@ import {
     RunService,
     Workspace,
     Players,
+	Chat,
 } from '@rbxts/services';
 
 import {
@@ -17,12 +18,15 @@ import {
 } from 'shared/utils';
 
 import { reloadAccessories } from 'shared/accessory_loader';
+import { startsWith } from '@rbxts/string-utils';
 import { Admins } from 'shared/admins';
 
 const Events = {
+	'SayMessageRequest': ReplicatedStorage.WaitForChild('DefaultChatSystemChatEvents').WaitForChild('SayMessageRequest') as RemoteEvent,
     'SetModifiersSetting': ReplicatedStorage.FindFirstChild('SetModifiersSetting') as RemoteEvent,
 	'SaySystemMessage': ReplicatedStorage.FindFirstChild('SaySystemMessage') as RemoteEvent,
     'AddRagdollCount': ReplicatedStorage.FindFirstChild('AddRagdollCount') as RemoteEvent,
+	'ShowChatBubble': ReplicatedStorage.FindFirstChild('ShowChatBubble') as RemoteEvent,
     'SetDeviceType': ReplicatedStorage.FindFirstChild('SetDeviceType') as RemoteEvent,
 	'CompleteGame': ReplicatedStorage.FindFirstChild('CompleteGame') as RemoteEvent,
 	'GroundImpact': ReplicatedStorage.FindFirstChild('GroundImpact') as RemoteEvent,
@@ -50,7 +54,9 @@ function createCube(player: Player, firstTime: boolean) {
     const cube = cubeTemplate.Clone();
     cube.Name = `cube${player.UserId}`;
     cube.Color = computeNameColor(player.Name);
+	cube.Parent = Workspace;
 	
+	const head = cube.FindFirstChild('Head') as BasePart;
 	const overheadGui = cube.FindFirstChild('OverheadGUI') as BillboardGui;
 	const icons = overheadGui.FindFirstChild('Icons') as Frame;
 	
@@ -71,9 +77,6 @@ function createCube(player: Player, firstTime: boolean) {
 	
 	player.SetAttribute(PlayerAttributes.TotalTime, undefined);
 	cube.SetAttribute('start_time', getTime());
-	cube.Parent = Workspace;
-	
-	const head = cube.FindFirstChild('Head') as BasePart;
 	
 	task.spawn(() => {
 		while (!cube.CanSetNetworkOwnership()) task.wait();
@@ -230,6 +233,20 @@ Events.CompleteGame.OnServerEvent.Connect((player, givenTime) => {
 	if (totalTime < 210) giveBadge(player, 2146538368);
 });
 
+Events.SayMessageRequest.OnServerEvent.Connect((player, message, channel) => {
+	const cube = Workspace.FindFirstChild(`cube${player.UserId}`);
+	const bubbleAttachment = cube?.FindFirstChild('BubbleOrigin');
+	if (!cube?.IsA('BasePart') || !bubbleAttachment?.IsA('BasePart') || !typeIs(message, 'string') || !typeIs(channel, 'string')) return;
+	
+	if (startsWith(message, '/w ') || channel !== 'All') return;
+	
+	for (const otherPlayer of Players.GetPlayers()) {
+		const filteredMessage = Chat.FilterStringAsync(message, player, otherPlayer);
+		Events.ShowChatBubble.FireClient(otherPlayer, bubbleAttachment, filteredMessage);
+	}
+});
+
+for (const player of Players.GetPlayers()) playerAdded(player);
 Players.PlayerAdded.Connect(playerAdded);
 
 Events.Reset.OnServerEvent.Connect(resetPlayer);

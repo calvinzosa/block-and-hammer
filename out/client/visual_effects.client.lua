@@ -732,23 +732,31 @@ local function newPart(part)
 				end
 				shakeIntensity.Value = math.clamp(head.AssemblyLinearVelocity.Magnitude / 45, 0.5, 1)
 				if hammerTexture == Accessories.HammerTexture.ExplosiveHammer then
+					local _position = cube.Position
+					local _position_1 = head.Position
+					local direction = _position - _position_1
+					if direction.Magnitude == 0 then
+						return nil
+					end
 					if getSetting(GameSetting.Modifiers) then
 						local _assemblyLinearVelocity = cube.AssemblyLinearVelocity
-						local _position = cube.Position
-						local _position_1 = head.Position
-						local _arg0_1 = (_position - _position_1).Unit * 250
+						local _arg0_1 = direction.Unit * 250
 						cube.AssemblyLinearVelocity = _assemblyLinearVelocity + _arg0_1
 					end
 					if getSetting(GameSetting.Effects) then
+						local velocity = head.AssemblyLinearVelocity * 10
+						if velocity.Magnitude == 0 then
+							return nil
+						end
 						head.Color = Color3.fromRGB(128, 128, 0)
-						task.delay(0, function()
+						task.delay(0.01, function()
 							if head then
 								TweenService:Create(head, tweenTypes.linear.short, {
 									Color = Color3.fromRGB(255, 0, 0),
 								}):Play()
 							end
 						end)
-						createDebris(head.AssemblyLinearVelocity * 10, head.Position, otherPart, 2.5)
+						createDebris(velocity, head.Position, otherPart, 2.5)
 						local explosion = Instance.new("Explosion")
 						explosion.Position = head.Position
 						explosion.BlastRadius = 0
@@ -930,7 +938,7 @@ RunService.Stepped:Connect(function(_, dt)
 							Size = Vector3.zero,
 							Transparency = 1,
 						}):Play()
-						Debris:AddItem(part, Info.Time)
+						Debris:AddItem(part, OuterInfo.Time)
 					end
 				end)
 			end
@@ -971,7 +979,7 @@ RunService.Stepped:Connect(function(_, dt)
 	prevCubePosition = cube.Position
 	cube:SetAttribute("lastVelocity", cube.AssemblyLinearVelocity)
 end)
-print("[src/client/visual_effects.client.ts:905]", "Started running visual_effects.client.ts")
+print("[src/client/visual_effects.client.ts:911]", "Started running visual_effects.client.ts")
 while true do
 	local _value = task.wait(0.05)
 	if not (_value ~= 0 and _value == _value and _value) then

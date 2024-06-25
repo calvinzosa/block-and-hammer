@@ -141,9 +141,9 @@ local function updateSettingButtons()
 			button.MouseButton1Click:Connect(function()
 				local currentValue = not getSetting(name)
 				setSetting(name, currentValue)
-				if name == "modifiers" then
+				if name == GameSetting.Modifiers then
 					Events.SetModifiersSetting:FireServer(getSetting(GameSetting.Modifiers))
-				elseif name == "timergui" then
+				elseif name == GameSetting.TimerGUI then
 					(screenGui:FindFirstChild("Timer")).Visible = getSetting(GameSetting.TimerGUI)
 				end
 				button.Text = `{alias}: {if currentValue then "✅" else "❌"}`
@@ -270,7 +270,7 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 	end
 	if (currentTime - lastChange) > 5 and not areSettingsSaved and not settingsGui.Visible then
-		print("[src/client/menu_gui.client.ts:233]", `Saved settings: {HttpService:JSONEncode(Settings)}`)
+		print("[src/client/menu_gui.client.ts:234]", `Saved settings: {HttpService:JSONEncode(Settings)}`)
 		Events.SaveSettingsJSON:FireServer(Settings)
 		areSettingsSaved = true
 	end
@@ -289,9 +289,9 @@ Events.LoadSettingsJSON.OnClientEvent:Connect(function(settingsJSON)
 			Events.SetModifiersSetting:FireServer(true)
 		end
 		updateSettingButtons()
-		print("[src/client/menu_gui.client.ts:251]", `Loaded settings data: {settingsJSON}`)
+		print("[src/client/menu_gui.client.ts:252]", `Loaded settings data: {settingsJSON}`)
 	else
-		warn("[src/client/menu_gui.client.ts:252]", "Unable to decode settings data")
+		warn("[src/client/menu_gui.client.ts:253]", "Unable to decode settings data")
 	end
 end);
 (menuButtons:WaitForChild("Reset")).MouseButton1Click:Connect(function()
@@ -479,12 +479,12 @@ Events.SettingChanged.Event:Connect(updateSettingButtons)
 local function changePlaceVersion()
 	local value = (ReplicatedStorage:FindFirstChild("PlaceVersion")).Value
 	local text = tostring(value)
-	if value == 0 then
+	if value == -1 then
 		text = "DEV"
 	elseif value == -2 then
 		text = "TESTING"
 	end
 	placeVersion.Text = `block and hammer - v{value}`
 end
+changePlaceVersion();
 (ReplicatedStorage:WaitForChild("PlaceVersion")).Changed:Connect(changePlaceVersion)
-changePlaceVersion()

@@ -9,7 +9,7 @@ import {
 } from '@rbxts/services';
 
 import str from '@rbxts/string-utils';
-import { $warn } from 'rbxts-transform-debug';
+import { $print, $warn } from 'rbxts-transform-debug';
 
 const Events = {
     SettingChanged: ReplicatedStorage.WaitForChild('SettingChanged') as BindableEvent,
@@ -25,18 +25,6 @@ const RNG = new Random();
 
 export type DictKey = string | number | symbol;
 export type DictValue = string | number | symbol;
-
-export enum GameSetting {
-    'HideOthers' = 'hideothers',
-    'ShowRange' = 'showrange',
-    'Effects' = 'effects',
-    'ScreenShake' = 'screenshake',
-    'Sounds' = 'sounds',
-    'Music' = 'music',
-    'TimerGUI' = 'timergui',
-    'Modifiers' = 'modifiers',
-    'CSG' = 'csg',
-};
 
 export namespace PlayerAttributes {
     export const IsNew = 'isNew';
@@ -127,6 +115,18 @@ export namespace Accessories {
     };
 };
 
+export enum GameSetting {
+    'HideOthers' = 'hideothers',
+    'ShowRange' = 'showrange',
+    'Effects' = 'effects',
+    'ScreenShake' = 'screenshake',
+    'Sounds' = 'sounds',
+    'Music' = 'music',
+    'TimerGUI' = 'timergui',
+    'Modifiers' = 'modifiers',
+    'CSG' = 'csg',
+};
+
 export type BaseSettings = Record<GameSetting, boolean>;
 
 export const Settings: BaseSettings = {
@@ -138,7 +138,7 @@ export const Settings: BaseSettings = {
     'music': true,
     'timergui': true,
     'modifiers': false,
-    'csg': true
+    'csg': true,
 };
 
 export const DefaultSettings = table.clone(Settings);

@@ -30,6 +30,11 @@ local function updateGui()
 	description.Text = ""
 	equipButton.Visible = false
 	selectedAccessory = nil
+	for _, button in items:GetChildren() do
+		if button:IsA("ImageButton") then
+			button:Destroy()
+		end
+	end
 	for name, accessory in pairs(accessoryList) do
 		if accessory.never then
 			continue
@@ -81,15 +86,15 @@ local function updateGui()
 							task.wait(0.5)
 						end
 					end
+					accessoryButton.Visible = true
 					if hasBadge then
 						canEquipIt = true
-						shadow.Visible = true
+						shadow.Visible = false
 					else
+						shadow.Visible = true
 						shadow.Text = accessory.badge_name
 						if not accessory.always_show then
 							accessoryButton.Visible = false
-						else
-							accessoryButton.Visible = true
 						end
 					end
 				end)
@@ -112,7 +117,6 @@ local function updateGui()
 			if not (_value ~= 0 and _value == _value and _value ~= "" and _value) then
 				accessoryButton:SetAttribute("connected", true)
 				accessoryButton.MouseButton1Click:Connect(function()
-					selectedAccessory = accessoryButton
 					title.Text = name
 					local _condition = accessory.description
 					if _condition == nil then
@@ -124,6 +128,7 @@ local function updateGui()
 						equipButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 						equipButton.BackgroundTransparency = 0.6
 						equipButton.AutoButtonColor = true
+						selectedAccessory = accessoryButton
 					else
 						equipButton.TextColor3 = Color3.fromRGB(175, 175, 175)
 						equipButton.BackgroundTransparency = 0.5
@@ -157,9 +162,6 @@ equipButton.MouseButton1Click:Connect(function()
 			_result = _result:IsA("UIStroke")
 		end
 		_condition = not _result
-		if not _condition then
-			_condition = not outline.Enabled
-		end
 	end
 	if _condition then
 		return nil
@@ -231,64 +233,65 @@ equipButton.MouseButton1Click:Connect(function()
 end)
 RunService.RenderStepped:Connect(function()
 	if not accessoriesGui.Visible then
-		for _, button in items:GetChildren() do
-			local _condition = not button:IsA("ImageButton")
-			if not _condition then
-				_condition = button:GetAttribute("loopDebounce")
-				if not (_condition ~= 0 and _condition == _condition and _condition ~= "" and _condition) then
-					_condition = not (accessoryList[button.Name] ~= nil)
-				end
+		return nil
+	end
+	for _, button in items:GetChildren() do
+		local _condition = not button:IsA("ImageButton")
+		if not _condition then
+			_condition = button:GetAttribute("loopDebounce")
+			if not (_condition ~= 0 and _condition == _condition and _condition ~= "" and _condition) then
+				_condition = not (accessoryList[button.Name] ~= nil)
 			end
-			if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
+		end
+		if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
+			continue
+		end
+		local data = accessoryList[button.Name]
+		if data.spritesheet_data then
+			local tileWidth = data.spritesheet_data.tileWidth
+			local tileHeight = data.spritesheet_data.tileHeight
+			local maxRow = data.spritesheet_data.rows
+			local maxColumn = data.spritesheet_data.columns
+			local loopDelay = data.spritesheet_data.loopDelay
+			local fps = data.spritesheet_data.fps
+			local currentTime = time()
+			local _condition_1 = button:GetAttribute("lastChange")
+			if _condition_1 == nil then
+				_condition_1 = (currentTime - 1)
+			end
+			local lastChange = _condition_1
+			if (currentTime - lastChange) < (1 / fps) then
 				continue
 			end
-			local data = accessoryList[button.Name]
-			if data.spritesheet_data then
-				local tileWidth = data.spritesheet_data.tileWidth
-				local tileHeight = data.spritesheet_data.tileHeight
-				local maxRow = data.spritesheet_data.rows
-				local maxColumn = data.spritesheet_data.columns
-				local loopDelay = data.spritesheet_data.loopDelay
-				local fps = data.spritesheet_data.fps
-				local currentTime = time()
-				local _condition_1 = button:GetAttribute("lastChange")
-				if _condition_1 == nil then
-					_condition_1 = (currentTime - 1)
-				end
-				local lastChange = _condition_1
-				if (currentTime - lastChange) < (1 / fps) then
-					continue
-				end
-				button:SetAttribute("lastChange", currentTime)
-				local _condition_2 = button:GetAttribute("spritesheetX")
-				if _condition_2 == nil then
-					_condition_2 = -tileWidth
-				end
-				local x = _condition_2
-				local _condition_3 = button:GetAttribute("spritesheetY")
-				if _condition_3 == nil then
-					_condition_3 = 0
-				end
-				local y = _condition_3
-				x += tileWidth
-				if x >= maxColumn * tileWidth then
-					y += tileHeight
-					x = 0
-					if y >= maxRow * tileHeight then
-						y = 0
-						if loopDelay > 0 then
-							button:SetAttribute("loopDebounce", true)
-							task.delay(loopDelay, function()
-								return button:SetAttribute("loopDebounce", nil)
-							end)
-						end
+			button:SetAttribute("lastChange", currentTime)
+			local _condition_2 = button:GetAttribute("spritesheetX")
+			if _condition_2 == nil then
+				_condition_2 = -tileWidth
+			end
+			local x = _condition_2
+			local _condition_3 = button:GetAttribute("spritesheetY")
+			if _condition_3 == nil then
+				_condition_3 = 0
+			end
+			local y = _condition_3
+			x += tileWidth
+			if x >= maxColumn * tileWidth then
+				y += tileHeight
+				x = 0
+				if y >= maxRow * tileHeight then
+					y = 0
+					if loopDelay > 0 then
+						button:SetAttribute("loopDebounce", true)
+						task.delay(loopDelay, function()
+							return button:SetAttribute("loopDebounce", nil)
+						end)
 					end
 				end
-				button:SetAttribute("spritesheetX", x)
-				button:SetAttribute("spritesheetY", y)
-				button.ImageRectSize = Vector2.new(tileWidth, tileHeight)
-				button.ImageRectOffset = Vector2.new(x, y)
 			end
+			button:SetAttribute("spritesheetX", x)
+			button:SetAttribute("spritesheetY", y)
+			button.ImageRectSize = Vector2.new(tileWidth, tileHeight)
+			button.ImageRectOffset = Vector2.new(x, y)
 		end
 	end
 end)

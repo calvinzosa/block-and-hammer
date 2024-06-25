@@ -7,6 +7,7 @@ import {
 	StarterGui,
 	Workspace,
     Players,
+	TextChatService,
 } from '@rbxts/services';
 
 import { $print, $warn } from 'rbxts-transform-debug';
@@ -35,6 +36,7 @@ import {
 const Events = {
     'BuildingHammerPlace': ReplicatedStorage.WaitForChild('BuildingHammerPlace') as RemoteEvent,
     'AddRagdollCount': ReplicatedStorage.WaitForChild('AddRagdollCount') as RemoteEvent,
+    'ShowChatBubble': ReplicatedStorage.WaitForChild('ShowChatBubble') as RemoteEvent,
     'CompleteGame': ReplicatedStorage.WaitForChild('CompleteGame') as RemoteEvent,
 	
     'StartClientTutorial': ReplicatedStorage.WaitForChild('StartClientTutorial') as BindableEvent,
@@ -55,6 +57,7 @@ const spectatePlayer = isSpectating.WaitForChild('player') as StringValue;
 const canMove = valueInstances.WaitForChild('can_move') as BoolValue;
 const screenGui = GUI.WaitForChild('ScreenGui') as ScreenGui;
 const replayGui = GUI.WaitForChild('ReplayGui') as ScreenGui;
+const debugInfo = screenGui.WaitForChild('DebugInfo') as Frame;
 const timerLabel = screenGui.WaitForChild('Timer') as TextLabel;
 const speedometerLabel = screenGui.WaitForChild('Speedometer') as TextLabel;
 const altitudeLabel = screenGui.WaitForChild('Altitude') as TextLabel;
@@ -448,7 +451,7 @@ function updateModifiers() {
                         
                         const velocity = cube.AssemblyLinearVelocity;
                         const force = cube.Position.sub(head.Position).Unit.mul(600);
-                        cube.AssemblyLinearVelocity = velocity.add(force);
+						if (force.X === force.X && force.Y === force.Y && force.Z === force.Z) cube.AssemblyLinearVelocity = velocity.add(force);
                         
                         const explosion = new Instance('Explosion');
                         explosion.Position = head.Position;
@@ -568,7 +571,7 @@ RunService.Heartbeat.Connect((dt) => {
 		
 		timerLabel.Text = string.format('%02d:%02d.%d', minutes, seconds, math.floor(milliseconds / 100));
 		altitudeLabel.Text = altitudeString;
-		speedometerLabel.Text = speedString;
+		speedometerLabel.Text = `${speedString}/s`;
 		
 		timerLabel.TextColor3 = Color3.fromRGB(255, 255, 255);
 		if (targetCube.GetAttribute('used_modifiers')) {
@@ -627,6 +630,15 @@ RunService.Heartbeat.Connect((dt) => {
 			if (descendant.IsA('BasePart') && descendant.CollisionGroup === 'cubes') descendant.CollisionGroup = 'clientCube'
 		}
 		
+		let previousRagdollTime = ragdollTime;
+		ragdollTime = math.max(ragdollTime - dt, 0);
+		cube.SetAttribute('ragdollTime', ragdollTime);
+		
+		if (getSetting(GameSetting.Modifiers) && cubeHat === Accessories.CubeHat.InstantGyro) {
+			ragdollTime = 0;
+			previousRagdollTime = 0;
+		}
+		
 		if (ragdollTime > 0 && (!getSetting(GameSetting.Modifiers) || cubeHat !== Accessories.CubeHat.InstantGyro)) {
 			alignOrientation.Enabled = false;
 			arm.CanCollide = true;
@@ -641,9 +653,10 @@ RunService.Heartbeat.Connect((dt) => {
 			armAlignOrientation.Enabled = true;
 		}
 		
-		ragdollTime = math.max(ragdollTime - dt, 0);
-		
-		cube.SetAttribute('ragdollTime', ragdollTime);
+		if (ragdollTime === 0 && previousRagdollTime > 0) {
+			$print('Pivot hammer back to cube');
+			arm.CFrame = cube.CFrame;
+		}
 		
 		const cubeTransparency = (cube.GetAttribute('transparency') as number | undefined) ?? 0;
 		const hammerTransparency = (cube.GetAttribute('hammerTransparency') as number | undefined) ?? 0;
@@ -852,8 +865,7 @@ RunService.Heartbeat.Connect((dt) => {
 			else armRotation.WorldCFrame = CFrame.lookAt(cube.Position.mul(plane), head.Position.mul(plane), Vector3.zAxis).mul(rotationOffset);
 		}
 		
-		const debugInfo = screenGui.FindFirstChild('DebugInfo') as Frame | undefined;
-		if (debugInfo && debugInfo.Visible) {
+		if (debugInfo.Visible) {
 			const left = debugInfo.FindFirstChild('Left') as Frame;
 			const right = debugInfo.FindFirstChild('Right') as Frame;
 			
@@ -944,13 +956,14 @@ Events.StartClientTutorial.Event.Connect(() => {
 	task.delay(0.1, updateModifiers);
 });
 
+Events.ShowChatBubble.OnClientEvent.Connect((bubbleAttachment: BasePart, content: string) => {
+	TextChatService.DisplayBubble(bubbleAttachment, content);
+});
+
 UserInputService.InputBegan.Connect((input, processed) => {
 	if (processed) return;
 	
-	if (input.KeyCode === Enum.KeyCode.I && UserInputService.IsKeyDown(Enum.KeyCode.LeftControl)) {
-		const debugInfo = screenGui.FindFirstChild('DebugInfo') as Frame | undefined;
-		if (debugInfo) debugInfo.Visible = !debugInfo.Visible
-	}
+	if (input.KeyCode === Enum.KeyCode.I && UserInputService.IsKeyDown(Enum.KeyCode.LeftControl)) debugInfo.Visible = !debugInfo.Visible;
 });
 
 RunService.Heartbeat.Connect((step) => {

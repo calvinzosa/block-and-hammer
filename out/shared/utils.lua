@@ -21,17 +21,6 @@ end
 local GUI = _result
 local placeId = game.PlaceId
 local RNG = Random.new()
-local GameSetting = {
-	HideOthers = "hideothers",
-	ShowRange = "showrange",
-	Effects = "effects",
-	ScreenShake = "screenshake",
-	Sounds = "sounds",
-	Music = "music",
-	TimerGUI = "timergui",
-	Modifiers = "modifiers",
-	CSG = "csg",
-}
 local PlayerAttributes = {}
 do
 	local _container = PlayerAttributes
@@ -135,6 +124,17 @@ do
 	}
 	_container.CubeAura = CubeAura
 end
+local GameSetting = {
+	HideOthers = "hideothers",
+	ShowRange = "showrange",
+	Effects = "effects",
+	ScreenShake = "screenshake",
+	Sounds = "sounds",
+	Music = "music",
+	TimerGUI = "timergui",
+	Modifiers = "modifiers",
+	CSG = "csg",
+}
 local Settings = {
 	hideothers = false,
 	showrange = false,
@@ -699,9 +699,9 @@ return {
 	giveBadge = giveBadge,
 	isTestingServer = isTestingServer,
 	isMainServer = isMainServer,
-	GameSetting = GameSetting,
 	PlayerAttributes = PlayerAttributes,
 	Accessories = Accessories,
+	GameSetting = GameSetting,
 	Settings = Settings,
 	DefaultSettings = DefaultSettings,
 	tweenTypes = tweenTypes,
