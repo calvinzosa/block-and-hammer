@@ -86,6 +86,7 @@ export namespace Accessories {
         Shotgun = 'Shotgun',
         Platform = 'Platform',
         Hammer404 = '404 Hammer',
+        HitboxHammer = 'Hitbox Hammer',
         Mallet = 'Mallet',
         GodsHammer = 'God\'s Hammer',
         IcyHammer = 'Icy Hammer',

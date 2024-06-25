@@ -10,7 +10,7 @@ import {
 	TextChatService,
 } from '@rbxts/services';
 
-import { $print, $warn } from 'rbxts-transform-debug';
+import { $dbg, $print, $warn } from 'rbxts-transform-debug';
 
 import {
 	convertStudsToMeters,
@@ -61,7 +61,9 @@ const debugInfo = screenGui.WaitForChild('DebugInfo') as Frame;
 const timerLabel = screenGui.WaitForChild('Timer') as TextLabel;
 const speedometerLabel = screenGui.WaitForChild('Speedometer') as TextLabel;
 const altitudeLabel = screenGui.WaitForChild('Altitude') as TextLabel;
-const mapFolder = Workspace.WaitForChild('Map');
+const nonBreakable = Workspace.WaitForChild('NonBreakable') as Folder;
+const mapFolder = Workspace.WaitForChild('Map') as Folder;
+const platformsFolder = mapFolder.WaitForChild('Platforms') as Folder;
 const propellersFolder = mapFolder.WaitForChild('Propellers') as Folder;
 const mudParts = mapFolder.WaitForChild('MudParts');
 const effectsFolder = Workspace.WaitForChild('Effects') as BasePart;
@@ -70,6 +72,7 @@ const wallPlane = Workspace.WaitForChild('Wall') as BasePart;
 const flippedGravity = ReplicatedStorage.WaitForChild('flipped_gravity') as BoolValue;
 const mouseVisual = Workspace.WaitForChild('MouseVisual') as BasePart;
 const modifierDisablers = Workspace.WaitForChild('ForceDisableModifiers') as BasePart;
+const hitboxFolder = Workspace.WaitForChild('Hitboxes') as Folder;
 
 const AbilityCooldowns = {
     ExplosiveHammer: false,
@@ -190,6 +193,40 @@ function updatePropellers(cube: BasePart, dt: number) {
 	if (headPropeller?.IsA('VectorForce')) headPropeller.Force = totalHeadForce.mul(gravity).mul(dt * 10 * headMultiplier);
 }
 
+function updatePlatforms(cube: BasePart, head: BasePart) {
+	for (const platform of platformsFolder.GetChildren()) {
+		if (!platform.IsA('BasePart')) continue;
+		
+		const cubeCollision = platform.FindFirstChild('CubeCollision') as (NoCollisionConstraint | undefined) ?? new Instance('NoCollisionConstraint');
+		cubeCollision.Name = 'CubeCollision';
+		cubeCollision.Part0 = platform;
+		cubeCollision.Part1 = cube;
+		cubeCollision.Enabled = (platform.Position.Y + platform.Size.Y / 2) > (cube.Position.Y - cube.Size.Y / 2 + 0.25);
+		cubeCollision.Parent = platform;
+		
+		const headCollision = platform.FindFirstChild('HeadCollision') as (NoCollisionConstraint | undefined) ?? new Instance('NoCollisionConstraint');
+		headCollision.Name = 'HeadCollision';
+		headCollision.Part0 = platform;
+		headCollision.Part1 = head;
+		headCollision.Enabled = (platform.Position.Y + platform.Size.Y / 2) > head.Position.Y;
+		headCollision.Parent = platform;
+		
+		platform.SetAttribute('notCollidable', headCollision.Enabled);
+	}
+}
+
+function updateMud(cube: BasePart, head: BasePart, dt: number) {
+	const slowdownFactor = math.clamp(1 - (dt * 15), 0.01, 1);
+	
+	const params = new OverlapParams();
+	params.FilterType = Enum.RaycastFilterType.Include;
+	params.FilterDescendantsInstances = [ mudParts ];
+	
+	for (const part of [ cube, head ]) {
+		if (Workspace.GetPartsInPart(part, params).size() > 0) part.AssemblyLinearVelocity = part.AssemblyLinearVelocity.mul(slowdownFactor);
+	}
+}
+
 function formatDebugWorldNumber(num: number) {
 	const [ integer, decimal ] = math.modf(math.abs(num));
     return string.format('%s%05d%s', integer >= 0 ? '+' : '-', integer, string.format('%.3f', decimal).sub(2));
@@ -233,6 +270,11 @@ function getBuildSize() {
 }
 
 function updateModifiers() {
+	for (const hitbox of hitboxFolder.GetChildren()) {
+		if (hitbox.IsA('SelectionBox')) hitbox.Adornee?.SetAttribute('hitboxOutline', undefined);
+	}
+	hitboxFolder.ClearAllChildren();
+	
     for (const [ hammer, actions ] of pairs(ActionNames)) {
         for (const [ abilityName, actionName ] of pairs(actions)) {
             ContextActionService.UnbindAction(actionName as string);
@@ -291,38 +333,36 @@ function updateModifiers() {
                     AbilityObjects.GrapplingHammerRope.Destroy();
                     AbilityObjects.GrapplingHammerRope = undefined;
                 }
-                
+				
                 if (action === ActionNames.GrapplingHammer.Activate) {
                     const head = cube.FindFirstChild('Head');
+					const arm = cube.FindFirstChild('Arm');
                     const axisLock = Workspace.FindFirstChild('AxisLock');
                     const rightAttachment = head?.FindFirstChild('RightAttachment');
-                    if (!head?.IsA('BasePart') || !axisLock?.IsA('BasePart') || !rightAttachment?.IsA('Attachment')) return;
-                    
+                    if (!head?.IsA('BasePart') || !arm?.IsA('BasePart') || !axisLock?.IsA('BasePart') || !rightAttachment?.IsA('Attachment')) return;
+					
                     if (state === Enum.UserInputState.Begin) {
                         const params = new RaycastParams();
                         params.FilterType = Enum.RaycastFilterType.Exclude;
                         
                         const filter = [  ];
                         for (const object of Workspace.GetChildren()) {
-                            if (object !== Workspace.FindFirstChild('Map') && object !== Workspace.FindFirstChild('NonBreakable')) filter.push(object);
+                            if (object !== mapFolder && object !== nonBreakable) filter.push(object);
                         }
                         
-                        const propellers = Workspace.FindFirstChild('Propellers') as (Folder | undefined);
-                        if (propellers) {
-                            for (const propeller of propellers.GetChildren()) {
-                                const hitbox = propeller.FindFirstChild('Hitbox') as (BasePart | undefined);
-                                if (hitbox) filter.push(hitbox);
-                            }
-                        }
+						for (const propeller of propellersFolder.GetChildren()) {
+							const hitbox = propeller.FindFirstChild('Hitbox');
+							if (hitbox?.IsA('BasePart')) filter.push(hitbox);
+						}
                         
                         params.FilterDescendantsInstances = filter;
                         
-                        const result = Workspace.Raycast(head.Position, head.CFrame.LookVector.mul(6144), params);
+                        const result = Workspace.Raycast(head.Position, arm.CFrame.RightVector.mul(6144), params);
                         if (!result) return;
                         
                         const target = new Instance('Attachment');
-                        target.WorldCFrame = new CFrame(result.Position);
-                        target.Parent = axisLock;
+                        target.CFrame = new CFrame(result.Position);
+						target.Parent = axisLock;
                         
                         const rope = new Instance('RopeConstraint');
                         rope.Visible = true;
@@ -354,7 +394,7 @@ function updateModifiers() {
                         if (UserInputService.IsKeyDown(Enum.KeyCode.LeftShift)) delta *= 10;
                         
                         const newLength = math.clamp(rope.Length + delta * 10, 1, 6144);
-                        TweenService.Create(rope, tweenTypes.linear.short, { Length: newLength }).Play();
+                        TweenService.Create(rope, new TweenInfo(0.2), { Length: newLength }).Play();
                     }
                 }
             }
@@ -362,7 +402,7 @@ function updateModifiers() {
             ContextActionService.BindAction(ActionNames.GrapplingHammer.Activate, activate, true, Enum.KeyCode.E);
             ContextActionService.SetTitle(ActionNames.GrapplingHammer.Activate, 'Grapple');
             
-            ContextActionService.BindAction(ActionNames.GrapplingHammer.Activate, scroll, false, Enum.UserInputType.MouseWheel);
+            ContextActionService.BindAction(ActionNames.GrapplingHammer.Scroll, scroll, false, Enum.UserInputType.MouseWheel);
         } else if (currentHammer === Accessories.HammerTexture.Shotgun) {
             function fire(action: string, state: Enum.UserInputState, input: InputObject) {
                 if (!cube || !isClientCube(cube)) return;
@@ -492,7 +532,19 @@ function updateModifiers() {
 			
 			ContextActionService.BindAction(ActionNames.InverterHammer.Invert, invert, true, Enum.KeyCode.E)
 			ContextActionService.SetTitle(ActionNames.InverterHammer.Invert, '⬆️')
-        }
+        } else if (currentHammer === Accessories.HammerTexture.HitboxHammer) {
+			for (const descendant of [ ...mapFolder.GetDescendants(), ...nonBreakable.GetDescendants() ]) {
+				if (descendant.IsA('BasePart') && !descendant.GetAttribute('hitboxOutline')) {
+					descendant.SetAttribute('hitboxOutline', true);
+					
+					const outline = new Instance('SelectionBox');
+					outline.Adornee = descendant;
+					outline.Color3 = (descendant.IsA('Part') && descendant.Shape === Enum.PartType.Block) ? Color3.fromRGB(255, 0, 0) : Color3.fromRGB(0, 0, 255);
+					outline.Transparency = math.min(descendant.Transparency, 0.5);
+					outline.Parent = hitboxFolder;
+				}
+			}
+		}
     }
 }
 
@@ -655,7 +707,7 @@ RunService.Heartbeat.Connect((dt) => {
 		
 		if (ragdollTime === 0 && previousRagdollTime > 0) {
 			$print('Pivot hammer back to cube');
-			arm.CFrame = cube.CFrame;
+			arm.CFrame = (new CFrame(cube.Position)).mul(CFrame.fromOrientation(0, 0, math.pi / 2));
 		}
 		
 		const cubeTransparency = (cube.GetAttribute('transparency') as number | undefined) ?? 0;
@@ -766,6 +818,8 @@ RunService.Heartbeat.Connect((dt) => {
 		wallPlane.Position = cubePosition;
 		
 		updatePropellers(cube, dt);
+		updateMud(cube, head, dt);
+		updatePlatforms(cube, head);
 		
 		const [ position, nonFiltered, hitPart ] = mouseRaycast();
 		if (!typeIs(position, 'Vector3') || !typeIs(nonFiltered, 'Vector3')) return;
@@ -848,13 +902,12 @@ RunService.Heartbeat.Connect((dt) => {
 		if (distanceLimit?.IsA('RopeConstraint')) distanceLimit.Length = maxRange;
 		
 		const actualHammerDistance = math.min(hammerDistance, maxRange);
+		const rotationOffset = CFrame.fromOrientation(math.pi / 2, math.pi / 2, 0);
 		
 		const hammerPosition = cube.Position.add(new Vector3(math.cos(hammerAngle) * actualHammerDistance, math.sin(hammerAngle) * actualHammerDistance));
 		const plane = new Vector3(1, 1, 0);
 		
 		if (canMove.Value) {
-			const rotationOffset = CFrame.fromOrientation(math.pi / 2, math.pi / 2, 0);
-			
 			const mouse = UserInputService.GetMouseLocation();
 			for (const gui of StarterGui.GetGuiObjectsAtPosition(mouse.X, mouse.Y)) {
 				if (gui.Name === 'ContextButtonFrame') return;
@@ -964,18 +1017,4 @@ UserInputService.InputBegan.Connect((input, processed) => {
 	if (processed) return;
 	
 	if (input.KeyCode === Enum.KeyCode.I && UserInputService.IsKeyDown(Enum.KeyCode.LeftControl)) debugInfo.Visible = !debugInfo.Visible;
-});
-
-RunService.Heartbeat.Connect((step) => {
-	if (!cube || player.GetAttribute(PlayerAttributes.InErrorLand)) return;
-	
-	const slowdownFactor = math.clamp(1 - (step * 30), 0.01, 1);
-	
-	const params = new OverlapParams();
-	params.FilterType = Enum.RaycastFilterType.Include;
-	params.FilterDescendantsInstances = [ mudParts ];
-	
-	for (const part of [ cube, cube.FindFirstChild('Head') ]) {
-		if (part?.IsA('BasePart') && Workspace.GetPartsInPart(part, params).size() > 0) part.AssemblyLinearVelocity = part.AssemblyLinearVelocity.mul(slowdownFactor);
-	}
 });

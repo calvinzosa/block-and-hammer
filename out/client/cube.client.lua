@@ -54,7 +54,9 @@ local debugInfo = screenGui:WaitForChild("DebugInfo")
 local timerLabel = screenGui:WaitForChild("Timer")
 local speedometerLabel = screenGui:WaitForChild("Speedometer")
 local altitudeLabel = screenGui:WaitForChild("Altitude")
+local nonBreakable = Workspace:WaitForChild("NonBreakable")
 local mapFolder = Workspace:WaitForChild("Map")
+local platformsFolder = mapFolder:WaitForChild("Platforms")
 local propellersFolder = mapFolder:WaitForChild("Propellers")
 local mudParts = mapFolder:WaitForChild("MudParts")
 local effectsFolder = Workspace:WaitForChild("Effects")
@@ -63,6 +65,7 @@ local wallPlane = Workspace:WaitForChild("Wall")
 local flippedGravity = ReplicatedStorage:WaitForChild("flipped_gravity")
 local mouseVisual = Workspace:WaitForChild("MouseVisual")
 local modifierDisablers = Workspace:WaitForChild("ForceDisableModifiers")
+local hitboxFolder = Workspace:WaitForChild("Hitboxes")
 local AbilityCooldowns = {
 	ExplosiveHammer = false,
 	Shotgun = false,
@@ -113,7 +116,7 @@ local function newPropeller(propeller)
 		_condition = not (type(_arg0) == "number")
 	end
 	if _condition then
-		warn("[src/client/cube.client.ts:110]", "An invalid propeller was created.")
+		warn("[src/client/cube.client.ts:113]", "An invalid propeller was created.")
 		return nil
 	end
 	local _propeller = propeller
@@ -127,7 +130,7 @@ local function updatePropellers(cube, dt)
 			_result = _result:IsA("BasePart")
 		end
 		if not _result then
-			warn("[src/client/cube.client.ts:121]", "A propeller has broke!")
+			warn("[src/client/cube.client.ts:124]", "A propeller has broke!")
 			table.remove(cachedPropellers, i + 1)
 			break
 		end
@@ -255,6 +258,37 @@ local function updatePropellers(cube, dt)
 		headPropeller.Force = _exp * _arg0
 	end
 end
+local function updatePlatforms(cube, head)
+	for _, platform in platformsFolder:GetChildren() do
+		if not platform:IsA("BasePart") then
+			continue
+		end
+		local cubeCollision = platform:FindFirstChild("CubeCollision") or Instance.new("NoCollisionConstraint")
+		cubeCollision.Name = "CubeCollision"
+		cubeCollision.Part0 = platform
+		cubeCollision.Part1 = cube
+		cubeCollision.Enabled = (platform.Position.Y + platform.Size.Y / 2) > (cube.Position.Y - cube.Size.Y / 2 + 0.25)
+		cubeCollision.Parent = platform
+		local headCollision = platform:FindFirstChild("HeadCollision") or Instance.new("NoCollisionConstraint")
+		headCollision.Name = "HeadCollision"
+		headCollision.Part0 = platform
+		headCollision.Part1 = head
+		headCollision.Enabled = (platform.Position.Y + platform.Size.Y / 2) > head.Position.Y
+		headCollision.Parent = platform
+		platform:SetAttribute("notCollidable", headCollision.Enabled)
+	end
+end
+local function updateMud(cube, head, dt)
+	local slowdownFactor = math.clamp(1 - (dt * 15), 0.01, 1)
+	local params = OverlapParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { mudParts }
+	for _, part in { cube, head } do
+		if #Workspace:GetPartsInPart(part, params) > 0 then
+			part.AssemblyLinearVelocity = part.AssemblyLinearVelocity * slowdownFactor
+		end
+	end
+end
 local function formatDebugWorldNumber(num)
 	local integer, decimal = math.modf(math.abs(num))
 	return string.format("%s%05d%s", if integer >= 0 then "+" else "-", integer, string.sub(string.format("%.3f", decimal), 2))
@@ -310,6 +344,15 @@ local function getBuildSize()
 	return size
 end
 local function updateModifiers()
+	for _, hitbox in hitboxFolder:GetChildren() do
+		if hitbox:IsA("SelectionBox") then
+			local _result = hitbox.Adornee
+			if _result ~= nil then
+				_result:SetAttribute("hitboxOutline", nil)
+			end
+		end
+	end
+	hitboxFolder:ClearAllChildren()
 	for hammer, actions in pairs(ActionNames) do
 		for abilityName, actionName in pairs(actions) do
 			ContextActionService:UnbindAction(actionName)
@@ -375,6 +418,7 @@ local function updateModifiers()
 				end
 				if action == ActionNames.GrapplingHammer.Activate then
 					local head = cube:FindFirstChild("Head")
+					local arm = cube:FindFirstChild("Arm")
 					local axisLock = Workspace:FindFirstChild("AxisLock")
 					local _rightAttachment = head
 					if _rightAttachment ~= nil then
@@ -387,17 +431,24 @@ local function updateModifiers()
 					end
 					local _condition = not _result
 					if not _condition then
-						local _result_1 = axisLock
+						local _result_1 = arm
 						if _result_1 ~= nil then
 							_result_1 = _result_1:IsA("BasePart")
 						end
 						_condition = not _result_1
 						if not _condition then
-							local _result_2 = rightAttachment
+							local _result_2 = axisLock
 							if _result_2 ~= nil then
-								_result_2 = _result_2:IsA("Attachment")
+								_result_2 = _result_2:IsA("BasePart")
 							end
 							_condition = not _result_2
+							if not _condition then
+								local _result_3 = rightAttachment
+								if _result_3 ~= nil then
+									_result_3 = _result_3:IsA("Attachment")
+								end
+								_condition = not _result_3
+							end
 						end
 					end
 					if _condition then
@@ -408,26 +459,27 @@ local function updateModifiers()
 						params.FilterType = Enum.RaycastFilterType.Exclude
 						local filter = {}
 						for _, object in Workspace:GetChildren() do
-							if object ~= Workspace:FindFirstChild("Map") and object ~= Workspace:FindFirstChild("NonBreakable") then
+							if object ~= mapFolder and object ~= nonBreakable then
 								table.insert(filter, object)
 							end
 						end
-						local propellers = Workspace:FindFirstChild("Propellers")
-						if propellers then
-							for _, propeller in propellers:GetChildren() do
-								local hitbox = propeller:FindFirstChild("Hitbox")
-								if hitbox then
-									table.insert(filter, hitbox)
-								end
+						for _, propeller in propellersFolder:GetChildren() do
+							local hitbox = propeller:FindFirstChild("Hitbox")
+							local _result_1 = hitbox
+							if _result_1 ~= nil then
+								_result_1 = _result_1:IsA("BasePart")
+							end
+							if _result_1 then
+								table.insert(filter, hitbox)
 							end
 						end
 						params.FilterDescendantsInstances = filter
-						local result = Workspace:Raycast(head.Position, head.CFrame.LookVector * 6144, params)
+						local result = Workspace:Raycast(head.Position, arm.CFrame.RightVector * 6144, params)
 						if not result then
 							return nil
 						end
 						local target = Instance.new("Attachment")
-						target.WorldCFrame = CFrame.new(result.Position)
+						target.CFrame = CFrame.new(result.Position)
 						target.Parent = axisLock
 						local rope = Instance.new("RopeConstraint")
 						rope.Visible = true
@@ -461,7 +513,7 @@ local function updateModifiers()
 							delta *= 10
 						end
 						local newLength = math.clamp(rope.Length + delta * 10, 1, 6144)
-						TweenService:Create(rope, tweenTypes.linear.short, {
+						TweenService:Create(rope, TweenInfo.new(0.2), {
 							Length = newLength,
 						}):Play()
 					end
@@ -469,7 +521,7 @@ local function updateModifiers()
 			end
 			ContextActionService:BindAction(ActionNames.GrapplingHammer.Activate, activate, true, Enum.KeyCode.E)
 			ContextActionService:SetTitle(ActionNames.GrapplingHammer.Activate, "Grapple")
-			ContextActionService:BindAction(ActionNames.GrapplingHammer.Activate, scroll, false, Enum.UserInputType.MouseWheel)
+			ContextActionService:BindAction(ActionNames.GrapplingHammer.Scroll, scroll, false, Enum.UserInputType.MouseWheel)
 		elseif currentHammer == Accessories.HammerTexture.Shotgun then
 			local function fire(action, state, input)
 				if not cube or not isClientCube(cube) then
@@ -681,6 +733,30 @@ local function updateModifiers()
 			end
 			ContextActionService:BindAction(ActionNames.InverterHammer.Invert, invert, true, Enum.KeyCode.E)
 			ContextActionService:SetTitle(ActionNames.InverterHammer.Invert, "⬆️")
+		elseif currentHammer == Accessories.HammerTexture.HitboxHammer then
+			local _array = {}
+			local _length = #_array
+			local _array_1 = mapFolder:GetDescendants()
+			local _Length = #_array_1
+			table.move(_array_1, 1, _Length, _length + 1, _array)
+			_length += _Length
+			local _array_2 = nonBreakable:GetDescendants()
+			table.move(_array_2, 1, #_array_2, _length + 1, _array)
+			for _, descendant in _array do
+				local _condition = descendant:IsA("BasePart")
+				if _condition then
+					local _value = descendant:GetAttribute("hitboxOutline")
+					_condition = not (_value ~= 0 and _value == _value and _value ~= "" and _value)
+				end
+				if _condition then
+					descendant:SetAttribute("hitboxOutline", true)
+					local outline = Instance.new("SelectionBox")
+					outline.Adornee = descendant
+					outline.Color3 = if (descendant:IsA("Part") and descendant.Shape == Enum.PartType.Block) then Color3.fromRGB(255, 0, 0) else Color3.fromRGB(0, 0, 255)
+					outline.Transparency = math.min(descendant.Transparency, 0.5)
+					outline.Parent = hitboxFolder
+				end
+			end
 		end
 	end
 end
@@ -976,8 +1052,8 @@ RunService.Heartbeat:Connect(function(dt)
 			armAlignOrientation.Enabled = true
 		end
 		if ragdollTime == 0 and previousRagdollTime > 0 then
-			print("[src/client/cube.client.ts:657]", "Pivot hammer back to cube")
-			arm.CFrame = cube.CFrame
+			print("[src/client/cube.client.ts:709]", "Pivot hammer back to cube")
+			arm.CFrame = CFrame.new(cube.Position)
 		end
 		local _condition_5 = (cube:GetAttribute("transparency"))
 		if _condition_5 == nil then
@@ -1115,6 +1191,8 @@ RunService.Heartbeat:Connect(function(dt)
 		shakeIntensity.Value = math.max(intensity - dt * 3, 0)
 		wallPlane.Position = cubePosition
 		updatePropellers(cube, dt)
+		updateMud(cube, head, dt)
+		updatePlatforms(cube, head)
 		local position, nonFiltered, hitPart = mouseRaycast()
 		if not (typeof(position) == "Vector3") or not (typeof(nonFiltered) == "Vector3") then
 			return nil
@@ -1207,12 +1285,12 @@ RunService.Heartbeat:Connect(function(dt)
 			distanceLimit.Length = maxRange
 		end
 		local actualHammerDistance = math.min(hammerDistance, maxRange)
+		local rotationOffset = CFrame.fromOrientation(math.pi / 2, math.pi / 2, 0)
 		local _position = cube.Position
 		local _vector3_2 = Vector3.new(math.cos(hammerAngle) * actualHammerDistance, math.sin(hammerAngle) * actualHammerDistance)
 		local hammerPosition = _position + _vector3_2
 		local plane = Vector3.new(1, 1, 0)
 		if canMove.Value then
-			local rotationOffset = CFrame.fromOrientation(math.pi / 2, math.pi / 2, 0)
 			local mouse = UserInputService:GetMouseLocation()
 			for _, gui in StarterGui:GetGuiObjectsAtPosition(mouse.X, mouse.Y) do
 				if gui.Name == "ContextButtonFrame" then
@@ -1276,7 +1354,7 @@ winArea.Touched:Connect(function(otherPart)
 	if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
 		player:SetAttribute(PlayerAttributes.CompletedGame, true)
 		local totalTime = getCubeTime(otherPart)
-		print("[src/client/cube.client.ts:941]", `Completed game in {totalTime} seconds`)
+		print("[src/client/cube.client.ts:994]", `Completed game in {totalTime} seconds`)
 		Events.CompleteGame:FireServer(totalTime)
 		Events.MakeReplayEvent:Fire(string.format("win,%d", totalTime * 1000))
 	end
@@ -1300,28 +1378,5 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	end
 	if input.KeyCode == Enum.KeyCode.I and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
 		debugInfo.Visible = not debugInfo.Visible
-	end
-end)
-RunService.Heartbeat:Connect(function(step)
-	local _value = not cube or player:GetAttribute(PlayerAttributes.InErrorLand)
-	if _value ~= 0 and _value == _value and _value ~= "" and _value then
-		return nil
-	end
-	local slowdownFactor = math.clamp(1 - (step * 30), 0.01, 1)
-	local params = OverlapParams.new()
-	params.FilterType = Enum.RaycastFilterType.Include
-	params.FilterDescendantsInstances = { mudParts }
-	for _, part in { cube, cube:FindFirstChild("Head") } do
-		local _result = part
-		if _result ~= nil then
-			_result = _result:IsA("BasePart")
-		end
-		local _condition = _result
-		if _condition then
-			_condition = #Workspace:GetPartsInPart(part, params) > 0
-		end
-		if _condition then
-			part.AssemblyLinearVelocity = part.AssemblyLinearVelocity * slowdownFactor
-		end
 	end
 end)

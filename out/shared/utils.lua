@@ -99,6 +99,7 @@ do
 		Shotgun = "Shotgun",
 		Platform = "Platform",
 		Hammer404 = "404 Hammer",
+		HitboxHammer = "Hitbox Hammer",
 		Mallet = "Mallet",
 		GodsHammer = "God's Hammer",
 		IcyHammer = "Icy Hammer",
@@ -637,7 +638,7 @@ local function giveBadge(player, badgeId)
 		return nil
 	end
 	if isTestingServer() then
-		warn("[src/shared/utils.ts:494]", "Badges are disabled in the Testing Server.")
+		warn("[src/shared/utils.ts:495]", "Badges are disabled in the Testing Server.")
 		return nil
 	end
 	local userId = player.UserId

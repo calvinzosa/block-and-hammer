@@ -483,15 +483,13 @@ Events.LoadSettingsJSON.OnClientEvent.Connect((settingsJSON: string) => {
 Events.SettingChanged.Event.Connect(updateSettingButtons);
 Events.StartClientTutorial.Event.Connect(() => menuToggle.lock().deselect().unlock());
 
-function changePlaceVersion() {
-	const value = (ReplicatedStorage.FindFirstChild('PlaceVersion') as IntValue).Value;
-	
-	let text = tostring(value);
-	if (value === -1) text = 'DEV';
-	else if (value === -2) text = 'TESTING';
-	
-	placeVersion.Text = `block and hammer - v${value}`;
-}
+const placeVersionValue = ReplicatedStorage.WaitForChild('PlaceVersion') as IntValue;
+if (placeVersionValue.Value === 0) placeVersionValue.Changed.Wait();
 
-changePlaceVersion();
-(ReplicatedStorage.WaitForChild('PlaceVersion') as IntValue).Changed.Connect(changePlaceVersion);
+const value = (ReplicatedStorage.FindFirstChild('PlaceVersion') as IntValue).Value;
+
+let text = tostring(value);
+if (value === -1) text = 'DEV';
+else if (value === -2) text = 'TESTING';
+
+placeVersion.Text = `block and hammer - v${value}`;

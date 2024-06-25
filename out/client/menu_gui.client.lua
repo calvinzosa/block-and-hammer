@@ -509,15 +509,15 @@ Events.SettingChanged.Event:Connect(updateSettingButtons)
 Events.StartClientTutorial.Event:Connect(function()
 	return menuToggle:lock():deselect():unlock()
 end)
-local function changePlaceVersion()
-	local value = (ReplicatedStorage:FindFirstChild("PlaceVersion")).Value
-	local text = tostring(value)
-	if value == -1 then
-		text = "DEV"
-	elseif value == -2 then
-		text = "TESTING"
-	end
-	placeVersion.Text = `block and hammer - v{value}`
+local placeVersionValue = ReplicatedStorage:WaitForChild("PlaceVersion")
+if placeVersionValue.Value == 0 then
+	placeVersionValue.Changed:Wait()
 end
-changePlaceVersion();
-(ReplicatedStorage:WaitForChild("PlaceVersion")).Changed:Connect(changePlaceVersion)
+local value = (ReplicatedStorage:FindFirstChild("PlaceVersion")).Value
+local text = tostring(value)
+if value == -1 then
+	text = "DEV"
+elseif value == -2 then
+	text = "TESTING"
+end
+placeVersion.Text = `block and hammer - v{value}`

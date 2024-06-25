@@ -9,6 +9,7 @@ local Accessories = _utils.Accessories
 local getCubeAura = _utils.getCubeAura
 local getCubeHat = _utils.getCubeHat
 local giveBadge = _utils.giveBadge
+local getHammerTexture = _utils.getHammerTexture
 local _result = ReplicatedStorage:WaitForChild("Modules")
 if _result ~= nil then
 	_result = _result:WaitForChild("Accessories")
@@ -518,6 +519,55 @@ local hammerFunctions = {
 			head.BrickColor = BrickColor.new("Dark stone grey")
 		end
 	end,
+	_hitbox = function(cube)
+		local arm = cube:FindFirstChild("Arm")
+		local head = cube:FindFirstChild("Head")
+		local _result_1 = arm
+		if _result_1 ~= nil then
+			_result_1 = _result_1:IsA("BasePart")
+		end
+		local _condition = not _result_1
+		if not _condition then
+			local _result_2 = head
+			if _result_2 ~= nil then
+				_result_2 = _result_2:IsA("BasePart")
+			end
+			_condition = not _result_2
+		end
+		if _condition then
+			return emptyFunction
+		end
+		cube:SetAttribute("hammerTransparency", 1)
+		cube:SetAttribute("transparency", 1)
+		cube.Transparency = 1
+		arm.Transparency = 1
+		head.Transparency = 1
+		local cubeOutline = Instance.new("SelectionBox")
+		cubeOutline.Color3 = cube.Color
+		cubeOutline.Adornee = cube
+		cubeOutline.Name = "CubeOutline"
+		cubeOutline.Parent = cube
+		local headOutline = cubeOutline:Clone()
+		headOutline.Color3 = head.Color
+		headOutline.Adornee = head
+		headOutline.Name = "HeadOutline"
+		headOutline.Parent = head
+		local armOutline = cubeOutline:Clone()
+		armOutline.Color3 = arm.Color
+		armOutline.Adornee = arm
+		armOutline.Name = "ArmOutline"
+		armOutline.Parent = arm
+		return function()
+			cube:SetAttribute("hammerTransparency", 0)
+			cube:SetAttribute("transparency", 0)
+			cube.Transparency = 0
+			arm.Transparency = 0
+			head.Transparency = 0
+			cubeOutline:Destroy()
+			headOutline:Destroy()
+			armOutline:Destroy()
+		end
+	end,
 }
 local function loadAccessories(cube, data, player, hammerRemoveFunction)
 	local _binding = data
@@ -694,12 +744,15 @@ local function loadAccessories(cube, data, player, hammerRemoveFunction)
 	end
 	return nil
 end
-local function reloadAccessories(cube, b, hatAccessory, auraAccessory)
+local function reloadAccessories(cube, b, hatAccessory, auraAccessory, hammerAccessory)
 	if hatAccessory == nil then
 		hatAccessory = Accessories.CubeHat.NoHat
 	end
 	if auraAccessory == nil then
 		auraAccessory = Accessories.CubeAura.NoAura
+	end
+	if hammerAccessory == nil then
+		hammerAccessory = Accessories.HammerTexture.NoHammerTexture
 	end
 	local cubeColor
 	local _b = b
@@ -711,6 +764,7 @@ local function reloadAccessories(cube, b, hatAccessory, auraAccessory)
 		cubeColor = b:GetAttribute("CUBE_COLOR") or computeNameColor(b.Name)
 		hatAccessory = getCubeHat(b)
 		auraAccessory = getCubeAura(b)
+		hammerAccessory = getHammerTexture(b)
 	else
 		cubeColor = b
 	end
@@ -738,7 +792,13 @@ local function reloadAccessories(cube, b, hatAccessory, auraAccessory)
 			_result_1.Color = ColorSequence.new(cubeColor)
 		end
 	end)
-	print("[src/shared/accessory_loader.ts:492]", `Updated accessories for {cube.Name}`)
+	pcall(function()
+		hammerAccessory = Accessories.HammerTexture.HitboxHammer
+		if hammerAccessory then
+			(cube:FindFirstChild("CubeOutline")).Color3 = cubeColor
+		end
+	end)
+	print("[src/shared/accessory_loader.ts:539]", `Updated accessories for {cube.Name}`)
 end
 return {
 	loadAccessories = loadAccessories,
