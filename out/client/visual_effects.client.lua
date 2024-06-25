@@ -878,7 +878,11 @@ RunService.Stepped:Connect(function(_, dt)
 		_condition = screenGui.Enabled
 	end
 	if _condition then
-		camera.FieldOfView = 70 + math.max(velocity.Magnitude - 100, 0) / 5
+		if getSetting(GameSetting.OrthographicView) then
+			camera.FieldOfView = 1
+		else
+			camera.FieldOfView = 70 + math.max(velocity.Magnitude - 100, 0) / 5
+		end
 		local percent = if getSetting(GameSetting.Sounds) then math.max((velocity.Magnitude - 100) / 300, 0) else 0
 		wind.Volume = percent * 3
 	end
@@ -979,7 +983,7 @@ RunService.Stepped:Connect(function(_, dt)
 	prevCubePosition = cube.Position
 	cube:SetAttribute("lastVelocity", cube.AssemblyLinearVelocity)
 end)
-print("[src/client/visual_effects.client.ts:911]", "Started running visual_effects.client.ts")
+print("[src/client/visual_effects.client.ts:912]", "Started running visual_effects.client.ts")
 while true do
 	local _value = task.wait(0.05)
 	if not (_value ~= 0 and _value == _value and _value) then

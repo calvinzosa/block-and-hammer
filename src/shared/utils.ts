@@ -134,6 +134,7 @@ export enum GameSetting {
     'TimerGUI' = 'timergui',
     'Modifiers' = 'modifiers',
     'CSG' = 'csg',
+    'OrthographicView' = 'orthographic'
 };
 
 export type BaseSettings = Record<GameSetting, boolean>;
@@ -148,6 +149,7 @@ export const Settings: BaseSettings = {
     'timergui': true,
     'modifiers': false,
     'csg': true,
+    'orthographic': false,
 };
 
 export const DefaultSettings = table.clone(Settings);
@@ -175,6 +177,7 @@ const settingAlias: Record<GameSetting, string> = {
     [GameSetting.TimerGUI]: 'Timer GUI',
     [GameSetting.Modifiers]: 'Modifiers',
     [GameSetting.CSG]: 'CSG',
+    [GameSetting.OrthographicView]: 'Orthographic View',
 };
 
 const settingOrder: Record<GameSetting, number> = {
@@ -187,6 +190,7 @@ const settingOrder: Record<GameSetting, number> = {
     [GameSetting.ShowRange]: 7,
     [GameSetting.HideOthers]: 8,
     [GameSetting.TimerGUI]: 9,
+    [GameSetting.OrthographicView]: 10,
 };
 
 interface TextCompression {

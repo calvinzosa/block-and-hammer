@@ -147,6 +147,7 @@ local GameSetting = {
 	TimerGUI = "timergui",
 	Modifiers = "modifiers",
 	CSG = "csg",
+	OrthographicView = "orthographic",
 }
 local Settings = {
 	hideothers = false,
@@ -158,6 +159,7 @@ local Settings = {
 	timergui = true,
 	modifiers = false,
 	csg = true,
+	orthographic = false,
 }
 local DefaultSettings = table.clone(Settings)
 local tweenTypes = {
@@ -183,6 +185,7 @@ local settingAlias = {
 	[GameSetting.TimerGUI] = "Timer GUI",
 	[GameSetting.Modifiers] = "Modifiers",
 	[GameSetting.CSG] = "CSG",
+	[GameSetting.OrthographicView] = "Orthographic View",
 }
 local settingOrder = {
 	[GameSetting.Modifiers] = 1,
@@ -194,6 +197,7 @@ local settingOrder = {
 	[GameSetting.ShowRange] = 7,
 	[GameSetting.HideOthers] = 8,
 	[GameSetting.TimerGUI] = 9,
+	[GameSetting.OrthographicView] = 10,
 }
 local PlayerAdmins = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Admins"))
 local TextCompression = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("TextCompression"))
@@ -638,7 +642,7 @@ local function giveBadge(player, badgeId)
 		return nil
 	end
 	if isTestingServer() then
-		warn("[src/shared/utils.ts:495]", "Badges are disabled in the Testing Server.")
+		warn("[src/shared/utils.ts:499]", "Badges are disabled in the Testing Server.")
 		return nil
 	end
 	local userId = player.UserId

@@ -98,6 +98,7 @@ const AbilityVariables = {
 };
 
 const cachedPropellers: Model[] = [  ];
+const cachedParticles: ParticleEmitter[] = [  ];
 
 let cube: BasePart | undefined = undefined;
 let wasModifiersEnabled = false;
@@ -232,7 +233,7 @@ function formatDebugWorldNumber(num: number) {
     return string.format('%s%05d%s', integer >= 0 ? '+' : '-', integer, string.format('%.3f', decimal).sub(2));
 }
 
-function mouseRaycast() {
+function mouseRaycast(distance: number) {
 	const mouse = UserInputService.GetMouseLocation();
 	const ray = camera.ViewportPointToRay(mouse.X, mouse.Y);
 	
@@ -240,12 +241,12 @@ function mouseRaycast() {
 	params.FilterType = Enum.RaycastFilterType.Include;
 	params.FilterDescendantsInstances = [ wallPlane ];
 	
-	const resultA = Workspace.Raycast(ray.Origin, ray.Direction.Unit.mul(512), params);
+	const resultA = Workspace.Raycast(ray.Origin, ray.Direction.Unit.mul(distance), params);
 	
 	params.FilterType = Enum.RaycastFilterType.Exclude;
 	params.FilterDescendantsInstances = [ mouseVisual, modifierDisablers, effectsFolder ]; // Workspace.FindFirstChild('ray_part')
 	
-	const resultB = Workspace.Raycast(ray.Origin, ray.Direction.Unit.mul(512), params)
+	const resultB = Workspace.Raycast(ray.Origin, ray.Direction.Unit.mul(distance), params)
 	return $tuple(resultA?.Position, resultB?.Position, resultB?.Instance !== wallPlane);
 }
 
@@ -787,18 +788,36 @@ RunService.Heartbeat.Connect((dt) => {
 			else if (currentHammer === Accessories.HammerTexture.ExplosiveHammer) zoom = 65;
 		}
 		
+		wallPlane.Transparency = 1;
+		
+		if (getSetting(GameSetting.OrthographicView)) {
+			wallPlane.Transparency = 0.75;
+			
+			zoom *= 64;
+			
+			for (const [ i, particle ] of pairs(cachedParticles)) {
+				if (!particle.IsDescendantOf(Workspace)) cachedParticles.remove(i - 1);
+				
+				if (!particle.Enabled || particle.GetAttribute('__emitDebounce')) continue;
+				
+				if (particle.Rate < math.huge) {
+					particle.SetAttribute('__emitDebounce', true);
+					task.delay(1 / particle.Rate, () => particle.SetAttribute('__emitDebounce', undefined));
+				}
+				
+				particle.Emit(1);
+			}
+		}
+		
 		const cameraCFrame = CFrame.lookAt(cameraPosition.sub(new Vector3(0, 0, zoom + velocity)), cameraPosition, up);
 		
 		const start = cube.Position;
-		const goal = cameraCFrame.Position;
-		
-		const distance = start.sub(goal).Magnitude;
 		
 		const params = new OverlapParams();
 		params.FilterType = Enum.RaycastFilterType.Include;
 		params.FilterDescendantsInstances = [ mapFolder ];
 		
-		for (const obstructingPart of Workspace.GetPartBoundsInBox(new CFrame(start.X, start.Y, distance / -2), new Vector3(10, 10, distance), params)) {
+		for (const obstructingPart of Workspace.GetPartBoundsInBox(new CFrame(start.X, start.Y, 0), new Vector3(10, 10, 4096), params)) {
 			if (obstructingPart.GetAttribute('CAMERA_TRANSPARENT')) {
 				const transparency = obstructingPart.GetAttribute('CAMERA_TRANSPARENCY') as number ?? 0.9;
 				obstructingPart.LocalTransparencyModifier = numLerp(obstructingPart.LocalTransparencyModifier, transparency, dt * 5);
@@ -821,7 +840,7 @@ RunService.Heartbeat.Connect((dt) => {
 		updateMud(cube, head, dt);
 		updatePlatforms(cube, head);
 		
-		const [ position, nonFiltered, hitPart ] = mouseRaycast();
+		const [ position, nonFiltered, hitPart ] = mouseRaycast(zoom + 512);
 		if (!typeIs(position, 'Vector3') || !typeIs(nonFiltered, 'Vector3')) return;
 		
 		if (screenGui.Enabled) {
@@ -1017,4 +1036,12 @@ UserInputService.InputBegan.Connect((input, processed) => {
 	if (processed) return;
 	
 	if (input.KeyCode === Enum.KeyCode.I && UserInputService.IsKeyDown(Enum.KeyCode.LeftControl)) debugInfo.Visible = !debugInfo.Visible;
+});
+
+for (const descendant of Workspace.GetDescendants()) {
+	if (descendant.IsA('ParticleEmitter')) cachedParticles.push(descendant);
+}
+
+Workspace.DescendantAdded.Connect((descendant) => {
+	if (descendant.IsA('ParticleEmitter')) cachedParticles.push(descendant);
 });

@@ -790,7 +790,8 @@ RunService.Stepped.Connect((_, dt) => {
 	
 	const velocity = targetCube.AssemblyLinearVelocity;
 	if (!player.GetAttribute(PlayerAttributes.Client.InMainMenu) && screenGui.Enabled) {
-		camera.FieldOfView = 70 + math.max(velocity.Magnitude - 100, 0) / 5;
+		if (getSetting(GameSetting.OrthographicView)) camera.FieldOfView = 1;
+		else camera.FieldOfView = 70 + math.max(velocity.Magnitude - 100, 0) / 5;
 		
 		const percent = getSetting(GameSetting.Sounds) ? math.max((velocity.Magnitude - 100) / 300, 0) : 0;
 		wind.Volume = percent * 3;

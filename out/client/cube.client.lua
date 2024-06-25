@@ -100,6 +100,7 @@ local AbilityVariables = {
 	},
 }
 local cachedPropellers = {}
+local cachedParticles = {}
 local cube = nil
 local wasModifiersEnabled = false
 local previousModifiersCheck = true
@@ -116,7 +117,7 @@ local function newPropeller(propeller)
 		_condition = not (type(_arg0) == "number")
 	end
 	if _condition then
-		warn("[src/client/cube.client.ts:113]", "An invalid propeller was created.")
+		warn("[src/client/cube.client.ts:114]", "An invalid propeller was created.")
 		return nil
 	end
 	local _propeller = propeller
@@ -130,7 +131,7 @@ local function updatePropellers(cube, dt)
 			_result = _result:IsA("BasePart")
 		end
 		if not _result then
-			warn("[src/client/cube.client.ts:124]", "A propeller has broke!")
+			warn("[src/client/cube.client.ts:125]", "A propeller has broke!")
 			table.remove(cachedPropellers, i + 1)
 			break
 		end
@@ -293,16 +294,24 @@ local function formatDebugWorldNumber(num)
 	local integer, decimal = math.modf(math.abs(num))
 	return string.format("%s%05d%s", if integer >= 0 then "+" else "-", integer, string.sub(string.format("%.3f", decimal), 2))
 end
-local function mouseRaycast()
+local function mouseRaycast(distance)
 	local mouse = UserInputService:GetMouseLocation()
 	local ray = camera:ViewportPointToRay(mouse.X, mouse.Y)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Include
 	params.FilterDescendantsInstances = { wallPlane }
-	local resultA = Workspace:Raycast(ray.Origin, ray.Direction.Unit * 512, params)
+	local _fn = Workspace
+	local _exp = ray.Origin
+	local _unit = ray.Direction.Unit
+	local _distance = distance
+	local resultA = _fn:Raycast(_exp, _unit * _distance, params)
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = { mouseVisual, modifierDisablers, effectsFolder }
-	local resultB = Workspace:Raycast(ray.Origin, ray.Direction.Unit * 512, params)
+	local _fn_1 = Workspace
+	local _exp_1 = ray.Origin
+	local _unit_1 = ray.Direction.Unit
+	local _distance_1 = distance
+	local resultB = _fn_1:Raycast(_exp_1, _unit_1 * _distance_1, params)
 	local _result = resultA
 	if _result ~= nil then
 		_result = _result.Position
@@ -1052,8 +1061,10 @@ RunService.Heartbeat:Connect(function(dt)
 			armAlignOrientation.Enabled = true
 		end
 		if ragdollTime == 0 and previousRagdollTime > 0 then
-			print("[src/client/cube.client.ts:709]", "Pivot hammer back to cube")
-			arm.CFrame = CFrame.new(cube.Position)
+			print("[src/client/cube.client.ts:710]", "Pivot hammer back to cube")
+			local _exp = (CFrame.new(cube.Position))
+			local _arg0 = CFrame.fromOrientation(0, 0, math.pi / 2)
+			arm.CFrame = _exp * _arg0
 		end
 		local _condition_5 = (cube:GetAttribute("transparency"))
 		if _condition_5 == nil then
@@ -1150,16 +1161,36 @@ RunService.Heartbeat:Connect(function(dt)
 				zoom = 65
 			end
 		end
+		wallPlane.Transparency = 1
+		if getSetting(GameSetting.OrthographicView) then
+			wallPlane.Transparency = 0.75
+			zoom *= 64
+			for i, particle in pairs(cachedParticles) do
+				if not particle:IsDescendantOf(Workspace) then
+					local _arg0 = i - 1
+					table.remove(cachedParticles, _arg0 + 1)
+				end
+				local _value_1 = not particle.Enabled or particle:GetAttribute("__emitDebounce")
+				if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
+					continue
+				end
+				if particle.Rate < math.huge then
+					particle:SetAttribute("__emitDebounce", true)
+					task.delay(1 / particle.Rate, function()
+						return particle:SetAttribute("__emitDebounce", nil)
+					end)
+				end
+				particle:Emit(1)
+			end
+		end
 		local _fn = CFrame
 		local _vector3_1 = Vector3.new(0, 0, zoom + velocity)
 		local cameraCFrame = _fn.lookAt(cameraPosition - _vector3_1, cameraPosition, up)
 		local start = cube.Position
-		local goal = cameraCFrame.Position
-		local distance = (start - goal).Magnitude
 		local params = OverlapParams.new()
 		params.FilterType = Enum.RaycastFilterType.Include
 		params.FilterDescendantsInstances = { mapFolder }
-		for _, obstructingPart in Workspace:GetPartBoundsInBox(CFrame.new(start.X, start.Y, distance / -2), Vector3.new(10, 10, distance), params) do
+		for _, obstructingPart in Workspace:GetPartBoundsInBox(CFrame.new(start.X, start.Y, 0), Vector3.new(10, 10, 4096), params) do
 			local _value_1 = obstructingPart:GetAttribute("CAMERA_TRANSPARENT")
 			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 				local _condition_7 = obstructingPart:GetAttribute("CAMERA_TRANSPARENCY")
@@ -1193,7 +1224,7 @@ RunService.Heartbeat:Connect(function(dt)
 		updatePropellers(cube, dt)
 		updateMud(cube, head, dt)
 		updatePlatforms(cube, head)
-		local position, nonFiltered, hitPart = mouseRaycast()
+		local position, nonFiltered, hitPart = mouseRaycast(zoom + 512)
 		if not (typeof(position) == "Vector3") or not (typeof(nonFiltered) == "Vector3") then
 			return nil
 		end
@@ -1354,7 +1385,7 @@ winArea.Touched:Connect(function(otherPart)
 	if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
 		player:SetAttribute(PlayerAttributes.CompletedGame, true)
 		local totalTime = getCubeTime(otherPart)
-		print("[src/client/cube.client.ts:994]", `Completed game in {totalTime} seconds`)
+		print("[src/client/cube.client.ts:1013]", `Completed game in {totalTime} seconds`)
 		Events.CompleteGame:FireServer(totalTime)
 		Events.MakeReplayEvent:Fire(string.format("win,%d", totalTime * 1000))
 	end
@@ -1378,5 +1409,16 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	end
 	if input.KeyCode == Enum.KeyCode.I and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
 		debugInfo.Visible = not debugInfo.Visible
+	end
+end)
+for _, descendant in Workspace:GetDescendants() do
+	if descendant:IsA("ParticleEmitter") then
+		table.insert(cachedParticles, descendant)
+	end
+end
+Workspace.DescendantAdded:Connect(function(descendant)
+	if descendant:IsA("ParticleEmitter") then
+		local _descendant = descendant
+		table.insert(cachedParticles, _descendant)
 	end
 end)
