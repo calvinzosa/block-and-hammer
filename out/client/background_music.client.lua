@@ -72,7 +72,7 @@ RunService.RenderStepped:Connect(function(dt)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
 		activeMusic = Music.Jamming
 	else
-		local _value_1 = player:GetAttribute(PlayerAttributes.Client.InTutorial)
+		local _value_1 = player:GetAttribute(PlayerAttributes.InTutorial)
 		if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 			activeMusic = Music.CrystalCave
 		else

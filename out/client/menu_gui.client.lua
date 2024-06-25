@@ -18,6 +18,7 @@ local getSetting = _utils.getSetting
 local setSetting = _utils.setSetting
 local Settings = _utils.Settings
 local getTime = _utils.getTime
+local Icon = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "topbar-plus", "out").Icon
 local Events = {
 	SetModifiersSetting = ReplicatedStorage:WaitForChild("SetModifiersSetting"),
 	LoadSettingsJSON = ReplicatedStorage:WaitForChild("LoadSettingsJSON"),
@@ -50,6 +51,7 @@ local settingsGui = screenGui:WaitForChild("SettingsGui")
 local settingButtons = settingsGui:WaitForChild("Buttons")
 local resetConfirmation = screenGui:WaitForChild("ResetConfirmation")
 local tutorialConfirmation = screenGui:WaitForChild("TutorialConfirmation")
+local tutorialGui = screenGui:WaitForChild("TutorialGUI")
 local colorChanger = screenGui:WaitForChild("ColorChanger")
 local credits = screenGui:WaitForChild("Credits")
 local questGui = screenGui:WaitForChild("QuestGUI")
@@ -57,13 +59,16 @@ local leaderboardGui = screenGui:WaitForChild("LeaderboardGUI")
 local changelogsGui = screenGui:WaitForChild("Changelogs")
 local replaysGui = screenGui:WaitForChild("ReplaysGUI")
 local statsGui = screenGui:WaitForChild("StatsGUI")
-local clickThreshold = 0.2
 local playerList = {}
+local clickThreshold = 0.2
+local menuToggle = Icon.new():setLabel("Menu")
+local openableGuis = { resetConfirmation, settingsGui, accessoriesGui, spectatingGui, tutorialConfirmation, colorChanger, credits, questGui, leaderboardGui, changelogsGui, statsGui, replaysGui }
 local lastChange = getTime()
 local areSettingsSaved = true
 local previousSettings = table.clone(Settings)
 local clickCount = 0
 local lastClickTime = 0
+Icon.setDisplayOrder(999999999)
 local function resetCharacter(fullReset)
 	if fullReset == nil then
 		fullReset = false
@@ -76,7 +81,7 @@ local function resetCharacter(fullReset)
 		end
 		return nil
 	end
-	local _value_1 = player:GetAttribute(PlayerAttributes.Client.InTutorial)
+	local _value_1 = player:GetAttribute(PlayerAttributes.InTutorial)
 	if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 		if cube then
 			cube:Destroy()
@@ -153,21 +158,37 @@ local function updateSettingButtons()
 	fixSettings()
 	player:SetAttribute(PlayerAttributes.Client.SettingsJSON, HttpService:JSONEncode(Settings))
 end
+local function toggleMenu()
+	if not isSpectating.Value and (canMove.Value or menuOpen.Value) then
+		canMove.Value = menuOpen.Value
+		menuOpen.Value = not menuOpen.Value
+	elseif not canMove.Value and not menuOpen.Value then
+		for _, gui in openableGuis do
+			if gui.Visible then
+				gui.Visible = false
+				menuOpen.Value = true
+				break
+			end
+		end
+	end
+	menuToggle:lock()
+	if not canMove.Value or menuOpen.Value then
+		menuToggle:select()
+	else
+		menuToggle:deselect()
+	end
+	menuToggle:unlock()
+end
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then
 		return nil
 	end
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
 		local currentTime = getTime()
 		if (currentTime - lastClickTime) < clickThreshold then
 			clickCount += 1
-			if (clickCount == 2 and not UserInputService.TouchEnabled) or (clickCount >= 3 and UserInputService.TouchEnabled) then
-				if not isSpectating.Value then
-					if canMove.Value or menuOpen.Value then
-						canMove.Value = menuOpen.Value
-						menuOpen.Value = not menuOpen.Value
-					end
-				end
+			if clickCount == 2 then
+				toggleMenu()
 				clickCount = 0
 			end
 		else
@@ -180,6 +201,12 @@ UserInputService.InputEnded:Connect(function(input, processed)
 	if input.KeyCode == Enum.KeyCode.R and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) and not processed then
 		resetCharacter(UserInputService:IsKeyDown(Enum.KeyCode.LeftShift))
 	end
+end)
+menuToggle.toggled:Connect(function()
+	if menuToggle.locked then
+		return nil
+	end
+	toggleMenu()
 end)
 RunService.RenderStepped:Connect(function(dt)
 	local currentTime = getTime()
@@ -270,7 +297,7 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 	end
 	if (currentTime - lastChange) > 5 and not areSettingsSaved and not settingsGui.Visible then
-		print("[src/client/menu_gui.client.ts:234]", `Saved settings: {HttpService:JSONEncode(Settings)}`)
+		print("[src/client/menu_gui.client.ts:278]", `Saved settings: {HttpService:JSONEncode(Settings)}`)
 		Events.SaveSettingsJSON:FireServer(Settings)
 		areSettingsSaved = true
 	end
@@ -289,9 +316,9 @@ Events.LoadSettingsJSON.OnClientEvent:Connect(function(settingsJSON)
 			Events.SetModifiersSetting:FireServer(true)
 		end
 		updateSettingButtons()
-		print("[src/client/menu_gui.client.ts:252]", `Loaded settings data: {settingsJSON}`)
+		print("[src/client/menu_gui.client.ts:296]", `Loaded settings data: {settingsJSON}`)
 	else
-		warn("[src/client/menu_gui.client.ts:253]", "Unable to decode settings data")
+		warn("[src/client/menu_gui.client.ts:297]", "Unable to decode settings data")
 	end
 end);
 (menuButtons:WaitForChild("Reset")).MouseButton1Click:Connect(function()
@@ -415,6 +442,9 @@ end);
 	menuOpen.Value = false
 	tutorialConfirmation.Visible = false
 end);
+(tutorialGui:WaitForChild("No")).MouseButton1Click:Connect(function()
+	tutorialGui.Visible = false
+end);
 (menuButtons:WaitForChild("ColorChanger")).MouseButton1Click:Connect(function()
 	menuOpen.Value = false
 	colorChanger.Visible = true
@@ -476,6 +506,9 @@ end);
 	replaysGui.Visible = false
 end)
 Events.SettingChanged.Event:Connect(updateSettingButtons)
+Events.StartClientTutorial.Event:Connect(function()
+	return menuToggle:lock():deselect():unlock()
+end)
 local function changePlaceVersion()
 	local value = (ReplicatedStorage:FindFirstChild("PlaceVersion")).Value
 	local text = tostring(value)

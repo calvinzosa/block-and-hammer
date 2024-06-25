@@ -8,8 +8,6 @@ import {
 	Lighting,
 } from '@rbxts/services';
 
-import { $print, $warn } from 'rbxts-transform-debug';
-
 import {
     PlayerAttributes,
     getSettingAlias,
@@ -22,6 +20,9 @@ import {
     Settings,
     getTime,
 } from 'shared/utils';
+
+import { $print, $warn } from 'rbxts-transform-debug';
+import { Icon } from '@rbxts/topbar-plus';
 
 const Events = {
 	'SetModifiersSetting': ReplicatedStorage.WaitForChild('SetModifiersSetting') as RemoteEvent,
@@ -59,6 +60,7 @@ const settingsGui = screenGui.WaitForChild('SettingsGui') as Frame;
 const settingButtons = settingsGui.WaitForChild('Buttons') as ScrollingFrame;
 const resetConfirmation = screenGui.WaitForChild('ResetConfirmation') as Frame;
 const tutorialConfirmation = screenGui.WaitForChild('TutorialConfirmation') as Frame;
+const tutorialGui = screenGui.WaitForChild('TutorialGUI') as Frame;
 const colorChanger = screenGui.WaitForChild('ColorChanger') as Frame;
 const credits = screenGui.WaitForChild('Credits') as Frame;
 const questGui = screenGui.WaitForChild('QuestGUI') as Frame;
@@ -67,14 +69,32 @@ const changelogsGui = screenGui.WaitForChild('Changelogs') as Frame;
 const replaysGui = screenGui.WaitForChild('ReplaysGUI') as Frame;
 const statsGui = screenGui.WaitForChild('StatsGUI') as Frame;
 
-const clickThreshold = 0.2;
 const playerList: string[] = [  ];
+const clickThreshold = 0.2;
+const menuToggle = new Icon().setLabel('Menu');
+
+const openableGuis = [
+	resetConfirmation,
+	settingsGui,
+	accessoriesGui,
+	spectatingGui,
+	tutorialConfirmation,
+	colorChanger,
+	credits,
+	questGui,
+	leaderboardGui,
+	changelogsGui,
+	statsGui,
+	replaysGui,
+];
 
 let lastChange = getTime();
 let areSettingsSaved = true;
 let previousSettings = table.clone(Settings);
 let clickCount = 0;
 let lastClickTime = 0;
+
+Icon.setDisplayOrder(999999999);
 
 function resetCharacter(fullReset: boolean = false) {
     let cube = Workspace.FindFirstChild(`cube${player.UserId}`) as (BasePart | undefined);
@@ -84,7 +104,7 @@ function resetCharacter(fullReset: boolean = false) {
 		return;
     }
 	
-	if (player.GetAttribute(PlayerAttributes.Client.InTutorial)) {
+	if (player.GetAttribute(PlayerAttributes.InTutorial)) {
 		if (cube) {
             cube.Destroy();
             cube = undefined;
@@ -154,21 +174,39 @@ function updateSettingButtons() {
 	player.SetAttribute(PlayerAttributes.Client.SettingsJSON, HttpService.JSONEncode(Settings));
 }
 
+function toggleMenu() {
+	if (!isSpectating.Value && (canMove.Value || menuOpen.Value)) {
+		canMove.Value = menuOpen.Value;
+		menuOpen.Value = !menuOpen.Value;
+	} else if (!canMove.Value && !menuOpen.Value) {
+		for (const gui of openableGuis) {
+			if (gui.Visible) {
+				gui.Visible = false;
+				menuOpen.Value = true;
+				
+				break;
+			}
+		}
+	}
+	
+	menuToggle.lock();
+	
+	if (!canMove.Value || menuOpen.Value) menuToggle.select();
+	else menuToggle.deselect();
+	
+	menuToggle.unlock();
+}
+
 UserInputService.InputBegan.Connect((input, processed) => {
 	if (processed) return;
 	
-	if (input.UserInputType === Enum.UserInputType.MouseButton1 || input.UserInputType === Enum.UserInputType.Touch) {
+	if (input.UserInputType === Enum.UserInputType.MouseButton1) {
 		const currentTime = getTime();
 		if ((currentTime - lastClickTime) < clickThreshold) {
 			clickCount++;
 			
-			if ((clickCount === 2 && !UserInputService.TouchEnabled) || (clickCount >= 3 && UserInputService.TouchEnabled)) {
-				if (!isSpectating.Value) {
-					if (canMove.Value || menuOpen.Value) {
-						canMove.Value = menuOpen.Value;
-						menuOpen.Value = !menuOpen.Value;
-					}
-				}
+			if (clickCount === 2) {
+				toggleMenu();
 				clickCount = 0;
 			}
 		} else clickCount = 1;
@@ -179,6 +217,12 @@ UserInputService.InputBegan.Connect((input, processed) => {
 
 UserInputService.InputEnded.Connect((input, processed) => {
 	if (input.KeyCode === Enum.KeyCode.R && UserInputService.IsKeyDown(Enum.KeyCode.LeftControl) && !processed) resetCharacter(UserInputService.IsKeyDown(Enum.KeyCode.LeftShift));
+});
+
+menuToggle.toggled.Connect(() => {
+	if (menuToggle.locked) return;
+	
+	toggleMenu();
 });
 
 RunService.RenderStepped.Connect((dt) => {
@@ -357,6 +401,10 @@ Events.LoadSettingsJSON.OnClientEvent.Connect((settingsJSON: string) => {
 	tutorialConfirmation.Visible = false;
 });
 
+(tutorialGui.WaitForChild('No') as TextButton).MouseButton1Click.Connect(() => {
+	tutorialGui.Visible = false;
+});
+
 (menuButtons.WaitForChild('ColorChanger') as TextButton).MouseButton1Click.Connect(() => {
 	menuOpen.Value = false;
 	colorChanger.Visible = true;
@@ -433,6 +481,7 @@ Events.LoadSettingsJSON.OnClientEvent.Connect((settingsJSON: string) => {
 });
 
 Events.SettingChanged.Event.Connect(updateSettingButtons);
+Events.StartClientTutorial.Event.Connect(() => menuToggle.lock().deselect().unlock());
 
 function changePlaceVersion() {
 	const value = (ReplicatedStorage.FindFirstChild('PlaceVersion') as IntValue).Value;

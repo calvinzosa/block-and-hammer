@@ -41,6 +41,7 @@ export namespace PlayerAttributes {
     export const HasModifiers = 'modifiers';
     export const Impacts = 'impacts';
     
+    export const InTutorial = 'inTutorial';
     export const CompletedGame = 'completedGame';
     export const HammerTexture = 'hammer_Texture';
     export const CubeColor = 'cubeColor';
@@ -63,7 +64,6 @@ export namespace PlayerAttributes {
     
     export enum Client {
         InMainMenu = 'inMainMenu',
-        InTutorial = 'inTutorial',
         SettingsJSON = 'clientSettingsJSON',
     };
 };
@@ -246,7 +246,7 @@ export function canUseSetting(name: string): boolean {
         const modifierDisablers = Workspace.FindFirstChild('ForceDisableModifiers') as (Instance | undefined);
         if (modifierDisablers !== undefined) params.FilterDescendantsInstances = [ modifierDisablers ];
 		
-        const areaCondition = player.GetAttribute(PlayerAttributes.InErrorLand) || player.GetAttribute(PlayerAttributes.Client.InTutorial);
+        const areaCondition = player.GetAttribute(PlayerAttributes.InErrorLand) || player.GetAttribute(PlayerAttributes.InTutorial);
 		if (areaCondition || (player && cube && Workspace.GetPartsInPart(cube, params).size() > 0)) return false;
     }
 	
@@ -285,28 +285,28 @@ export function fixSettings(): void {
 export function getHammerTexture(player: Player | undefined = undefined): Accessories.HammerTexture {
     if (player === undefined) player = Players.LocalPlayer;
     
-    if (player.GetAttribute(PlayerAttributes.Client.InTutorial)) return Accessories.HammerTexture.NoHammerTexture;
+    if (player.GetAttribute(PlayerAttributes.InTutorial)) return Accessories.HammerTexture.NoHammerTexture;
     return (player.GetAttribute(PlayerAttributes.HammerTexture) as Accessories.HammerTexture) ?? Accessories.HammerTexture.NoHammerTexture;
 }
 
 export function getCubeFace(player: Player | undefined = undefined): Accessories.CubeFace {
     if (player === undefined) player = Players.LocalPlayer;
     
-    if (player.GetAttribute(PlayerAttributes.Client.InTutorial)) return Accessories.CubeFace.DefaultFace;
+    if (player.GetAttribute(PlayerAttributes.InTutorial)) return Accessories.CubeFace.DefaultFace;
     return (player.GetAttribute(PlayerAttributes.CubeFace) as Accessories.CubeFace) ?? Accessories.CubeFace.DefaultFace;
 }
 
 export function getCubeHat(player: Player | undefined = undefined): Accessories.CubeHat {
     if (player === undefined) player = Players.LocalPlayer;
     
-    if (player.GetAttribute(PlayerAttributes.Client.InTutorial)) return Accessories.CubeHat.NoHat;
+    if (player.GetAttribute(PlayerAttributes.InTutorial)) return Accessories.CubeHat.NoHat;
     return (player.GetAttribute(PlayerAttributes.CubeHat) as Accessories.CubeHat) ?? Accessories.CubeHat.NoHat;
 }
 
 export function getCubeAura(player: Player | undefined): Accessories.CubeAura {
     if (player === undefined) player = Players.LocalPlayer;
     
-    if (player.GetAttribute(PlayerAttributes.Client.InTutorial)) return Accessories.CubeAura.NoAura;
+    if (player.GetAttribute(PlayerAttributes.InTutorial)) return Accessories.CubeAura.NoAura;
     return (player.GetAttribute(PlayerAttributes.CubeAura) as Accessories.CubeAura) ?? Accessories.CubeAura.NoAura;
 }
 

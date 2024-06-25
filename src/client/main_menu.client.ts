@@ -36,17 +36,17 @@ const effectsFolder = Workspace.WaitForChild('Effects');
 
 let didClickButton = false;
 
+if (player.GetAttribute(PlayerAttributes.IsNew)) {
+    tutorialGui.Visible = true;
+    canMove.Value = false;
+}
+
 player.AttributeChanged.Connect((attr) => {
 	if (attr === PlayerAttributes.IsNew && player.GetAttribute(attr)) {
 		tutorialGui.Visible = true;
 		canMove.Value = false;
     }
 });
-
-if (player.GetAttribute(PlayerAttributes.IsNew)) {
-    tutorialGui.Visible = true;
-    canMove.Value = false;
-}
 
 menuGui.Enabled = true;
 screenGui.Enabled = false;

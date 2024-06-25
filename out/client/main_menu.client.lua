@@ -31,18 +31,18 @@ local shadowTitle = shadow:WaitForChild("Title")
 local shadowText = shadow:WaitForChild("Loading")
 local effectsFolder = Workspace:WaitForChild("Effects")
 local didClickButton = false
-player.AttributeChanged:Connect(function(attr)
-	local _value = attr == PlayerAttributes.IsNew and player:GetAttribute(attr)
-	if _value ~= 0 and _value == _value and _value ~= "" and _value then
-		tutorialGui.Visible = true
-		canMove.Value = false
-	end
-end)
 local _value = player:GetAttribute(PlayerAttributes.IsNew)
 if _value ~= 0 and _value == _value and _value ~= "" and _value then
 	tutorialGui.Visible = true
 	canMove.Value = false
 end
+player.AttributeChanged:Connect(function(attr)
+	local _value_1 = attr == PlayerAttributes.IsNew and player:GetAttribute(attr)
+	if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
+		tutorialGui.Visible = true
+		canMove.Value = false
+	end
+end)
 menuGui.Enabled = true
 screenGui.Enabled = false
 while true do

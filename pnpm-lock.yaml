@@ -14,6 +14,9 @@ importers:
       '@rbxts/string-utils':
         specifier: ^1.0.3
         version: 1.0.3
+      '@rbxts/topbar-plus':
+        specifier: ^3.0.2
+        version: 3.0.2
       rbxts-transform-debug:
         specifier: ^2.2.0
         version: 2.2.0
@@ -99,6 +102,9 @@ packages:
 
   '@rbxts/string-utils@1.0.3':
     resolution: {integrity: sha512-nsZsPdGsrsBdwLg7qQ5RGHoVhfvK+U3GvZ/6S+7KufqaFrbHWk2lufESob/C3xYf5sAeXgTJKWUnDJknYBGTIQ==}
+
+  '@rbxts/topbar-plus@3.0.2':
+    resolution: {integrity: sha512-HhPy7OpcMfU8d8zzUFhH5zKoTbviLoavJQKyZTAlg9B19RKKznzbGaSPd7uuh0ovN4HZTt87VsrVJ70uFT3wpg==}
 
   '@rbxts/types@1.0.783':
     resolution: {integrity: sha512-eJowFHktuuXYoyYh0D6tLzVmig8dAqYLzl9wSvorhVd6dmpU8jcGIAbAf4ozbvRVmDhrP7AJ98ia0eDP3kpF9A==}
@@ -857,6 +863,8 @@ snapshots:
   '@rbxts/services@1.5.4': {}
 
   '@rbxts/string-utils@1.0.3': {}
+
+  '@rbxts/topbar-plus@3.0.2': {}
 
   '@rbxts/types@1.0.783': {}
 

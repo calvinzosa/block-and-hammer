@@ -45,6 +45,8 @@ do
 	_container.HasModifiers = HasModifiers
 	local Impacts = "impacts"
 	_container.Impacts = Impacts
+	local InTutorial = "inTutorial"
+	_container.InTutorial = InTutorial
 	local CompletedGame = "completedGame"
 	_container.CompletedGame = CompletedGame
 	local HammerTexture = "hammer_Texture"
@@ -79,7 +81,6 @@ do
 	_container.Device = Device
 	local Client = {
 		InMainMenu = "inMainMenu",
-		InTutorial = "inTutorial",
 		SettingsJSON = "clientSettingsJSON",
 	}
 	_container.Client = Client
@@ -254,7 +255,7 @@ local function canUseSetting(name)
 		end
 		local _condition = player:GetAttribute(PlayerAttributes.InErrorLand)
 		if not (_condition ~= 0 and _condition == _condition and _condition ~= "" and _condition) then
-			_condition = player:GetAttribute(PlayerAttributes.Client.InTutorial)
+			_condition = player:GetAttribute(PlayerAttributes.InTutorial)
 		end
 		local areaCondition = _condition
 		local _condition_1 = areaCondition
@@ -332,7 +333,7 @@ local function getHammerTexture(player)
 	if player == nil then
 		player = Players.LocalPlayer
 	end
-	local _value = player:GetAttribute(PlayerAttributes.Client.InTutorial)
+	local _value = player:GetAttribute(PlayerAttributes.InTutorial)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
 		return Accessories.HammerTexture.NoHammerTexture
 	end
@@ -345,7 +346,7 @@ local function getCubeFace(player)
 	if player == nil then
 		player = Players.LocalPlayer
 	end
-	local _value = player:GetAttribute(PlayerAttributes.Client.InTutorial)
+	local _value = player:GetAttribute(PlayerAttributes.InTutorial)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
 		return Accessories.CubeFace.DefaultFace
 	end
@@ -358,7 +359,7 @@ local function getCubeHat(player)
 	if player == nil then
 		player = Players.LocalPlayer
 	end
-	local _value = player:GetAttribute(PlayerAttributes.Client.InTutorial)
+	local _value = player:GetAttribute(PlayerAttributes.InTutorial)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
 		return Accessories.CubeHat.NoHat
 	end
@@ -368,7 +369,7 @@ local function getCubeAura(player)
 	if player == nil then
 		player = Players.LocalPlayer
 	end
-	local _value = player:GetAttribute(PlayerAttributes.Client.InTutorial)
+	local _value = player:GetAttribute(PlayerAttributes.InTutorial)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
 		return Accessories.CubeAura.NoAura
 	end

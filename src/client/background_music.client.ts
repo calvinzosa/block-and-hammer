@@ -69,7 +69,7 @@ RunService.RenderStepped.Connect((dt) => {
 	
 	let activeMusic = undefined as (Music | undefined);
     if (player.GetAttribute(PlayerAttributes.Client.InMainMenu)) activeMusic = Music.Jamming;
-    else if (player.GetAttribute(PlayerAttributes.Client.InTutorial)) activeMusic = Music.CrystalCave;
+    else if (player.GetAttribute(PlayerAttributes.InTutorial)) activeMusic = Music.CrystalCave;
 	else if (targetCube?.IsA('BasePart')) {
         const [ altitude ] = convertStudsToMeters(targetCube.Position.Y - 1.9);
         if (altitude < 100) activeMusic = Music.StartingOff;
