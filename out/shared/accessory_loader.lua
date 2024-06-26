@@ -616,7 +616,7 @@ local function loadAccessories(cube, data, player, hammerRemoveFunction)
 						clone:PivotTo(cube.CFrame)
 						clone.Name = "CLONED_HAT"
 						clone.Parent = cube
-						if RunService:IsServer() then
+						if RunService:IsServer() and player then
 							task.delay(0.5, function()
 								while true do
 									local _value_1 = task.wait()
@@ -726,7 +726,9 @@ local function loadAccessories(cube, data, player, hammerRemoveFunction)
 		end
 	end
 	if hammerRemoveFunction ~= nil then
-		task.spawn(pcall, hammerRemoveFunction)
+		TS.try(function()
+			hammerRemoveFunction()
+		end, function(err) end)
 	end
 	if type(hammer) == "string" then
 		local accessoryData = accessoryList[hammer]
@@ -737,7 +739,7 @@ local function loadAccessories(cube, data, player, hammerRemoveFunction)
 		local data = _data
 		if accessoryData and type(data) == "string" then
 			local hammerFunction = hammerFunctions[data]
-			if type(data) == "string" and type(hammerFunction) == "function" then
+			if type(data) == "string" and type(hammerFunction) == "function" and player then
 				return hammerFunction(cube, player)
 			end
 		end
@@ -770,7 +772,7 @@ local function reloadAccessories(cube, b, hatAccessory, auraAccessory, hammerAcc
 	end
 	local hat = cube:FindFirstChild("CLONED_HAT")
 	local aura = cube:FindFirstChild("AuraAttachment")
-	pcall(function()
+	TS.try(function()
 		local _condition_1 = hatAccessory == Accessories.CubeHat.InstantGyro
 		if _condition_1 then
 			local _result_1 = hat
@@ -782,8 +784,8 @@ local function reloadAccessories(cube, b, hatAccessory, auraAccessory, hammerAcc
 		if _condition_1 then
 			hat.Color = Color3.new(1 - cubeColor.R, 1 - cubeColor.G, 1 - cubeColor.B)
 		end
-	end)
-	pcall(function()
+	end, function(err) end)
+	TS.try(function()
 		if auraAccessory == Accessories.CubeAura.Glow and aura then
 			local _result_1 = aura:FindFirstChild("Glow")
 			if _result_1 ~= nil then
@@ -791,14 +793,14 @@ local function reloadAccessories(cube, b, hatAccessory, auraAccessory, hammerAcc
 			end
 			_result_1.Color = ColorSequence.new(cubeColor)
 		end
-	end)
-	pcall(function()
+	end, function(err) end)
+	TS.try(function()
 		hammerAccessory = Accessories.HammerTexture.HitboxHammer
 		if hammerAccessory then
 			(cube:FindFirstChild("CubeOutline")).Color3 = cubeColor
 		end
-	end)
-	print("[src/shared/accessory_loader.ts:539]", `Updated accessories for {cube.Name}`)
+	end, function(err) end)
+	print("[src/shared/accessory_loader.ts:543]", `Updated accessories for {cube.Name}`)
 end
 return {
 	loadAccessories = loadAccessories,

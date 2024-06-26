@@ -13,7 +13,7 @@ import {
 	getHammerTexture
 } from './utils';
 
-import { $print } from 'rbxts-transform-debug';
+import { $print, $warn } from 'rbxts-transform-debug';
 
 export type AccessoryData = {
 	acc_type: Accessories.Type,
@@ -387,7 +387,7 @@ export const hammerFunctions: Record<string, (cube: BasePart, player: Player) =>
 	}
 }
 
-export function loadAccessories(cube: BasePart, data: { face?: string, hammer?: string, hat?: string, aura?: string }, player: Player, hammerRemoveFunction: (() => void) | undefined) {
+export function loadAccessories(cube: BasePart, data: { face?: string, hammer?: string, hat?: string, aura?: string }, player: Player | undefined, hammerRemoveFunction: (() => void) | undefined) {
 	const { face, hammer, hat, aura } = data;
 	
 	if (typeIs(face, 'string')) {
@@ -422,7 +422,7 @@ export function loadAccessories(cube: BasePart, data: { face?: string, hammer?: 
 						clone.Name = 'CLONED_HAT';
 						clone.Parent = cube;
 						
-						if (RunService.IsServer()) {
+						if (RunService.IsServer() && player) {
 							task.delay(0.5, () => {
 								while (task.wait()) {
 									const [ canSet ] = clone.CanSetNetworkOwnership();
@@ -498,14 +498,18 @@ export function loadAccessories(cube: BasePart, data: { face?: string, hammer?: 
 		}
 	}
 	
-	if (hammerRemoveFunction !== undefined) task.spawn(pcall, hammerRemoveFunction);
+	if (hammerRemoveFunction !== undefined) {
+		try {
+			hammerRemoveFunction();
+		} catch (err) {  }
+	}
 	
 	if (typeIs(hammer, 'string')) {
 		const accessoryData = accessoryList[hammer];
 		const data = accessoryData?.data;
 		if (accessoryData && typeIs(data, 'string')) {
 			const hammerFunction = hammerFunctions[data];
-			if (typeIs(data, 'string') && typeIs(hammerFunction, 'function')) return hammerFunction(cube, player);
+			if (typeIs(data, 'string') && typeIs(hammerFunction, 'function') && player) return hammerFunction(cube, player);
 		}
 	}
 	
@@ -524,17 +528,17 @@ export function reloadAccessories(cube: BasePart, b: Color3 | Player, hatAccesso
 	const hat = cube.FindFirstChild('CLONED_HAT') as (BasePart | undefined);
 	const aura = cube.FindFirstChild('AuraAttachment') as (Attachment | undefined);
 	
-	pcall(() => {
+	try {
 		if (hatAccessory === Accessories.CubeHat.InstantGyro && hat?.IsA('BasePart')) hat.Color = new Color3(1 - cubeColor.R, 1 - cubeColor.G, 1 - cubeColor.B);
-	});
+	} catch (err) {  }
 	
-	pcall(() => {
+	try {
 		if (auraAccessory === Accessories.CubeAura.Glow && aura) (aura.FindFirstChild('Glow')?.FindFirstChild('Glow') as ParticleEmitter).Color = new ColorSequence(cubeColor);
-	});
+	} catch (err) {  }
 	
-	pcall(() => {
+	try {
 		if (hammerAccessory = Accessories.HammerTexture.HitboxHammer) (cube.FindFirstChild('CubeOutline') as SelectionBox).Color3 = cubeColor;
-	});
+	} catch (err) {  }
 	
 	$print(`Updated accessories for ${cube.Name}`);
 }

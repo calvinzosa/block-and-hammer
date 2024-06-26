@@ -50,6 +50,7 @@ local spectatePlayer = isSpectating:WaitForChild("player")
 local canMove = valueInstances:WaitForChild("can_move")
 local screenGui = GUI:WaitForChild("ScreenGui")
 local replayGui = GUI:WaitForChild("ReplayGui")
+local mouseIcon = screenGui:WaitForChild("MouseIcon")
 local debugInfo = screenGui:WaitForChild("DebugInfo")
 local timerLabel = screenGui:WaitForChild("Timer")
 local speedometerLabel = screenGui:WaitForChild("Speedometer")
@@ -117,13 +118,13 @@ local function newPropeller(propeller)
 		_condition = not (type(_arg0) == "number")
 	end
 	if _condition then
-		warn("[src/client/cube.client.ts:114]", "An invalid propeller was created.")
+		warn("[src/client/cube.client.ts:115]", "An invalid propeller was created.")
 		return nil
 	end
 	local _propeller = propeller
 	table.insert(cachedPropellers, _propeller)
 end
-local function updatePropellers(cube, dt)
+local function updatePropellers(cube, head, dt)
 	for i, propeller in pairs(cachedPropellers) do
 		local blades = propeller:FindFirstChild("Blades")
 		local _result = blades
@@ -131,7 +132,7 @@ local function updatePropellers(cube, dt)
 			_result = _result:IsA("BasePart")
 		end
 		if not _result then
-			warn("[src/client/cube.client.ts:125]", "A propeller has broke!")
+			warn("[src/client/cube.client.ts:126]", "A propeller has broke!")
 			table.remove(cachedPropellers, i + 1)
 			break
 		end
@@ -214,8 +215,8 @@ local function updatePropellers(cube, dt)
 		_condition = 196.2
 	end
 	local gravity = _condition
-	local cubeMultiplier = 1
-	local headMultiplier = 1
+	local cubeMultiplier = 0.1
+	local headMultiplier = 0.1
 	params.FilterDescendantsInstances = { mudParts }
 	for i, part in pairs({ cube, cube:FindFirstChild("Head") }) do
 		local _result = part
@@ -228,36 +229,20 @@ local function updatePropellers(cube, dt)
 		end
 		if _condition_1 then
 			if i == 1 then
-				cubeMultiplier = 2
+				cubeMultiplier = 0.2
 			else
-				headMultiplier = 2
+				headMultiplier = 0.2
 			end
 		end
 	end
-	local propellerForce = cube:FindFirstChild("PropellerForce")
-	local _result = propellerForce
-	if _result ~= nil then
-		_result = _result:IsA("VectorForce")
-	end
-	if _result then
-		local _exp = totalCubeForce * gravity
-		local _arg0 = dt * 40 * cubeMultiplier
-		propellerForce.Force = _exp * _arg0
-	end
-	local _headPropeller = cube:FindFirstChild("Head")
-	if _headPropeller ~= nil then
-		_headPropeller = _headPropeller:FindFirstChild("PropellerForce")
-	end
-	local headPropeller = _headPropeller
-	local _result_1 = headPropeller
-	if _result_1 ~= nil then
-		_result_1 = _result_1:IsA("VectorForce")
-	end
-	if _result_1 then
-		local _exp = totalHeadForce * gravity
-		local _arg0 = dt * 10 * headMultiplier
-		headPropeller.Force = _exp * _arg0
-	end
+	local _assemblyLinearVelocity = cube.AssemblyLinearVelocity
+	local _exp = totalCubeForce * gravity
+	local _arg0 = dt * cubeMultiplier
+	cube.AssemblyLinearVelocity = _assemblyLinearVelocity + (_exp * _arg0)
+	local _assemblyLinearVelocity_1 = head.AssemblyLinearVelocity
+	local _exp_1 = totalHeadForce * gravity
+	local _arg0_1 = dt * headMultiplier
+	head.AssemblyLinearVelocity = _assemblyLinearVelocity_1 + (_exp_1 * _arg0_1)
 end
 local function updatePlatforms(cube, head)
 	for _, platform in platformsFolder:GetChildren() do
@@ -1061,7 +1046,7 @@ RunService.Heartbeat:Connect(function(dt)
 			armAlignOrientation.Enabled = true
 		end
 		if ragdollTime == 0 and previousRagdollTime > 0 then
-			print("[src/client/cube.client.ts:710]", "Pivot hammer back to cube")
+			print("[src/client/cube.client.ts:708]", "Pivot hammer back to cube")
 			local _exp = (CFrame.new(cube.Position))
 			local _arg0 = CFrame.fromOrientation(0, 0, math.pi / 2)
 			arm.CFrame = _exp * _arg0
@@ -1221,7 +1206,7 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 		shakeIntensity.Value = math.max(intensity - dt * 3, 0)
 		wallPlane.Position = cubePosition
-		updatePropellers(cube, dt)
+		updatePropellers(cube, head, dt)
 		updateMud(cube, head, dt)
 		updatePlatforms(cube, head)
 		local position, nonFiltered, hitPart = mouseRaycast(zoom + 512)
@@ -1321,8 +1306,26 @@ RunService.Heartbeat:Connect(function(dt)
 		local _vector3_2 = Vector3.new(math.cos(hammerAngle) * actualHammerDistance, math.sin(hammerAngle) * actualHammerDistance)
 		local hammerPosition = _position + _vector3_2
 		local plane = Vector3.new(1, 1, 0)
+		local mouse = UserInputService:GetMouseLocation()
+		local trail = head:FindFirstChild("Trail")
+		local _result_7 = trail
+		if _result_7 ~= nil then
+			_result_7 = _result_7:IsA("Trail")
+		end
+		if _result_7 then
+			local isMouseIconVisible = mouseIcon.Visible
+			if isMouseIconVisible then
+				arm.LocalTransparencyModifier = 0.5
+				head.LocalTransparencyModifier = 0.5
+				trail.Enabled = false
+				mouseIcon.Position = UDim2.fromOffset(mouse.X, mouse.Y)
+			else
+				trail.Enabled = true
+			end
+			UserInputService.MouseIconEnabled = not isMouseIconVisible
+			mouseVisual.Transparency = if isMouseIconVisible then 1 else 0
+		end
 		if canMove.Value then
-			local mouse = UserInputService:GetMouseLocation()
 			for _, gui in StarterGui:GetGuiObjectsAtPosition(mouse.X, mouse.Y) do
 				if gui.Name == "ContextButtonFrame" then
 					return nil
@@ -1385,7 +1388,7 @@ winArea.Touched:Connect(function(otherPart)
 	if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
 		player:SetAttribute(PlayerAttributes.CompletedGame, true)
 		local totalTime = getCubeTime(otherPart)
-		print("[src/client/cube.client.ts:1013]", `Completed game in {totalTime} seconds`)
+		print("[src/client/cube.client.ts:1029]", `Completed game in {totalTime} seconds`)
 		Events.CompleteGame:FireServer(totalTime)
 		Events.MakeReplayEvent:Fire(string.format("win,%d", totalTime * 1000))
 	end

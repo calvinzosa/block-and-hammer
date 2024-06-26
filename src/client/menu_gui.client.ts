@@ -282,19 +282,26 @@ RunService.RenderStepped.Connect((dt) => {
 });
 
 Events.LoadSettingsJSON.OnClientEvent.Connect((settingsJSON: string) => {
-	const [ success, newSettings ] = pcall(() => HttpService.JSONDecode(settingsJSON)) as LuaTuple<[ boolean, Record<string, boolean> ]>;
+	let newSettings: Record<string, boolean> | undefined = undefined;
+	try {
+		const decodedSettings = HttpService.JSONDecode(settingsJSON);
+		newSettings = decodedSettings as Record<string, boolean>;
+	} catch (err) {
+		$warn(`Unable to decode settings JSON | Error: ${err}`);
+		return;
+	}
 	
-	if (success && typeIs(newSettings, 'table')) {
-		for (const [ name ] of pairs(Settings)) {
-			if (name in newSettings) setSetting(name, newSettings[name]);
-		}
-		
-		if (getSetting(GameSetting.Modifiers)) Events.SetModifiersSetting.FireServer(true);
-		
-		updateSettingButtons();
-		
-		$print(`Loaded settings data: ${settingsJSON}`);
-	} else $warn('Unable to decode settings data');
+	for (const [ name ] of pairs(Settings)) {
+		if (name in newSettings) setSetting(name, newSettings[name]);
+	}
+	
+	previousSettings = table.clone(Settings);
+	
+	if (getSetting(GameSetting.Modifiers)) Events.SetModifiersSetting.FireServer(true);
+	
+	updateSettingButtons();
+	
+	$print(`Loaded settings data: ${settingsJSON}`);
 });
 
 (menuButtons.WaitForChild('Reset') as TextButton).MouseButton1Click.Connect(() => {

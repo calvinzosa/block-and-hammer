@@ -31,50 +31,50 @@ if isMainServer() then
 			if not (_value ~= 0 and _value == _value and _value) then
 				break
 			end
-			local savedServerId = nil
-			repeat
-				do
-					local success, serverId = pcall(function()
-						return TestingServerStore:GetAsync("ServerId")
-					end)
-					if success then
-						savedServerId = serverId
-						break
-					end
+			local savedServerId
+			while true do
+				local _exitType, _returns = TS.try(function()
+					savedServerId = TestingServerStore:GetAsync("ServerId")
+					return TS.TRY_BREAK
+				end, function(err)
+					warn("[src/server/testing_server.server.ts:35]", err)
+				end)
+				if _exitType then
+					break
 				end
-				local _value_1 = task.wait(0.5)
-			until not (_value_1 ~= 0 and _value_1 == _value_1 and _value_1)
-			if not (savedServerId ~= "" and savedServerId) or savedServerId == "none" then
+			end
+			local _savedServerId = savedServerId
+			local _condition_1 = not (type(_savedServerId) == "string")
+			if not _condition_1 then
+				_condition_1 = savedServerId == "none"
+			end
+			if _condition_1 then
 				local serverId = TeleportService:ReserveServer(GameData.TestingPlaceId)
 				savedServerId = serverId
-				repeat
-					do
-						local success = pcall(function()
-							return TestingServerStore:SetAsync("ServerId", serverId)
-						end)
-						if success then
-							break
-						end
-					end
-					local _value_1 = task.wait(0.5)
-				until not (_value_1 ~= 0 and _value_1 == _value_1 and _value_1)
+				while true do
+					TS.try(function()
+						TestingServerStore:SetAsync("ServerId", serverId)
+					end, function(err)
+						warn("[src/server/testing_server.server.ts:47]", err)
+					end)
+				end
 			end
 			TeleportService:TeleportToPrivateServer(GameData.TestingPlaceId, savedServerId, Players:GetPlayers())
 		end
 	end
 elseif isTestingServer() then
-	print("[src/server/testing_server.server.ts:52]", "Server Type: Testing")
+	print("[src/server/testing_server.server.ts:56]", "Server Type: Testing")
 	game:BindToClose(function()
-		repeat
-			do
-				local success = pcall(function()
-					return TestingServerStore:SetAsync("ServerId", "none")
-				end)
-				if success then
-					break
-				end
+		while true do
+			local _exitType, _returns = TS.try(function()
+				TestingServerStore:SetAsync("ServerId", "none")
+				return TS.TRY_BREAK
+			end, function(err)
+				warn("[src/server/testing_server.server.ts:64]", err)
+			end)
+			if _exitType then
+				break
 			end
-			local _value = task.wait(0.5)
-		until not (_value ~= 0 and _value == _value and _value)
+		end
 	end)
 end

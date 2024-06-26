@@ -14,7 +14,7 @@ import { $warn } from 'rbxts-transform-debug';
 const Events = {
     SettingChanged: ReplicatedStorage.WaitForChild('SettingChanged') as BindableEvent,
     MakeReplayEvent: ReplicatedStorage.WaitForChild('MakeReplayEvent') as BindableEvent,
-}
+};
 
 const player = Players.LocalPlayer;
 const GUI = player?.WaitForChild('PlayerGui') as (PlayerGui | undefined);
@@ -32,7 +32,7 @@ export namespace GameData {
     
     export const MainPlaceId = 13458875976;
     export const TestingPlaceId = 17837400665;
-}
+};
 
 export namespace PlayerAttributes {
     export const IsNew = 'isNew';
@@ -329,7 +329,9 @@ export function playSound(name: string, properties: Record<string, DictValue> = 
     sound.PlayOnRemove = false;
     if (properties) {
         for (const [ name, value ] of pairs(properties)) {
-            pcall(() => (sound as unknown as Record<string, DictValue>)[name] = value);
+            try {
+                (sound as unknown as Record<string, DictValue>)[name] = value;
+            } catch (err) {  }
             
             if (typeIs(value, 'number')) dataString += `,${name}=${math.round(value * 1000)}`;
             else dataString += `,${name}=${tostring(value)}`;
@@ -354,7 +356,9 @@ export function playSound(name: string, properties: Record<string, DictValue> = 
     sound.Ended.Connect(() => sound.Destroy());
 }
 
-export function getCubeTime(cube: BasePart): LuaTuple<[ number, number ]> {
+export function getCubeTime(cube: Instance | undefined): LuaTuple<[ number, number ]> {
+    if (!cube?.IsA('BasePart') || !cube.GetAttribute('isCube')) return $tuple(-1, -1);
+    
     const currentTime = getTime();
     
     const finishTotalTime = cube.GetAttribute('finishTotalTime');
@@ -466,9 +470,11 @@ export function decodeJSONObject(object: unknown): unknown {
         
         if (typeIs(value, 'string')) {
             if (datatype === 'Color3') {
-                const [ success, hex ] = pcall(Color3.fromHex, value);
-                if (success) return hex;
-                else return undefined;
+                try {
+                    return Color3.fromHex(value);
+                } catch (err) {
+                    return undefined;
+                }
             }
         } else if (value === undefined) {
             for (const [ key, value ] of pairs(dictTable)) dictTable[key] = decodeJSONObject(value) as DictValue;
@@ -507,11 +513,14 @@ export function giveBadge(player: Player, badgeId: number): void {
         
         let success = false;
         
-        do {
-            [ success ] = pcall(() => {
+        while (true) {
+            try {
                 if (!BadgeService.UserHasBadgeAsync(userId, badgeId)) BadgeService.AwardBadge(userId, badgeId);
-            });
-        } while (!success);
+                break;
+            } catch (err) {
+                $warn(err);
+            }
+        }
         
         task.wait(1);
         player.SetAttribute(PlayerAttributes.BadgeDebounce, undefined);

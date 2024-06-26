@@ -303,23 +303,28 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 end)
 Events.LoadSettingsJSON.OnClientEvent:Connect(function(settingsJSON)
-	local success, newSettings = pcall(function()
-		return HttpService:JSONDecode(settingsJSON)
+	local newSettings = nil
+	local _exitType, _returns = TS.try(function()
+		local decodedSettings = HttpService:JSONDecode(settingsJSON)
+		newSettings = decodedSettings
+	end, function(err)
+		warn("[src/client/menu_gui.client.ts:290]", `Unable to decode settings JSON | Error: {err}`)
+		return TS.TRY_RETURN, {}
 	end)
-	if success and type(newSettings) == "table" then
-		for name in pairs(Settings) do
-			if newSettings[name] ~= nil then
-				setSetting(name, newSettings[name])
-			end
-		end
-		if getSetting(GameSetting.Modifiers) then
-			Events.SetModifiersSetting:FireServer(true)
-		end
-		updateSettingButtons()
-		print("[src/client/menu_gui.client.ts:296]", `Loaded settings data: {settingsJSON}`)
-	else
-		warn("[src/client/menu_gui.client.ts:297]", "Unable to decode settings data")
+	if _exitType then
+		return unpack(_returns)
 	end
+	for name in pairs(Settings) do
+		if newSettings[name] ~= nil then
+			setSetting(name, newSettings[name])
+		end
+	end
+	previousSettings = table.clone(Settings)
+	if getSetting(GameSetting.Modifiers) then
+		Events.SetModifiersSetting:FireServer(true)
+	end
+	updateSettingButtons()
+	print("[src/client/menu_gui.client.ts:304]", `Loaded settings data: {settingsJSON}`)
 end);
 (menuButtons:WaitForChild("Reset")).MouseButton1Click:Connect(function()
 	if debounces.reset then

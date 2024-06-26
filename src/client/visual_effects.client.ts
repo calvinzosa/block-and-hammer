@@ -504,85 +504,86 @@ function newPart(part: Instance) {
 								});
 							}
 						}
-					} else if (hammerTexture === Accessories.HammerTexture.SteelHammer && getSetting(GameSetting.Modifiers) && !otherPart.IsA('UnionOperation')) {
-						if (geometryDebounce || otherPart.Size.Magnitude > 750) return;
+					} else if (hammerTexture === Accessories.HammerTexture.SteelHammer && getSetting(GameSetting.Modifiers) && !otherPart.IsA('UnionOperation') && false) {
+						// TODO: fix steel hammer modifier
+						// if (geometryDebounce || otherPart.Size.Magnitude > 750) return;
 						
-						geometryDebounce = true;
+						// geometryDebounce = true;
 						
-						const area = new Instance('Part');
-						area.Size = Vector3.one.mul(9);
-						area.Position = head.Position;
-						area.Shape = Enum.PartType.Ball;
-						area.Color = otherPart.Color;
+						// const area = new Instance('Part');
+						// area.Size = Vector3.one.mul(9);
+						// area.Position = head.Position;
+						// area.Shape = Enum.PartType.Ball;
+						// area.Color = otherPart.Color;
 						
-						const params = new OverlapParams();
-						params.FilterType = Enum.RaycastFilterType.Include;
-						params.FilterDescendantsInstances = [ mapFolder ];
+						// const params = new OverlapParams();
+						// params.FilterType = Enum.RaycastFilterType.Include;
+						// params.FilterDescendantsInstances = [ mapFolder ];
 						
-						const options = {
-							SplitApart: false,
-							CollisionFidelity: Enum.CollisionFidelity.PreciseConvexDecomposition
-						}
+						// const options = {
+						// 	SplitApart: false,
+						// 	CollisionFidelity: Enum.CollisionFidelity.PreciseConvexDecomposition
+						// }
 						
-						const subtractedPart = (GeometryService.SubtractAsync(otherPart, [ area ], options) as PartOperation[])[1] as (PartOperation | undefined);
-						if (subtractedPart) {
-							subtractedPart.Anchored = false;
-							subtractedPart.SetAttribute('steelHammered', true);
-							subtractedPart.Parent = otherPart.Parent;
+						// const subtractedPart = (GeometryService.SubtractAsync(otherPart, [ area ], options) as PartOperation[])[1] as (PartOperation | undefined);
+						// if (subtractedPart) {
+						// 	subtractedPart.Anchored = false;
+						// 	subtractedPart.SetAttribute('steelHammered', true);
+						// 	subtractedPart.Parent = otherPart.Parent;
 							
-							const weld = new Instance('Weld');
-							weld.Part0 = subtractedPart;
-							weld.Part1 = otherPart;
+						// 	const weld = new Instance('Weld');
+						// 	weld.Part0 = subtractedPart;
+						// 	weld.Part1 = otherPart;
 							
-							if (otherPart.IsA('PartOperation') && otherPart.GetAttribute('steelHammered')) {
-								const original = otherPart.FindFirstChild('original') as (ObjectValue | undefined);
-								if (!original) {
-									subtractedPart.Destroy();
-									return;
-								}
+						// 	if (otherPart.IsA('PartOperation') && otherPart.GetAttribute('steelHammered')) {
+						// 		const original = otherPart.FindFirstChild('original') as (ObjectValue | undefined);
+						// 		if (!original) {
+						// 			subtractedPart.Destroy();
+						// 			return;
+						// 		}
 								
-								original.Parent = subtractedPart;
-								otherPart.Destroy();
+						// 		original.Parent = subtractedPart;
+						// 		otherPart.Destroy();
 								
-								weld.Part1 = original.Value as BasePart;
-							} else {
-								const objectValue = new Instance('ObjectValue');
-								objectValue.Name = 'original';
-								objectValue.Value = otherPart;
-								objectValue.Parent = subtractedPart;
+						// 		weld.Part1 = original.Value as BasePart;
+						// 	} else {
+						// 		const objectValue = new Instance('ObjectValue');
+						// 		objectValue.Name = 'original';
+						// 		objectValue.Value = otherPart;
+						// 		objectValue.Parent = subtractedPart;
 								
-								otherPart.Transparency = 1;
-								otherPart.CanCollide = false;
-								otherPart.SetAttribute('broken', true);
-							}
+						// 		otherPart.Transparency = 1;
+						// 		otherPart.CanCollide = false;
+						// 		otherPart.SetAttribute('broken', true);
+						// 	}
 							
-							weld.Parent = subtractedPart;
+						// 	weld.Parent = subtractedPart;
 							
-							task.delay(15, () => {
-								const value = subtractedPart.FindFirstChild('original') as (ObjectValue | undefined);
-								if (subtractedPart.Parent && value?.Value?.GetAttribute('broken')) {
-									const originalPart = value.Value as BasePart;
-									originalPart.SetAttribute('broken', undefined);
-									originalPart.Transparency = 0;
-									originalPart.CanCollide = true;
+						// 	task.delay(15, () => {
+						// 		const value = subtractedPart.FindFirstChild('original') as (ObjectValue | undefined);
+						// 		if (subtractedPart.Parent && value?.Value?.GetAttribute('broken')) {
+						// 			const originalPart = value.Value as BasePart;
+						// 			originalPart.SetAttribute('broken', undefined);
+						// 			originalPart.Transparency = 0;
+						// 			originalPart.CanCollide = true;
 									
-									subtractedPart.Destroy();
-								}
-							})
+						// 			subtractedPart.Destroy();
+						// 		}
+						// 	})
 							
-							area.Destroy();
-							geometryDebounce = false;
-						} else {
-							otherPart.Transparency = 1;
-							otherPart.CanCollide = false;
-							otherPart.SetAttribute('broken', true);
-							task.delay(15, () => {
-								otherPart.SetAttribute('broken', undefined);
-								otherPart.Transparency = 0;
-								otherPart.CanCollide = true;
-							});
-							geometryDebounce = false;
-						}
+						// 	area.Destroy();
+						// 	geometryDebounce = false;
+						// } else {
+						// 	otherPart.Transparency = 1;
+						// 	otherPart.CanCollide = false;
+						// 	otherPart.SetAttribute('broken', true);
+						// 	task.delay(15, () => {
+						// 		otherPart.SetAttribute('broken', undefined);
+						// 		otherPart.Transparency = 0;
+						// 		otherPart.CanCollide = true;
+						// 	});
+						// 	geometryDebounce = false;
+						// }
 					} else if (hammerTexture === Accessories.HammerTexture.IcyHammer && getSetting(GameSetting.Modifiers)) {
 						const arm = cube.FindFirstChild('Arm') as (BasePart | undefined);
 						const trail = head.FindFirstChild('Trail') as (Trail | undefined);

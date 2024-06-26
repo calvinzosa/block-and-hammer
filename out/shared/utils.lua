@@ -412,10 +412,9 @@ local function playSound(name, properties, ignoreReplay)
 	sound.PlayOnRemove = false
 	if properties then
 		for name, value in pairs(properties) do
-			pcall(function()
+			TS.try(function()
 				sound[name] = value
-				return sound[name]
-			end)
+			end, function(err) end)
 			if type(value) == "number" then
 				dataString ..= `,{name}={math.round(value * 1000)}`
 			else
@@ -444,6 +443,18 @@ local function playSound(name, properties, ignoreReplay)
 	end)
 end
 local function getCubeTime(cube)
+	local _result_1 = cube
+	if _result_1 ~= nil then
+		_result_1 = _result_1:IsA("BasePart")
+	end
+	local _condition = not _result_1
+	if not _condition then
+		local _value = cube:GetAttribute("isCube")
+		_condition = not (_value ~= 0 and _value == _value and _value ~= "" and _value)
+	end
+	if _condition then
+		return -1, -1
+	end
 	local currentTime = getTime()
 	local finishTotalTime = cube:GetAttribute("finishTotalTime")
 	if type(finishTotalTime) == "number" then
@@ -602,11 +613,13 @@ local function decodeJSONObject(object)
 		local value = dictTable.value
 		if type(value) == "string" then
 			if datatype == "Color3" then
-				local success, hex = pcall(Color3.fromHex, value)
-				if success then
-					return hex
-				else
-					return nil
+				local _exitType, _returns = TS.try(function()
+					return TS.TRY_RETURN, { Color3.fromHex(value) }
+				end, function(err)
+					return TS.TRY_RETURN, { nil }
+				end)
+				if _exitType then
+					return unpack(_returns)
 				end
 			end
 		elseif value == nil then
@@ -642,7 +655,7 @@ local function giveBadge(player, badgeId)
 		return nil
 	end
 	if isTestingServer() then
-		warn("[src/shared/utils.ts:499]", "Badges are disabled in the Testing Server.")
+		warn("[src/shared/utils.ts:505]", "Badges are disabled in the Testing Server.")
 		return nil
 	end
 	local userId = player.UserId
@@ -656,15 +669,19 @@ local function giveBadge(player, badgeId)
 		end
 		player:SetAttribute(PlayerAttributes.BadgeDebounce, true)
 		local success = false
-		repeat
-			do
-				success = pcall(function()
-					if not BadgeService:UserHasBadgeAsync(userId, badgeId) then
-						BadgeService:AwardBadge(userId, badgeId)
-					end
-				end)
+		while true do
+			local _exitType, _returns = TS.try(function()
+				if not BadgeService:UserHasBadgeAsync(userId, badgeId) then
+					BadgeService:AwardBadge(userId, badgeId)
+				end
+				return TS.TRY_BREAK
+			end, function(err)
+				warn("[src/shared/utils.ts:521]", err)
+			end)
+			if _exitType then
+				break
 			end
-		until success
+		end
 		task.wait(1)
 		player:SetAttribute(PlayerAttributes.BadgeDebounce, nil)
 	end)

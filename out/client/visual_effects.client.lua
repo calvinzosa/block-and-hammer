@@ -568,85 +568,72 @@ local function newPart(part)
 								end)
 							end
 						end
-					elseif hammerTexture == Accessories.HammerTexture.SteelHammer and getSetting(GameSetting.Modifiers) and not otherPart:IsA("UnionOperation") then
-						if geometryDebounce or otherPart.Size.Magnitude > 750 then
-							return nil
-						end
-						geometryDebounce = true
-						local area = Instance.new("Part")
-						area.Size = Vector3.one * 9
-						area.Position = head.Position
-						area.Shape = Enum.PartType.Ball
-						area.Color = otherPart.Color
-						local params = OverlapParams.new()
-						params.FilterType = Enum.RaycastFilterType.Include
-						params.FilterDescendantsInstances = { mapFolder }
-						local options = {
-							SplitApart = false,
-							CollisionFidelity = Enum.CollisionFidelity.PreciseConvexDecomposition,
-						}
-						local subtractedPart = (GeometryService:SubtractAsync(otherPart, { area }, options))[2]
-						if subtractedPart then
-							subtractedPart.Anchored = false
-							subtractedPart:SetAttribute("steelHammered", true)
-							subtractedPart.Parent = otherPart.Parent
-							local weld = Instance.new("Weld")
-							weld.Part0 = subtractedPart
-							weld.Part1 = otherPart
-							local _value_2 = otherPart:IsA("PartOperation") and otherPart:GetAttribute("steelHammered")
-							if _value_2 ~= 0 and _value_2 == _value_2 and _value_2 ~= "" and _value_2 then
-								local original = otherPart:FindFirstChild("original")
-								if not original then
-									subtractedPart:Destroy()
-									return nil
-								end
-								original.Parent = subtractedPart
-								otherPart:Destroy()
-								weld.Part1 = original.Value
-							else
-								local objectValue = Instance.new("ObjectValue")
-								objectValue.Name = "original"
-								objectValue.Value = otherPart
-								objectValue.Parent = subtractedPart
-								otherPart.Transparency = 1
-								otherPart.CanCollide = false
-								otherPart:SetAttribute("broken", true)
-							end
-							weld.Parent = subtractedPart
-							task.delay(15, function()
-								local value = subtractedPart:FindFirstChild("original")
-								local _condition_3 = subtractedPart.Parent
-								if _condition_3 then
-									local _result = value
-									if _result ~= nil then
-										_result = _result.Value
-										if _result ~= nil then
-											_result = _result:GetAttribute("broken")
-										end
-									end
-									_condition_3 = _result
-								end
-								if _condition_3 ~= 0 and _condition_3 == _condition_3 and _condition_3 ~= "" and _condition_3 then
-									local originalPart = value.Value
-									originalPart:SetAttribute("broken", nil)
-									originalPart.Transparency = 0
-									originalPart.CanCollide = true
-									subtractedPart:Destroy()
-								end
-							end)
-							area:Destroy()
-							geometryDebounce = false
-						else
-							otherPart.Transparency = 1
-							otherPart.CanCollide = false
-							otherPart:SetAttribute("broken", true)
-							task.delay(15, function()
-								otherPart:SetAttribute("broken", nil)
-								otherPart.Transparency = 0
-								otherPart.CanCollide = true
-							end)
-							geometryDebounce = false
-						end
+					elseif hammerTexture == Accessories.HammerTexture.SteelHammer and getSetting(GameSetting.Modifiers) and not otherPart:IsA("UnionOperation") and false then
+						-- TODO: fix steel hammer modifier
+						-- if (geometryDebounce || otherPart.Size.Magnitude > 750) return;
+						-- geometryDebounce = true;
+						-- const area = new Instance('Part');
+						-- area.Size = Vector3.one.mul(9);
+						-- area.Position = head.Position;
+						-- area.Shape = Enum.PartType.Ball;
+						-- area.Color = otherPart.Color;
+						-- const params = new OverlapParams();
+						-- params.FilterType = Enum.RaycastFilterType.Include;
+						-- params.FilterDescendantsInstances = [ mapFolder ];
+						-- const options = {
+						-- 	SplitApart: false,
+						-- 	CollisionFidelity: Enum.CollisionFidelity.PreciseConvexDecomposition
+						-- }
+						-- const subtractedPart = (GeometryService.SubtractAsync(otherPart, [ area ], options) as PartOperation[])[1] as (PartOperation | undefined);
+						-- if (subtractedPart) {
+						-- 	subtractedPart.Anchored = false;
+						-- 	subtractedPart.SetAttribute('steelHammered', true);
+						-- 	subtractedPart.Parent = otherPart.Parent;
+						-- 	const weld = new Instance('Weld');
+						-- 	weld.Part0 = subtractedPart;
+						-- 	weld.Part1 = otherPart;
+						-- 	if (otherPart.IsA('PartOperation') && otherPart.GetAttribute('steelHammered')) {
+						-- 		const original = otherPart.FindFirstChild('original') as (ObjectValue | undefined);
+						-- 		if (!original) {
+						-- 			subtractedPart.Destroy();
+						-- 			return;
+						-- 		}
+						-- 		original.Parent = subtractedPart;
+						-- 		otherPart.Destroy();
+						-- 		weld.Part1 = original.Value as BasePart;
+						-- 	} else {
+						-- 		const objectValue = new Instance('ObjectValue');
+						-- 		objectValue.Name = 'original';
+						-- 		objectValue.Value = otherPart;
+						-- 		objectValue.Parent = subtractedPart;
+						-- 		otherPart.Transparency = 1;
+						-- 		otherPart.CanCollide = false;
+						-- 		otherPart.SetAttribute('broken', true);
+						-- 	}
+						-- 	weld.Parent = subtractedPart;
+						-- 	task.delay(15, () => {
+						-- 		const value = subtractedPart.FindFirstChild('original') as (ObjectValue | undefined);
+						-- 		if (subtractedPart.Parent && value?.Value?.GetAttribute('broken')) {
+						-- 			const originalPart = value.Value as BasePart;
+						-- 			originalPart.SetAttribute('broken', undefined);
+						-- 			originalPart.Transparency = 0;
+						-- 			originalPart.CanCollide = true;
+						-- 			subtractedPart.Destroy();
+						-- 		}
+						-- 	})
+						-- 	area.Destroy();
+						-- 	geometryDebounce = false;
+						-- } else {
+						-- 	otherPart.Transparency = 1;
+						-- 	otherPart.CanCollide = false;
+						-- 	otherPart.SetAttribute('broken', true);
+						-- 	task.delay(15, () => {
+						-- 		otherPart.SetAttribute('broken', undefined);
+						-- 		otherPart.Transparency = 0;
+						-- 		otherPart.CanCollide = true;
+						-- 	});
+						-- 	geometryDebounce = false;
+						-- }
 					elseif hammerTexture == Accessories.HammerTexture.IcyHammer and getSetting(GameSetting.Modifiers) then
 						local arm = cube:FindFirstChild("Arm")
 						local trail = head:FindFirstChild("Trail")
@@ -983,7 +970,7 @@ RunService.Stepped:Connect(function(_, dt)
 	prevCubePosition = cube.Position
 	cube:SetAttribute("lastVelocity", cube.AssemblyLinearVelocity)
 end)
-print("[src/client/visual_effects.client.ts:912]", "Started running visual_effects.client.ts")
+print("[src/client/visual_effects.client.ts:913]", "Started running visual_effects.client.ts")
 while true do
 	local _value = task.wait(0.05)
 	if not (_value ~= 0 and _value == _value and _value) then

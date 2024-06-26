@@ -10,7 +10,7 @@ import {
 	TextChatService,
 } from '@rbxts/services';
 
-import { $dbg, $print, $warn } from 'rbxts-transform-debug';
+import { $print, $warn } from 'rbxts-transform-debug';
 
 import {
 	convertStudsToMeters,
@@ -57,6 +57,7 @@ const spectatePlayer = isSpectating.WaitForChild('player') as StringValue;
 const canMove = valueInstances.WaitForChild('can_move') as BoolValue;
 const screenGui = GUI.WaitForChild('ScreenGui') as ScreenGui;
 const replayGui = GUI.WaitForChild('ReplayGui') as ScreenGui;
+const mouseIcon = screenGui.WaitForChild('MouseIcon') as ImageLabel;
 const debugInfo = screenGui.WaitForChild('DebugInfo') as Frame;
 const timerLabel = screenGui.WaitForChild('Timer') as TextLabel;
 const speedometerLabel = screenGui.WaitForChild('Speedometer') as TextLabel;
@@ -118,7 +119,7 @@ function newPropeller(propeller: Instance) {
     cachedPropellers.push(propeller);
 }
 
-function updatePropellers(cube: BasePart, dt: number) {
+function updatePropellers(cube: BasePart, head: BasePart, dt: number) {
 	for (const [ i, propeller ] of pairs(cachedPropellers)) {
 		const blades = propeller.FindFirstChild('Blades');
 		if (!blades?.IsA('BasePart')) {
@@ -175,23 +176,20 @@ function updatePropellers(cube: BasePart, dt: number) {
 	
 	const gravity = Workspace.GetAttribute('default_gravity') as (number | undefined) ?? 196.2;
 	
-	let cubeMultiplier = 1;
-	let headMultiplier = 1;
+	let cubeMultiplier = 0.1;
+	let headMultiplier = 0.1;
 	
 	params.FilterDescendantsInstances = [ mudParts ];
 	
 	for (const [ i, part ] of pairs([ cube, cube.FindFirstChild('Head') ])) {
 		if (part?.IsA('BasePart') && Workspace.GetPartsInPart(part, params).size() > 0) {
-			if (i === 1) cubeMultiplier = 2;
-			else headMultiplier = 2;
+			if (i === 1) cubeMultiplier = 0.2;
+			else headMultiplier = 0.2;
 		}
 	}
 	
-	const propellerForce = cube.FindFirstChild('PropellerForce');
-	if (propellerForce?.IsA('VectorForce')) propellerForce.Force = totalCubeForce.mul(gravity).mul(dt * 40 * cubeMultiplier);
-	
-	const headPropeller = cube.FindFirstChild('Head')?.FindFirstChild('PropellerForce');
-	if (headPropeller?.IsA('VectorForce')) headPropeller.Force = totalHeadForce.mul(gravity).mul(dt * 10 * headMultiplier);
+	cube.AssemblyLinearVelocity = cube.AssemblyLinearVelocity.add(totalCubeForce.mul(gravity).mul(dt * cubeMultiplier));
+	head.AssemblyLinearVelocity = head.AssemblyLinearVelocity.add(totalHeadForce.mul(gravity).mul(dt * headMultiplier));
 }
 
 function updatePlatforms(cube: BasePart, head: BasePart) {
@@ -836,7 +834,7 @@ RunService.Heartbeat.Connect((dt) => {
 		shakeIntensity.Value = math.max(intensity - dt * 3, 0);
 		wallPlane.Position = cubePosition;
 		
-		updatePropellers(cube, dt);
+		updatePropellers(cube, head, dt);
 		updateMud(cube, head, dt);
 		updatePlatforms(cube, head);
 		
@@ -926,8 +924,26 @@ RunService.Heartbeat.Connect((dt) => {
 		const hammerPosition = cube.Position.add(new Vector3(math.cos(hammerAngle) * actualHammerDistance, math.sin(hammerAngle) * actualHammerDistance));
 		const plane = new Vector3(1, 1, 0);
 		
+		const mouse = UserInputService.GetMouseLocation();
+		
+		const trail = head.FindFirstChild('Trail');
+		if (trail?.IsA('Trail')) {
+			const isMouseIconVisible = mouseIcon.Visible;
+			if (isMouseIconVisible) {
+				arm.LocalTransparencyModifier = 0.5;
+				head.LocalTransparencyModifier = 0.5;
+				trail.Enabled = false;
+				
+				mouseIcon.Position = UDim2.fromOffset(mouse.X, mouse.Y);
+			} else {
+				trail.Enabled = true;
+			}
+			
+			UserInputService.MouseIconEnabled = !isMouseIconVisible;
+			mouseVisual.Transparency = isMouseIconVisible ? 1 : 0;
+		}
+		
 		if (canMove.Value) {
-			const mouse = UserInputService.GetMouseLocation();
 			for (const gui of StarterGui.GetGuiObjectsAtPosition(mouse.X, mouse.Y)) {
 				if (gui.Name === 'ContextButtonFrame') return;
 			}

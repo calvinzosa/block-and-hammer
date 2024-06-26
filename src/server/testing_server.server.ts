@@ -12,7 +12,7 @@ import {
     GameData,
 } from 'shared/utils';
 
-import { $print } from 'rbxts-transform-debug';
+import { $print, $warn } from 'rbxts-transform-debug';
 
 const TestingServerStore = DataStoreService.GetDataStore('testing_server');
 const forceTestingServer = ReplicatedStorage.FindFirstChild('ForceTestingServer') as IntValue;
@@ -26,23 +26,27 @@ if (isMainServer()) {
     
     if (ownerId.Value === GameData.CreatorId) {
         while (task.wait(3)) {
-            let savedServerId = undefined;
-            do {
-                const [ success, serverId ] = pcall(() => TestingServerStore.GetAsync('ServerId'));
-                if (success) {
-                    savedServerId = serverId as (string | undefined);
+            let savedServerId;
+            while (true) {
+                try {
+                    [ savedServerId ] = TestingServerStore.GetAsync('ServerId');
                     break;
+                } catch (err) {
+                    $warn(err);
                 }
-            } while (task.wait(0.5));
+            }
             
-            if (!savedServerId || savedServerId === 'none') {
+            if (!typeIs(savedServerId, 'string') || savedServerId === 'none') {
                 const [ serverId ] = TeleportService.ReserveServer(GameData.TestingPlaceId);
                 savedServerId = serverId;
                 
-                do {
-                    const [ success ] = pcall(() => TestingServerStore.SetAsync('ServerId', serverId));
-                    if (success) break;
-                } while (task.wait(0.5));
+                while (true) {
+                    try {
+                        TestingServerStore.SetAsync('ServerId', serverId);
+                    } catch (err) {
+                        $warn(err);
+                    }
+                }
             }
             
             TeleportService.TeleportToPrivateServer(GameData.TestingPlaceId, savedServerId, Players.GetPlayers());
@@ -52,9 +56,13 @@ if (isMainServer()) {
     $print('Server Type: Testing');
     
     game.BindToClose(() => {
-        do {
-            const [ success ] = pcall(() => TestingServerStore.SetAsync('ServerId', 'none'));
-            if (success) break;
-        } while (task.wait(0.5));
+        while (true) {
+            try {
+                TestingServerStore.SetAsync('ServerId', 'none');
+                break;
+            } catch (err) {
+                $warn(err);
+            }
+        }
     });
 }
