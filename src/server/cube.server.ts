@@ -15,6 +15,7 @@ import {
 	giveBadge,
 	getTime,
 	getTimeUnits,
+	getHammerTexture,
 } from 'shared/utils';
 
 import { reloadAccessories } from 'shared/accessory_loader';
@@ -27,6 +28,7 @@ const Events = {
 	'SaySystemMessage': ReplicatedStorage.FindFirstChild('SaySystemMessage') as RemoteEvent,
     'AddRagdollCount': ReplicatedStorage.FindFirstChild('AddRagdollCount') as RemoteEvent,
 	'ShowChatBubble': ReplicatedStorage.FindFirstChild('ShowChatBubble') as RemoteEvent,
+    'DestroyedPart': ReplicatedStorage.FindFirstChild('DestroyedPart') as RemoteEvent,
     'SetDeviceType': ReplicatedStorage.FindFirstChild('SetDeviceType') as RemoteEvent,
 	'CompleteGame': ReplicatedStorage.FindFirstChild('CompleteGame') as RemoteEvent,
 	'GroundImpact': ReplicatedStorage.FindFirstChild('GroundImpact') as RemoteEvent,
@@ -231,6 +233,23 @@ Events.CompleteGame.OnServerEvent.Connect((player, givenTime) => {
 	cube.SetAttribute('start_time', getTime() - totalTime);
 	
 	if (totalTime < 210) giveBadge(player, 2146538368);
+});
+
+Events.DestroyedPart.OnServerEvent.Connect((player, otherPart) => {
+	const cube = Workspace.FindFirstChild(`cube${player.UserId}`)
+	if (!cube || !typeIs(otherPart, 'Instance') || !otherPart.IsA('BasePart')) return;
+	
+	if (otherPart.GetAttribute('CAN_SHATTER')) {
+		player.SetAttribute('didShatter', true);
+		task.delay(10, () => {
+			if (player.Parent === Players) player.SetAttribute('didShatter', undefined);
+		});
+	}
+	
+	const count = (cube.GetAttribute('destroyed_counter') as (number | undefined) ?? 0) + 1;
+	cube.SetAttribute('destroyed_counter', count);
+	
+	if (otherPart.Name === `part${player.UserId}` && getHammerTexture(player) === Accessories.HammerTexture.BuilderHammer) otherPart.SetAttribute('timer', 0);
 });
 
 Events.SayMessageRequest.OnServerEvent.Connect((player, message, channel) => {

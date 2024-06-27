@@ -3,6 +3,8 @@ local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_incl
 local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
 local ReplicatedStorage = _services.ReplicatedStorage
 local TeleportService = _services.TeleportService
+local TweenService = _services.TweenService
+local RunService = _services.RunService
 local Workspace = _services.Workspace
 local Players = _services.Players
 local startsWith = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "string-utils").startsWith
@@ -10,6 +12,7 @@ local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "ut
 local isTestingServer = _utils.isTestingServer
 local getPlayerRank = _utils.getPlayerRank
 local giveBadge = _utils.giveBadge
+local numLerp = _utils.numLerp
 local accessoryList = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "accessory_loader").accessoryList
 local Events = {
 	SaySystemMessage = ReplicatedStorage:FindFirstChild("SaySystemMessage"),
@@ -26,7 +29,7 @@ Commands = {
 		parameters = {},
 		callback = function(sender)
 			local rank = getPlayerRank(sender)
-			local message = "available commands you can use:"
+			local message = "Available commands you can use:"
 			for name, data in pairs(Commands) do
 				if data.rank > rank then
 					continue
@@ -61,9 +64,9 @@ Commands = {
 			else
 				task.wait()
 				if accessoryList[accessoryName] ~= nil then
-					Events.SaySystemMessage:FireClient(sender, "not allowed")
+					Events.SaySystemMessage:FireClient(sender, "You are not allowed to equip that!", Color3.fromRGB(255, 170, 0))
 				else
-					Events.SaySystemMessage:FireClient(sender, "does not exist")
+					Events.SaySystemMessage:FireClient(sender, "Not found", Color3.fromRGB(255, 128, 128))
 				end
 			end
 		end,
@@ -95,9 +98,9 @@ Commands = {
 		parameters = {},
 		callback = function(sender)
 			task.wait(0)
-			Events.SaySystemMessage:FireClient(sender, `Accessory list:`)
+			Events.SaySystemMessage:FireClient(sender, "Accessory List:", Color3.fromRGB(0, 200, 255))
 			for name in pairs(accessoryList) do
-				Events.SaySystemMessage:FireClient(sender, `> {name}`)
+				Events.SaySystemMessage:FireClient(sender, `> {name}`, Color3.fromRGB(0, 200, 255))
 			end
 		end,
 	},
@@ -151,6 +154,54 @@ Commands = {
 			_fn:PivotTo(_cFrame * _cFrame_1)
 			task.wait(0.1)
 			targetCube.Anchored = false
+		end,
+	},
+	scale = {
+		rank = 2,
+		parameters = { "players", "number" },
+		callback = function(sender, a, b)
+			local targets = a
+			local newScale = b
+			if not (type(newScale) == "number") then
+				Events.SaySystemMessage:FireClient(sender, "Second parameter must be a number", Color3.fromRGB(255, 170, 0))
+				return nil
+			end
+			for _, player in targets do
+				local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
+				local _condition = cube
+				if _condition then
+					local _value = cube:GetAttribute("isScaling")
+					_condition = not (_value ~= 0 and _value == _value and _value ~= "" and _value)
+				end
+				if _condition then
+					cube:SetAttribute("isScaling", true)
+					task.spawn(function()
+						local _condition_1 = cube:GetAttribute("scale")
+						if _condition_1 == nil then
+							_condition_1 = 1
+						end
+						local previousScale = _condition_1
+						local model = Instance.new("Model")
+						model:ScaleTo(previousScale)
+						model.Parent = Workspace
+						cube.Parent = model
+						local currentTime = time()
+						local startTime = currentTime
+						local totalTime = 0.4
+						while (currentTime - startTime) < totalTime do
+							local alpha = TweenService:GetValue((currentTime - startTime) / totalTime, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+							local currentScale = numLerp(previousScale, newScale, alpha)
+							model:ScaleTo(currentScale)
+							currentTime = time()
+							RunService.Heartbeat:Wait()
+						end
+						model:ScaleTo(newScale)
+						cube:SetAttribute("isScaling", nil)
+						cube:SetAttribute("scale", newScale)
+						cube.Parent = Workspace
+					end)
+				end
+			end
 		end,
 	},
 	error = {
@@ -286,12 +337,12 @@ local function chatted(player, message)
 	end
 	if rank < command.rank then
 		task.wait(0)
-		Events.SaySystemMessage:FireClient(player, "You are not allowed to use this command!", Color3.new(1, 0, 0))
+		Events.SaySystemMessage:FireClient(player, "You are not allowed to use this command!", Color3.fromRGB(255, 170, 0))
 		return nil
 	end
 	if #args ~= #command.parameters then
 		task.wait(0)
-		Events.SaySystemMessage:FireClient(player, "Invalid command syntax, use ;cmds to see how to use this command", Color3.new(1, 0.5, 0))
+		Events.SaySystemMessage:FireClient(player, "Invalid command syntax, use ;cmds to see how to use this command", Color3.fromRGB(0, 0, 255))
 		return nil
 	end
 	local parsedParameters = {}
@@ -302,6 +353,12 @@ local function chatted(player, message)
 		elseif parameterType == "string" then
 			local _arg0 = args[i]
 			table.insert(parsedParameters, _arg0)
+		elseif parameterType == "number" then
+			local _condition = tonumber(args[i])
+			if _condition == nil then
+				_condition = args[i]
+			end
+			table.insert(parsedParameters, _condition)
 		end
 	end
 	command.callback(player, unpack(parsedParameters))

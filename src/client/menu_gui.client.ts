@@ -71,7 +71,7 @@ const statsGui = screenGui.WaitForChild('StatsGUI') as Frame;
 
 const playerList: string[] = [  ];
 const clickThreshold = 0.2;
-const menuToggle = new Icon().setLabel('Menu');
+const menuToggle = new Icon().setLabel('Menu').lock();
 
 const openableGuis = [
 	resetConfirmation,
@@ -175,6 +175,8 @@ function updateSettingButtons() {
 }
 
 function toggleMenu() {
+	if (menuToggle.locked) return;
+	
 	if (!isSpectating.Value && (canMove.Value || menuOpen.Value)) {
 		canMove.Value = menuOpen.Value;
 		menuOpen.Value = !menuOpen.Value;
@@ -196,6 +198,10 @@ function toggleMenu() {
 	
 	menuToggle.unlock();
 }
+
+player.AttributeChanged.Connect((attr) => {
+	if (attr === PlayerAttributes.Client.InMainMenu && !player.GetAttribute(attr)) menuToggle.unlock();
+});
 
 UserInputService.InputBegan.Connect((input, processed) => {
 	if (processed) return;

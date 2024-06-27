@@ -15,6 +15,7 @@ local Accessories = _utils.Accessories
 local giveBadge = _utils.giveBadge
 local getTime = _utils.getTime
 local getTimeUnits = _utils.getTimeUnits
+local getHammerTexture = _utils.getHammerTexture
 local reloadAccessories = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "accessory_loader").reloadAccessories
 local startsWith = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "string-utils").startsWith
 local Admins = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "admins").Admins
@@ -24,6 +25,7 @@ local Events = {
 	SaySystemMessage = ReplicatedStorage:FindFirstChild("SaySystemMessage"),
 	AddRagdollCount = ReplicatedStorage:FindFirstChild("AddRagdollCount"),
 	ShowChatBubble = ReplicatedStorage:FindFirstChild("ShowChatBubble"),
+	DestroyedPart = ReplicatedStorage:FindFirstChild("DestroyedPart"),
 	SetDeviceType = ReplicatedStorage:FindFirstChild("SetDeviceType"),
 	CompleteGame = ReplicatedStorage:FindFirstChild("CompleteGame"),
 	GroundImpact = ReplicatedStorage:FindFirstChild("GroundImpact"),
@@ -311,6 +313,38 @@ Events.CompleteGame.OnServerEvent:Connect(function(player, givenTime)
 	cube:SetAttribute("start_time", getTime() - totalTime)
 	if totalTime < 210 then
 		giveBadge(player, 2146538368)
+	end
+end)
+Events.DestroyedPart.OnServerEvent:Connect(function(player, otherPart)
+	local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
+	local _condition = not cube
+	if not _condition then
+		local _otherPart = otherPart
+		_condition = not (typeof(_otherPart) == "Instance")
+		if not _condition then
+			_condition = not otherPart:IsA("BasePart")
+		end
+	end
+	if _condition then
+		return nil
+	end
+	local _value = otherPart:GetAttribute("CAN_SHATTER")
+	if _value ~= 0 and _value == _value and _value ~= "" and _value then
+		player:SetAttribute("didShatter", true)
+		task.delay(10, function()
+			if player.Parent == Players then
+				player:SetAttribute("didShatter", nil)
+			end
+		end)
+	end
+	local _condition_1 = cube:GetAttribute("destroyed_counter")
+	if _condition_1 == nil then
+		_condition_1 = 0
+	end
+	local count = _condition_1 + 1
+	cube:SetAttribute("destroyed_counter", count)
+	if otherPart.Name == `part{player.UserId}` and getHammerTexture(player) == Accessories.HammerTexture.BuilderHammer then
+		otherPart:SetAttribute("timer", 0)
 	end
 end)
 Events.SayMessageRequest.OnServerEvent:Connect(function(player, message, channel)

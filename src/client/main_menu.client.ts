@@ -8,13 +8,12 @@ import {
 } from '@rbxts/services';
 
 import {
-    getTime,
     getHammerTexture,
+    PlayerAttributes,
     getPlayerRank,
-    playSound,
     Accessories,
-    tweenTypes,
-    PlayerAttributes
+    playSound,
+    getTime,
 } from 'shared/utils';
 
 const player = Players.LocalPlayer;
@@ -101,15 +100,16 @@ UserInputService.InputBegan.Once(() => {
 	// menuGui.Edit.Visible = true
     titleLabel.Visible = true;
 	
-	TweenService.Create(hintLabel, tweenTypes.linear.short, { TextTransparency: 1, TextStrokeTransparency: 1 }).Play();
-	TweenService.Create(playButton, tweenTypes.linear.short, { TextTransparency: 0, BackgroundTransparency: 0.6 }).Play();
-	TweenService.Create(titleLabel, tweenTypes.linear.short, { TextTransparency: 0, TextStrokeTransparency: 0 }).Play();
+    const Info = new TweenInfo(0.4, Enum.EasingStyle.Linear);
+	TweenService.Create(hintLabel, Info, { TextTransparency: 1, TextStrokeTransparency: 1 }).Play();
+	TweenService.Create(playButton, Info, { TextTransparency: 0, BackgroundTransparency: 0.6 }).Play();
+	TweenService.Create(titleLabel, Info, { TextTransparency: 0, TextStrokeTransparency: 0 }).Play();
 	
     if (getPlayerRank(player) >= 1) {
-        TweenService.Create(editButton, tweenTypes.linear.short, { TextTransparency: 0, BackgroundTransparency: 0.6 }).Play();
+        TweenService.Create(editButton, Info, { TextTransparency: 0, BackgroundTransparency: 0.6 }).Play();
     } else {
         editButton.SetAttribute('disabled', true);
-        TweenService.Create(editButton, tweenTypes.linear.short, { TextTransparency: 0.4, BackgroundTransparency: 0.4 }).Play();
+        TweenService.Create(editButton, Info, { TextTransparency: 0.4, BackgroundTransparency: 0.4 }).Play();
     }
 	
 	const spark = ReplicatedStorage.WaitForChild('Particles').WaitForChild('spark').Clone() as BasePart;
@@ -158,10 +158,11 @@ playButton.MouseButton1Click.Once(() => {
     shadowTitle.Visible = false;
     shadowText.Visible = false;
     
-    TweenService.Create(shadow, new TweenInfo(0.6, Enum.EasingStyle.Linear), { BackgroundTransparency: 0 }).Play();
+    const Info = new TweenInfo(0.6, Enum.EasingStyle.Linear);
+    TweenService.Create(shadow, Info, { BackgroundTransparency: 0 }).Play();
     task.wait(0.6);
     
-    TweenService.Create(shadow, tweenTypes.linear.short, { Size: UDim2.fromScale(0, 0) }).Play();
+    TweenService.Create(shadow, Info, { Size: UDim2.fromScale(0, 0) }).Play();
     task.delay(1, () => menuGui.Enabled = false);
     
     player.SetAttribute(PlayerAttributes.Client.InMainMenu, undefined);
@@ -178,7 +179,8 @@ editButton.MouseButton1Click.Once(() => {
     titleLabel.Visible = false;
     shadowText.Visible = false;
     
-    TweenService.Create(shadow, tweenTypes.linear.short, { BackgroundTransparency: 0 }).Play();
+    const Info = new TweenInfo(0.6, Enum.EasingStyle.Linear);
+    TweenService.Create(shadow, Info, { BackgroundTransparency: 0 }).Play();
     task.wait(1);
     
     (ReplicatedStorage.FindFirstChild('JoinEdit') as RemoteEvent).FireServer();

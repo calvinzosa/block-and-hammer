@@ -61,7 +61,7 @@ local replaysGui = screenGui:WaitForChild("ReplaysGUI")
 local statsGui = screenGui:WaitForChild("StatsGUI")
 local playerList = {}
 local clickThreshold = 0.2
-local menuToggle = Icon.new():setLabel("Menu")
+local menuToggle = Icon.new():setLabel("Menu"):lock()
 local openableGuis = { resetConfirmation, settingsGui, accessoriesGui, spectatingGui, tutorialConfirmation, colorChanger, credits, questGui, leaderboardGui, changelogsGui, statsGui, replaysGui }
 local lastChange = getTime()
 local areSettingsSaved = true
@@ -159,6 +159,9 @@ local function updateSettingButtons()
 	player:SetAttribute(PlayerAttributes.Client.SettingsJSON, HttpService:JSONEncode(Settings))
 end
 local function toggleMenu()
+	if menuToggle.locked then
+		return nil
+	end
 	if not isSpectating.Value and (canMove.Value or menuOpen.Value) then
 		canMove.Value = menuOpen.Value
 		menuOpen.Value = not menuOpen.Value
@@ -179,6 +182,16 @@ local function toggleMenu()
 	end
 	menuToggle:unlock()
 end
+player.AttributeChanged:Connect(function(attr)
+	local _condition = attr == PlayerAttributes.Client.InMainMenu
+	if _condition then
+		local _value = player:GetAttribute(attr)
+		_condition = not (_value ~= 0 and _value == _value and _value ~= "" and _value)
+	end
+	if _condition then
+		menuToggle:unlock()
+	end
+end)
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then
 		return nil
@@ -297,7 +310,7 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 	end
 	if (currentTime - lastChange) > 5 and not areSettingsSaved and not settingsGui.Visible then
-		print("[src/client/menu_gui.client.ts:278]", `Saved settings: {HttpService:JSONEncode(Settings)}`)
+		print("[src/client/menu_gui.client.ts:284]", `Saved settings: {HttpService:JSONEncode(Settings)}`)
 		Events.SaveSettingsJSON:FireServer(Settings)
 		areSettingsSaved = true
 	end
@@ -308,7 +321,7 @@ Events.LoadSettingsJSON.OnClientEvent:Connect(function(settingsJSON)
 		local decodedSettings = HttpService:JSONDecode(settingsJSON)
 		newSettings = decodedSettings
 	end, function(err)
-		warn("[src/client/menu_gui.client.ts:290]", `Unable to decode settings JSON | Error: {err}`)
+		warn("[src/client/menu_gui.client.ts:296]", `Unable to decode settings JSON | Error: {err}`)
 		return TS.TRY_RETURN, {}
 	end)
 	if _exitType then
@@ -324,7 +337,7 @@ Events.LoadSettingsJSON.OnClientEvent:Connect(function(settingsJSON)
 		Events.SetModifiersSetting:FireServer(true)
 	end
 	updateSettingButtons()
-	print("[src/client/menu_gui.client.ts:304]", `Loaded settings data: {settingsJSON}`)
+	print("[src/client/menu_gui.client.ts:310]", `Loaded settings data: {settingsJSON}`)
 end);
 (menuButtons:WaitForChild("Reset")).MouseButton1Click:Connect(function()
 	if debounces.reset then

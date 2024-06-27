@@ -1,6 +1,8 @@
 import {
 	ReplicatedStorage,
 	TeleportService,
+    TweenService,
+    RunService,
 	Workspace,
 	Players,
 } from '@rbxts/services';
@@ -11,6 +13,7 @@ import {
 	isTestingServer,
 	getPlayerRank,
 	giveBadge,
+    numLerp,
 } from 'shared/utils';
 
 import {
@@ -30,8 +33,8 @@ const connections: Map<Player, RBXScriptConnection> = new Map();
 
 interface Command {
     rank: number;
-    parameters: string[  ];
-    callback: (sender: Player, ...args: unknown[  ]) => void;
+    parameters: string[];
+    callback: (sender: Player, ...args: unknown[]) => void;
 }
 
 const Commands: Record<string, Command> = {
@@ -41,17 +44,14 @@ const Commands: Record<string, Command> = {
         callback: (sender: Player) => {
             const rank = getPlayerRank(sender);
             
-            let message = 'available commands you can use:';
+            let message = 'Available commands you can use:';
             for (const [name, data] of pairs(Commands)) {
-                if (data.rank > rank) {
-                    continue;
-                }
+                if (data.rank > rank) continue;
+                
                 message += `\n  ;${name}`;
-                if (data.parameters.size() > 0) {
-                    message += ` [${data.parameters.join('] [')}]`;
-                }
+                if (data.parameters.size() > 0) message += ` [${data.parameters.join('] [')}]`;
             }
-
+            
             task.wait(0);
             Events.SaySystemMessage.FireClient(sender, message);
         },
@@ -78,11 +78,8 @@ const Commands: Record<string, Command> = {
                 Events.ForceEquip.Fire(sender, accessoryName);
             } else {
                 task.wait();
-                if (accessoryName in accessoryList) {
-                    Events.SaySystemMessage.FireClient(sender, 'not allowed');
-                } else {
-                    Events.SaySystemMessage.FireClient(sender, 'does not exist');
-                }
+                if (accessoryName in accessoryList) Events.SaySystemMessage.FireClient(sender, 'You are not allowed to equip that!', Color3.fromRGB(255, 170, 0));
+                else Events.SaySystemMessage.FireClient(sender, 'Not found', Color3.fromRGB(255, 128, 128));
             }
         },
     },
@@ -113,10 +110,8 @@ const Commands: Record<string, Command> = {
         parameters: [  ],
         callback: (sender: Player) => {
             task.wait(0);
-            Events.SaySystemMessage.FireClient(sender, `Accessory list:`);
-            for (const [ name ] of pairs(accessoryList)) {
-                Events.SaySystemMessage.FireClient(sender, `> ${name}`);
-            }
+            Events.SaySystemMessage.FireClient(sender, 'Accessory List:', Color3.fromRGB(0, 200, 255));
+            for (const [ name ] of pairs(accessoryList)) Events.SaySystemMessage.FireClient(sender, `> ${name}`, Color3.fromRGB(0, 200, 255));
         },
     },
     goto: {
@@ -167,9 +162,58 @@ const Commands: Record<string, Command> = {
             targetCube.Anchored = false;
         },
     },
+    scale: {
+        rank: 2,
+        parameters: [ 'players', 'number' ],
+        callback: (sender: Player, a, b) => {
+            const targets = a as Player[];
+            const newScale = b as number;
+            if (!typeIs(newScale, 'number')) {
+                Events.SaySystemMessage.FireClient(sender, 'Second parameter must be a number', Color3.fromRGB(255, 170, 0));
+                return;
+            }
+            
+            for (const player of targets) {
+                const cube = Workspace.FindFirstChild(`cube${player.UserId}`) as BasePart;
+                if (cube && !cube.GetAttribute('isScaling')) {
+                    cube.SetAttribute('isScaling', true);
+                    task.spawn(() => {
+                        const previousScale = cube.GetAttribute('scale') as (number | undefined) ?? 1;
+                        
+                        const model = new Instance('Model');
+                        model.ScaleTo(previousScale);
+                        model.Parent = Workspace;
+                        
+                        cube.Parent = model;
+                        
+                        let currentTime = time();
+                        const startTime = currentTime;
+                        const totalTime = 0.4;
+                        
+                        while ((currentTime - startTime) < totalTime) {
+                            const alpha = TweenService.GetValue((currentTime - startTime) / totalTime, Enum.EasingStyle.Sine, Enum.EasingDirection.Out);
+                            
+                            const currentScale = numLerp(previousScale, newScale, alpha);
+                            model.ScaleTo(currentScale);
+                            
+                            currentTime = time();
+                            
+                            RunService.Heartbeat.Wait();
+                        }
+                        
+                        model.ScaleTo(newScale);
+                        
+                        cube.SetAttribute('isScaling', undefined);
+                        cube.SetAttribute('scale', newScale);
+                        cube.Parent = Workspace;
+                    });
+                }
+            }
+        },
+    },
     error: {
         rank: 2,
-        parameters: ['players'],
+        parameters: [ 'players' ],
         callback: (sender: Player, a) => {
             const targets = a as Player[];
             
@@ -265,7 +309,7 @@ function parseCommand(message: string) {
 }
 
 function getPlayers(name: string, sender: Player): Player[] {
-    const players: Player[  ] = [  ];
+    const players: Player[] = [  ];
     if (name === 'all' || name === 'others') {
         for (const otherPlayer of Players.GetPlayers()) {
             if (name === 'all' || otherPlayer !== sender) players.push(otherPlayer);
@@ -273,7 +317,7 @@ function getPlayers(name: string, sender: Player): Player[] {
     } else if (name === 'me') {
         players.push(sender);
     } else {
-        const validPlayerNames: string[  ] = [  ];
+        const validPlayerNames: string[] = [  ];
         for (const otherPlayer of Players.GetPlayers()) {
             if (startsWith(otherPlayer.Name.lower(), name.lower())) validPlayerNames.push(otherPlayer.Name);
         }
@@ -302,20 +346,21 @@ function chatted(player: Player, message: string) {
     
     if (rank < command.rank) {
         task.wait(0);
-        Events.SaySystemMessage.FireClient(player, 'You are not allowed to use this command!', new Color3(1, 0, 0));
+        Events.SaySystemMessage.FireClient(player, 'You are not allowed to use this command!', Color3.fromRGB(255, 170, 0));
         return;
     }
     
     if (args.size() !== command.parameters.size()) {
         task.wait(0);
-        Events.SaySystemMessage.FireClient(player, 'Invalid command syntax, use ;cmds to see how to use this command', new Color3(1, 0.5, 0));
+        Events.SaySystemMessage.FireClient(player, 'Invalid command syntax, use ;cmds to see how to use this command', Color3.fromRGB(0, 0, 255));
         return;
     }
     
-    const parsedParameters: (string | Player[])[] = [  ];
+    const parsedParameters: (string | number | Player[])[] = [  ];
 	for (const [ i, parameterType ] of pairs(command.parameters)) {
 		if (parameterType === 'players') parsedParameters.push(getPlayers(args[i - 1], player));
 		else if (parameterType === 'string') parsedParameters.push(args[i - 1]);
+		else if (parameterType === 'number') parsedParameters.push(tonumber(args[i - 1]) ?? args[i - 1]);
 	}
 	
 	command.callback(player, ...parsedParameters);
@@ -327,4 +372,4 @@ Players.PlayerAdded.Connect((player) => {
 
 Players.PlayerRemoving.Connect((player) => {
 	connections.get(player)?.Disconnect();
-})
+});

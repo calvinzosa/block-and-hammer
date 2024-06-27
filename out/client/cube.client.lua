@@ -31,12 +31,14 @@ local numLerp = _utils.numLerp
 local getTime = _utils.getTime
 local Events = {
 	BuildingHammerPlace = ReplicatedStorage:WaitForChild("BuildingHammerPlace"),
+	SaySystemMessage = ReplicatedStorage:WaitForChild("SaySystemMessage"),
 	AddRagdollCount = ReplicatedStorage:WaitForChild("AddRagdollCount"),
 	ShowChatBubble = ReplicatedStorage:WaitForChild("ShowChatBubble"),
 	CompleteGame = ReplicatedStorage:WaitForChild("CompleteGame"),
 	StartClientTutorial = ReplicatedStorage:WaitForChild("StartClientTutorial"),
 	ClientCreateDebris = ReplicatedStorage:WaitForChild("ClientCreateDebris"),
 	MakeReplayEvent = ReplicatedStorage:WaitForChild("MakeReplayEvent"),
+	ClientMessage = ReplicatedStorage:WaitForChild("ClientMessage"),
 	ClientRagdoll = ReplicatedStorage:WaitForChild("ClientRagdoll"),
 	ClientReset = ReplicatedStorage:WaitForChild("ClientReset"),
 }
@@ -118,7 +120,7 @@ local function newPropeller(propeller)
 		_condition = not (type(_arg0) == "number")
 	end
 	if _condition then
-		warn("[src/client/cube.client.ts:115]", "An invalid propeller was created.")
+		warn("[src/client/cube.client.ts:117]", "An invalid propeller was created.")
 		return nil
 	end
 	local _propeller = propeller
@@ -132,7 +134,7 @@ local function updatePropellers(cube, head, dt)
 			_result = _result:IsA("BasePart")
 		end
 		if not _result then
-			warn("[src/client/cube.client.ts:126]", "A propeller has broke!")
+			warn("[src/client/cube.client.ts:128]", "A propeller has broke!")
 			table.remove(cachedPropellers, i + 1)
 			break
 		end
@@ -274,6 +276,34 @@ local function updateMud(cube, head, dt)
 			part.AssemblyLinearVelocity = part.AssemblyLinearVelocity * slowdownFactor
 		end
 	end
+end
+local function saySystemMessage(message, color, font, size)
+	local _message = message
+	if not (type(_message) == "string") then
+		return nil
+	end
+	local _color = color
+	if not (typeof(_color) == "Color3") then
+		color = Color3.fromRGB(255, 255, 255)
+	end
+	local _font = font
+	local _condition = not (typeof(_font) == "EnumItem")
+	if not _condition then
+		_condition = not font:IsA("Font")
+	end
+	if _condition then
+		font = Enum.Font.BuilderSans
+	end
+	local _size = size
+	if not (type(_size) == "number") then
+		size = nil
+	end
+	StarterGui:SetCore("ChatMakeSystemMessage", {
+		Text = message,
+		Color = color,
+		Font = font,
+		TextSize = size,
+	})
 end
 local function formatDebugWorldNumber(num)
 	local integer, decimal = math.modf(math.abs(num))
@@ -778,33 +808,54 @@ RunService.Heartbeat:Connect(function(dt)
 		return nil
 	end
 	for _, otherPlayer in Players:GetPlayers() do
-		local _altitudeValue = otherPlayer:FindFirstChild("leaderstats")
+		local leaderstats = otherPlayer:FindFirstChild("leaderstats")
+		local _altitudeValue = leaderstats
 		if _altitudeValue ~= nil then
 			_altitudeValue = _altitudeValue:FindFirstChild("Altitude")
 		end
 		local altitudeValue = _altitudeValue
+		local _timeValue = leaderstats
+		if _timeValue ~= nil then
+			_timeValue = _timeValue:FindFirstChild("Time")
+		end
+		local timeValue = _timeValue
 		local _result = altitudeValue
 		if _result ~= nil then
 			_result = _result:IsA("StringValue")
 		end
-		if _result then
+		local _condition = _result
+		if _condition then
+			local _result_1 = timeValue
+			if _result_1 ~= nil then
+				_result_1 = _result_1:IsA("StringValue")
+			end
+			_condition = _result_1
+		end
+		if _condition then
 			local otherCube = Workspace:FindFirstChild(`cube{otherPlayer.UserId}`)
-			local value = "--"
+			local newAltitudeValue = "--"
+			local newTimeValue = "--"
 			local _result_1 = otherCube
 			if _result_1 ~= nil then
 				_result_1 = _result_1:IsA("BasePart")
 			end
 			if _result_1 then
 				local _binding = convertStudsToMeters(otherCube.Position.Y - 1.9)
-				local altitude = _binding[1]
 				local altitudeString = _binding[2]
-				value = altitudeString
+				newAltitudeValue = altitudeString
+				local cubeTime = getCubeTime(otherCube)
+				local _1, minutes, seconds, milliseconds = getTimeUnits(cubeTime * 1000)
+				newTimeValue = string.format("%02d:%02d.%d", minutes, seconds, math.floor(milliseconds / 100))
 			end
-			local _value_1 = player:GetAttribute(PlayerAttributes.InErrorLand)
-			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
-				value = "--"
+			local _condition_1 = player:GetAttribute(PlayerAttributes.InErrorLand)
+			if not (_condition_1 ~= 0 and _condition_1 == _condition_1 and _condition_1 ~= "" and _condition_1) then
+				_condition_1 = otherPlayer:GetAttribute(PlayerAttributes.InErrorLand)
 			end
-			altitudeValue.Value = value
+			if _condition_1 ~= 0 and _condition_1 == _condition_1 and _condition_1 ~= "" and _condition_1 then
+				newAltitudeValue = "--"
+			end
+			timeValue.Value = newTimeValue
+			altitudeValue.Value = newAltitudeValue
 		end
 	end
 	local currentHammer = getHammerTexture()
@@ -985,6 +1036,11 @@ RunService.Heartbeat:Connect(function(dt)
 		if not (type(startTime) == "number") then
 			return nil
 		end
+		local _condition_5 = cube:GetAttribute("scale")
+		if _condition_5 == nil then
+			_condition_5 = 1
+		end
+		local cubeScale = _condition_5
 		local _binding = convertStudsToMeters(cube.Position.Y - 1.9)
 		local altitude = _binding[1]
 		local range = cube:FindFirstChild("Range")
@@ -1046,21 +1102,21 @@ RunService.Heartbeat:Connect(function(dt)
 			armAlignOrientation.Enabled = true
 		end
 		if ragdollTime == 0 and previousRagdollTime > 0 then
-			print("[src/client/cube.client.ts:708]", "Pivot hammer back to cube")
+			print("[src/client/cube.client.ts:736]", "Pivot hammer back to cube")
 			local _exp = (CFrame.new(cube.Position))
 			local _arg0 = CFrame.fromOrientation(0, 0, math.pi / 2)
 			arm.CFrame = _exp * _arg0
 		end
-		local _condition_5 = (cube:GetAttribute("transparency"))
-		if _condition_5 == nil then
-			_condition_5 = 0
-		end
-		local cubeTransparency = _condition_5
-		local _condition_6 = (cube:GetAttribute("hammerTransparency"))
+		local _condition_6 = (cube:GetAttribute("transparency"))
 		if _condition_6 == nil then
 			_condition_6 = 0
 		end
-		local hammerTransparency = _condition_6
+		local cubeTransparency = _condition_6
+		local _condition_7 = (cube:GetAttribute("hammerTransparency"))
+		if _condition_7 == nil then
+			_condition_7 = 0
+		end
+		local hammerTransparency = _condition_7
 		cube.Transparency = numLerp(cube.Transparency, cubeTransparency, dt * 15)
 		for _, part in { head, arm } do
 			local alpha = dt * 15
@@ -1131,9 +1187,12 @@ RunService.Heartbeat:Connect(function(dt)
 		if not getSetting(GameSetting.ScreenShake) then
 			intensity = 0
 		end
-		local _cubePosition = cubePosition
-		local _vector3 = Vector3.new((if math.random() < 0.5 then 1 else -1) * intensity, (if math.random() < 0.5 then 1 else -1) * intensity, 0)
-		local cameraPosition = _cubePosition + _vector3
+		local cameraPosition = cubePosition
+		if intensity > 0 then
+			local _cameraPosition = cameraPosition
+			local _vector3 = Vector3.new((math.random(0, 1) * 2 - 1) * intensity, (math.random(0, 1) * 2 - 1) * intensity, 0)
+			cameraPosition = _cameraPosition + _vector3
+		end
 		local velocity = math.clamp(cubeVelocity.Magnitude - 50, 0, 100) / 15
 		local up = if flippedGravity.Value then Vector3.yAxis * (-1) else Vector3.yAxis
 		local zoom = 37.5
@@ -1145,6 +1204,9 @@ RunService.Heartbeat:Connect(function(dt)
 			elseif currentHammer == Accessories.HammerTexture.ExplosiveHammer then
 				zoom = 65
 			end
+		end
+		if cubeScale ~= 1 then
+			zoom *= cubeScale
 		end
 		wallPlane.Transparency = 1
 		if getSetting(GameSetting.OrthographicView) then
@@ -1169,8 +1231,9 @@ RunService.Heartbeat:Connect(function(dt)
 			end
 		end
 		local _fn = CFrame
-		local _vector3_1 = Vector3.new(0, 0, zoom + velocity)
-		local cameraCFrame = _fn.lookAt(cameraPosition - _vector3_1, cameraPosition, up)
+		local _cameraPosition = cameraPosition
+		local _vector3 = Vector3.new(0, 0, zoom + velocity)
+		local cameraCFrame = _fn.lookAt(_cameraPosition - _vector3, cameraPosition, up)
 		local start = cube.Position
 		local params = OverlapParams.new()
 		params.FilterType = Enum.RaycastFilterType.Include
@@ -1178,11 +1241,11 @@ RunService.Heartbeat:Connect(function(dt)
 		for _, obstructingPart in Workspace:GetPartBoundsInBox(CFrame.new(start.X, start.Y, 0), Vector3.new(10, 10, 4096), params) do
 			local _value_1 = obstructingPart:GetAttribute("CAMERA_TRANSPARENT")
 			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
-				local _condition_7 = obstructingPart:GetAttribute("CAMERA_TRANSPARENCY")
-				if _condition_7 == nil then
-					_condition_7 = 0.9
+				local _condition_8 = obstructingPart:GetAttribute("CAMERA_TRANSPARENCY")
+				if _condition_8 == nil then
+					_condition_8 = 0.9
 				end
-				local transparency = _condition_7
+				local transparency = _condition_8
 				obstructingPart.LocalTransparencyModifier = numLerp(obstructingPart.LocalTransparencyModifier, transparency, dt * 5)
 				TweenService:Create(obstructingPart, tweenTypes.linear.short, {
 					LocalTransparencyModifier = 0,
@@ -1260,7 +1323,7 @@ RunService.Heartbeat:Connect(function(dt)
 				part.BottomSurface = Enum.SurfaceType.Smooth
 				part.Parent = Workspace
 				task.spawn(function()
-					RunService.RenderStepped:Wait()
+					RunService.Heartbeat:Wait()
 					part:Destroy()
 				end)
 			elseif currentHammer == Accessories.HammerTexture.GodsHammer then
@@ -1273,6 +1336,9 @@ RunService.Heartbeat:Connect(function(dt)
 				maxRange = 18
 			end
 		end
+		if cubeScale ~= 1 then
+			maxRange *= cubeScale
+		end
 		local _value_1 = player:GetAttribute(PlayerAttributes.InErrorLand)
 		if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 			armAlignPosition.MaxForce = 6250
@@ -1284,13 +1350,13 @@ RunService.Heartbeat:Connect(function(dt)
 				end
 			end
 		end
-		local rangeDispaly = cube:FindFirstChild("Range")
-		local _result_5 = rangeDispaly
+		local rangeDisplay = cube:FindFirstChild("Range")
+		local _result_5 = rangeDisplay
 		if _result_5 ~= nil then
 			_result_5 = _result_5:IsA("BasePart")
 		end
 		if _result_5 then
-			rangeDispaly.Size = Vector3.new(0.001, maxRange * 2, maxRange * 2)
+			rangeDisplay.Size = Vector3.new(0, maxRange * 2, maxRange * 2)
 		end
 		local distanceLimit = cube:FindFirstChild("DistanceLimit")
 		local _result_6 = distanceLimit
@@ -1303,8 +1369,8 @@ RunService.Heartbeat:Connect(function(dt)
 		local actualHammerDistance = math.min(hammerDistance, maxRange)
 		local rotationOffset = CFrame.fromOrientation(math.pi / 2, math.pi / 2, 0)
 		local _position = cube.Position
-		local _vector3_2 = Vector3.new(math.cos(hammerAngle) * actualHammerDistance, math.sin(hammerAngle) * actualHammerDistance)
-		local hammerPosition = _position + _vector3_2
+		local _vector3_1 = Vector3.new(math.cos(hammerAngle) * actualHammerDistance, math.sin(hammerAngle) * actualHammerDistance)
+		local hammerPosition = _position + _vector3_1
 		local plane = Vector3.new(1, 1, 0)
 		local mouse = UserInputService:GetMouseLocation()
 		local trail = head:FindFirstChild("Trail")
@@ -1315,12 +1381,28 @@ RunService.Heartbeat:Connect(function(dt)
 		if _result_7 then
 			local isMouseIconVisible = mouseIcon.Visible
 			if isMouseIconVisible then
-				arm.LocalTransparencyModifier = 0.5
-				head.LocalTransparencyModifier = 0.5
-				trail.Enabled = false
+				if trail.Enabled then
+					local Info = TweenInfo.new(0.2, Enum.EasingStyle.Linear)
+					TweenService:Create(arm, Info, {
+						LocalTransparencyModifier = 0.75,
+					}):Play()
+					TweenService:Create(head, Info, {
+						LocalTransparencyModifier = 0.75,
+					}):Play()
+					trail.Enabled = false
+				end
 				mouseIcon.Position = UDim2.fromOffset(mouse.X, mouse.Y)
 			else
-				trail.Enabled = true
+				if not trail.Enabled then
+					local Info = TweenInfo.new(0.2, Enum.EasingStyle.Linear)
+					TweenService:Create(arm, Info, {
+						LocalTransparencyModifier = 0,
+					}):Play()
+					TweenService:Create(head, Info, {
+						LocalTransparencyModifier = 0,
+					}):Play()
+					trail.Enabled = true
+				end
 			end
 			UserInputService.MouseIconEnabled = not isMouseIconVisible
 			mouseVisual.Transparency = if isMouseIconVisible then 1 else 0
@@ -1338,6 +1420,15 @@ RunService.Heartbeat:Connect(function(dt)
 				armRotation.WorldCFrame = CFrame.lookAt(cube.Position * plane, head.Position * plane, Vector3.zAxis) * rotationOffset
 			end
 		end
+		if cubeScale ~= 1 then
+			armAlignPosition.MaxForce *= cubeScale ^ 2
+			if cubeScale > 1 then
+				armAlignPosition.Responsiveness *= cubeScale ^ 2
+				armAlignOrientation.Responsiveness *= cubeScale ^ 2
+			end
+			Workspace.Gravity *= math.log(math.abs(cubeScale - 1) + 1) * -1 + 1
+		end
+		mouseVisual.Size = Vector3.new(0.5, 0.5, 0.5) * cubeScale
 		if debugInfo.Visible then
 			local left = debugInfo:FindFirstChild("Left")
 			local right = debugInfo:FindFirstChild("Right");
@@ -1354,11 +1445,11 @@ RunService.Heartbeat:Connect(function(dt)
 			end
 			(left:FindFirstChild("TotalSounds")).Text = string.format("Total Sounds Playing: %d", totalSounds)
 			local _fn_1 = string
-			local _condition_7 = (cube:GetAttribute("destroyed_counter"))
-			if _condition_7 == nil then
-				_condition_7 = 0
+			local _condition_8 = (cube:GetAttribute("destroyed_counter"))
+			if _condition_8 == nil then
+				_condition_8 = 0
 			end
-			(left:FindFirstChild("DestroyedCounter")).Text = _fn_1.format("Destroyed Counter: %d", _condition_7)
+			(left:FindFirstChild("DestroyedCounter")).Text = _fn_1.format("Destroyed Counter: %d", _condition_8)
 			local unanchoredParts = 0
 			for _, descendant in Workspace:GetDescendants() do
 				if descendant:IsA("BasePart") and not descendant:IsA("Terrain") and not descendant.Anchored then
@@ -1367,7 +1458,7 @@ RunService.Heartbeat:Connect(function(dt)
 			end
 			(left:FindFirstChild("UnanchoredParts")).Text = string.format("Unanchored Parts: %d", unanchoredParts)
 			if cube.AssemblyAngularVelocity.Magnitude > 0 then
-				(right:FindFirstChild("VelocityDisplay")).Rotation = 180 + math.deg(math.atan2(cube.AssemblyLinearVelocity.Y, cube.AssemblyAngularVelocity.X));
+				(right:FindFirstChild("VelocityDisplay")).Rotation = 180 + math.deg(math.atan2(cube.AssemblyLinearVelocity.Y, cube.AssemblyLinearVelocity.X));
 				(right:FindFirstChild("VelocityDisplay")).Visible = true
 			else
 				(right:FindFirstChild("VelocityDisplay")).Visible = false
@@ -1388,7 +1479,7 @@ winArea.Touched:Connect(function(otherPart)
 	if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
 		player:SetAttribute(PlayerAttributes.CompletedGame, true)
 		local totalTime = getCubeTime(otherPart)
-		print("[src/client/cube.client.ts:1029]", `Completed game in {totalTime} seconds`)
+		print("[src/client/cube.client.ts:1083]", `Completed game in {totalTime} seconds`)
 		Events.CompleteGame:FireServer(totalTime)
 		Events.MakeReplayEvent:Fire(string.format("win,%d", totalTime * 1000))
 	end
@@ -1425,3 +1516,5 @@ Workspace.DescendantAdded:Connect(function(descendant)
 		table.insert(cachedParticles, _descendant)
 	end
 end)
+Events.SaySystemMessage.OnClientEvent:Connect(saySystemMessage)
+Events.ClientMessage.Event:Connect(saySystemMessage)

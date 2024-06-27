@@ -35,6 +35,7 @@ import {
 
 const Events = {
     'BuildingHammerPlace': ReplicatedStorage.WaitForChild('BuildingHammerPlace') as RemoteEvent,
+    'SaySystemMessage': ReplicatedStorage.WaitForChild('SaySystemMessage') as RemoteEvent,
     'AddRagdollCount': ReplicatedStorage.WaitForChild('AddRagdollCount') as RemoteEvent,
     'ShowChatBubble': ReplicatedStorage.WaitForChild('ShowChatBubble') as RemoteEvent,
     'CompleteGame': ReplicatedStorage.WaitForChild('CompleteGame') as RemoteEvent,
@@ -42,6 +43,7 @@ const Events = {
     'StartClientTutorial': ReplicatedStorage.WaitForChild('StartClientTutorial') as BindableEvent,
     'ClientCreateDebris': ReplicatedStorage.WaitForChild('ClientCreateDebris') as BindableEvent,
     'MakeReplayEvent': ReplicatedStorage.WaitForChild('MakeReplayEvent') as BindableEvent,
+    'ClientMessage': ReplicatedStorage.WaitForChild('ClientMessage') as BindableEvent,
     'ClientRagdoll': ReplicatedStorage.WaitForChild('ClientRagdoll') as BindableEvent,
     'ClientReset': ReplicatedStorage.WaitForChild('ClientReset') as BindableEvent,
 };
@@ -224,6 +226,21 @@ function updateMud(cube: BasePart, head: BasePart, dt: number) {
 	for (const part of [ cube, head ]) {
 		if (Workspace.GetPartsInPart(part, params).size() > 0) part.AssemblyLinearVelocity = part.AssemblyLinearVelocity.mul(slowdownFactor);
 	}
+}
+
+function saySystemMessage(message: unknown, color: unknown, font: unknown, size: unknown) {
+	if (!typeIs(message, 'string')) return;
+	
+	if (!typeIs(color, 'Color3')) color = Color3.fromRGB(255, 255, 255);
+	if (!typeIs(font, 'EnumItem') || !font.IsA('Font')) font = Enum.Font.BuilderSans;
+	if (!typeIs(size, 'number')) size = undefined;
+	
+	StarterGui.SetCore('ChatMakeSystemMessage', {
+		Text: message,
+		Color: color as Color3,
+		Font: font as Enum.Font,
+		TextSize: size as number,
+	});
 }
 
 function formatDebugWorldNumber(num: number) {
@@ -568,19 +585,28 @@ RunService.Heartbeat.Connect((dt) => {
 	if (player.GetAttribute(PlayerAttributes.Client.InMainMenu)) return;
 	
 	for (const otherPlayer of Players.GetPlayers()) {
-		const altitudeValue = otherPlayer.FindFirstChild('leaderstats')?.FindFirstChild('Altitude');
-		if (altitudeValue?.IsA('StringValue')) {
+		const leaderstats = otherPlayer.FindFirstChild('leaderstats');
+		const altitudeValue = leaderstats?.FindFirstChild('Altitude');
+		const timeValue = leaderstats?.FindFirstChild('Time');
+		if (altitudeValue?.IsA('StringValue') && timeValue?.IsA('StringValue')) {
 			const otherCube = Workspace.FindFirstChild(`cube${otherPlayer.UserId}`);
 			
-			let value = '--';
+			let newAltitudeValue = '--';
+			let newTimeValue = '--';
+			
 			if (otherCube?.IsA('BasePart')) {
-				const [ altitude, altitudeString ] = convertStudsToMeters(otherCube.Position.Y - 1.9);
-				value = altitudeString;
+				const [ , altitudeString ] = convertStudsToMeters(otherCube.Position.Y - 1.9);
+				newAltitudeValue = altitudeString;
+				
+				const [ cubeTime ] = getCubeTime(otherCube);
+				const [ , minutes, seconds, milliseconds ] = getTimeUnits(cubeTime * 1000);
+				newTimeValue = string.format('%02d:%02d.%d', minutes, seconds, math.floor(milliseconds / 100));
 			}
 			
-			if (player.GetAttribute(PlayerAttributes.InErrorLand)) value = '--';
+			if (player.GetAttribute(PlayerAttributes.InErrorLand) || otherPlayer.GetAttribute(PlayerAttributes.InErrorLand)) newAltitudeValue = '--';
 			
-			altitudeValue.Value = value;
+			timeValue.Value = newTimeValue;
+			altitudeValue.Value = newAltitudeValue;
 		}
 	}
 	
@@ -655,6 +681,8 @@ RunService.Heartbeat.Connect((dt) => {
 		if (!alignOrientation?.IsA('AlignOrientation') || !armAlignPosition?.IsA('AlignPosition') || !armAlignOrientation?.IsA('AlignOrientation')) return;
 		if (!armCFrame?.IsA('Attachment') || !armRotation?.IsA('Attachment')) return;
 		if (!typeIs(startTime, 'number')) return;
+		
+		const cubeScale = cube.GetAttribute('scale') as (number | undefined) ?? 1;
 		
 		const [ altitude ] = convertStudsToMeters(cube.Position.Y - 1.9);
 		
@@ -775,7 +803,9 @@ RunService.Heartbeat.Connect((dt) => {
 		
 		if (!getSetting(GameSetting.ScreenShake)) intensity = 0;
 		
-		const cameraPosition = cubePosition.add(new Vector3((math.random() < 0.5 ? 1 : -1) * intensity, (math.random() < 0.5 ? 1 : -1) * intensity, 0));
+		let cameraPosition = cubePosition;
+		if (intensity > 0) cameraPosition = cameraPosition.add(new Vector3((math.random(0, 1) * 2 - 1) * intensity, (math.random(0, 1) * 2 - 1) * intensity, 0));
+		
 		const velocity = math.clamp(cubeVelocity.Magnitude - 50, 0, 100) / 15;
 		const up = flippedGravity.Value ? Vector3.yAxis.mul(-1) : Vector3.yAxis;
 		
@@ -785,6 +815,8 @@ RunService.Heartbeat.Connect((dt) => {
 			else if (currentHammer === Accessories.HammerTexture.GrapplingHammer) zoom = 50;
 			else if (currentHammer === Accessories.HammerTexture.ExplosiveHammer) zoom = 65;
 		}
+		
+		if (cubeScale !== 1) zoom *= cubeScale;
 		
 		wallPlane.Transparency = 1;
 		
@@ -888,7 +920,7 @@ RunService.Heartbeat.Connect((dt) => {
 				part.Parent = Workspace;
 				
 				task.spawn(() => {
-					RunService.RenderStepped.Wait();
+					RunService.Heartbeat.Wait();
 					part.Destroy();
 				});
 			} else if (currentHammer === Accessories.HammerTexture.GodsHammer) {
@@ -902,6 +934,8 @@ RunService.Heartbeat.Connect((dt) => {
 			}
 		}
 		
+		if (cubeScale !== 1) maxRange *= cubeScale;
+		
 		if (player.GetAttribute(PlayerAttributes.InErrorLand)) {
 			armAlignPosition.MaxForce = 6250;
 			armAlignPosition.Responsiveness = 40;
@@ -912,8 +946,8 @@ RunService.Heartbeat.Connect((dt) => {
 			}
 		}
 		
-		const rangeDispaly = cube.FindFirstChild('Range');
-		if (rangeDispaly?.IsA('BasePart')) rangeDispaly.Size = new Vector3(0.001, maxRange * 2, maxRange * 2);
+		const rangeDisplay = cube.FindFirstChild('Range');
+		if (rangeDisplay?.IsA('BasePart')) rangeDisplay.Size = new Vector3(0, maxRange * 2, maxRange * 2);
 		
 		const distanceLimit = cube.FindFirstChild('DistanceLimit');
 		if (distanceLimit?.IsA('RopeConstraint')) distanceLimit.Length = maxRange;
@@ -930,13 +964,21 @@ RunService.Heartbeat.Connect((dt) => {
 		if (trail?.IsA('Trail')) {
 			const isMouseIconVisible = mouseIcon.Visible;
 			if (isMouseIconVisible) {
-				arm.LocalTransparencyModifier = 0.5;
-				head.LocalTransparencyModifier = 0.5;
-				trail.Enabled = false;
+				if (trail.Enabled) {
+					const Info = new TweenInfo(0.2, Enum.EasingStyle.Linear);
+					TweenService.Create(arm, Info, { LocalTransparencyModifier: 0.75 }).Play();
+					TweenService.Create(head, Info, { LocalTransparencyModifier: 0.75 }).Play();
+					trail.Enabled = false;
+				}
 				
 				mouseIcon.Position = UDim2.fromOffset(mouse.X, mouse.Y);
 			} else {
-				trail.Enabled = true;
+				if (!trail.Enabled) {
+					const Info = new TweenInfo(0.2, Enum.EasingStyle.Linear);
+					TweenService.Create(arm, Info, { LocalTransparencyModifier: 0 }).Play();
+					TweenService.Create(head, Info, { LocalTransparencyModifier: 0 }).Play();
+					trail.Enabled = true;
+				}
 			}
 			
 			UserInputService.MouseIconEnabled = !isMouseIconVisible;
@@ -952,6 +994,18 @@ RunService.Heartbeat.Connect((dt) => {
 			if (currentHammer === Accessories.HammerTexture.Platform) armRotation.WorldCFrame = CFrame.fromOrientation(0, 0, math.pi / 2);
 			else armRotation.WorldCFrame = CFrame.lookAt(cube.Position.mul(plane), head.Position.mul(plane), Vector3.zAxis).mul(rotationOffset);
 		}
+		
+		if (cubeScale !== 1) {
+			armAlignPosition.MaxForce *= cubeScale ** 2;
+			if (cubeScale > 1) {
+				armAlignPosition.Responsiveness *= cubeScale ** 2;
+				armAlignOrientation.Responsiveness *= cubeScale ** 2;
+			}
+			
+			Workspace.Gravity *= math.log(math.abs(cubeScale - 1) + 1) * -1 + 1;
+		}
+		
+		mouseVisual.Size = new Vector3(0.5, 0.5, 0.5).mul(cubeScale);
 		
 		if (debugInfo.Visible) {
 			const left = debugInfo.FindFirstChild('Left') as Frame;
@@ -1012,7 +1066,7 @@ RunService.Heartbeat.Connect((dt) => {
 			);
 			
 			if (cube.AssemblyAngularVelocity.Magnitude > 0) {
-				(right.FindFirstChild('VelocityDisplay') as Frame).Rotation = 180 + math.deg(math.atan2(cube.AssemblyLinearVelocity.Y, cube.AssemblyAngularVelocity.X));
+				(right.FindFirstChild('VelocityDisplay') as Frame).Rotation = 180 + math.deg(math.atan2(cube.AssemblyLinearVelocity.Y, cube.AssemblyLinearVelocity.X));
 				(right.FindFirstChild('VelocityDisplay') as Frame).Visible = true;
 			} else (right.FindFirstChild('VelocityDisplay') as Frame).Visible = false;
 			
@@ -1061,3 +1115,6 @@ for (const descendant of Workspace.GetDescendants()) {
 Workspace.DescendantAdded.Connect((descendant) => {
 	if (descendant.IsA('ParticleEmitter')) cachedParticles.push(descendant);
 });
+
+Events.SaySystemMessage.OnClientEvent.Connect(saySystemMessage);
+Events.ClientMessage.Event.Connect(saySystemMessage);

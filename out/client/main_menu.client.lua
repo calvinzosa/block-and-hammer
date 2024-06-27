@@ -8,13 +8,12 @@ local RunService = _services.RunService
 local Workspace = _services.Workspace
 local Players = _services.Players
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
-local getTime = _utils.getTime
 local getHammerTexture = _utils.getHammerTexture
-local getPlayerRank = _utils.getPlayerRank
-local playSound = _utils.playSound
-local Accessories = _utils.Accessories
-local tweenTypes = _utils.tweenTypes
 local PlayerAttributes = _utils.PlayerAttributes
+local getPlayerRank = _utils.getPlayerRank
+local Accessories = _utils.Accessories
+local playSound = _utils.playSound
+local getTime = _utils.getTime
 local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera")
 local GUI = player:WaitForChild("PlayerGui")
@@ -93,26 +92,27 @@ UserInputService.InputBegan:Once(function()
 	playButton.Visible = true
 	-- menuGui.Edit.Visible = true
 	titleLabel.Visible = true
-	TweenService:Create(hintLabel, tweenTypes.linear.short, {
+	local Info = TweenInfo.new(0.4, Enum.EasingStyle.Linear)
+	TweenService:Create(hintLabel, Info, {
 		TextTransparency = 1,
 		TextStrokeTransparency = 1,
 	}):Play()
-	TweenService:Create(playButton, tweenTypes.linear.short, {
+	TweenService:Create(playButton, Info, {
 		TextTransparency = 0,
 		BackgroundTransparency = 0.6,
 	}):Play()
-	TweenService:Create(titleLabel, tweenTypes.linear.short, {
+	TweenService:Create(titleLabel, Info, {
 		TextTransparency = 0,
 		TextStrokeTransparency = 0,
 	}):Play()
 	if getPlayerRank(player) >= 1 then
-		TweenService:Create(editButton, tweenTypes.linear.short, {
+		TweenService:Create(editButton, Info, {
 			TextTransparency = 0,
 			BackgroundTransparency = 0.6,
 		}):Play()
 	else
 		editButton:SetAttribute("disabled", true)
-		TweenService:Create(editButton, tweenTypes.linear.short, {
+		TweenService:Create(editButton, Info, {
 			TextTransparency = 0.4,
 			BackgroundTransparency = 0.4,
 		}):Play()
@@ -181,11 +181,12 @@ playButton.MouseButton1Click:Once(function()
 	shadow.BackgroundTransparency = 1
 	shadowTitle.Visible = false
 	shadowText.Visible = false
-	TweenService:Create(shadow, TweenInfo.new(0.6, Enum.EasingStyle.Linear), {
+	local Info = TweenInfo.new(0.6, Enum.EasingStyle.Linear)
+	TweenService:Create(shadow, Info, {
 		BackgroundTransparency = 0,
 	}):Play()
 	task.wait(0.6)
-	TweenService:Create(shadow, tweenTypes.linear.short, {
+	TweenService:Create(shadow, Info, {
 		Size = UDim2.fromScale(0, 0),
 	}):Play()
 	task.delay(1, function()
@@ -207,7 +208,8 @@ editButton.MouseButton1Click:Once(function()
 	shadow.BackgroundTransparency = 1
 	titleLabel.Visible = false
 	shadowText.Visible = false
-	TweenService:Create(shadow, tweenTypes.linear.short, {
+	local Info = TweenInfo.new(0.6, Enum.EasingStyle.Linear)
+	TweenService:Create(shadow, Info, {
 		BackgroundTransparency = 0,
 	}):Play()
 	task.wait(1);
