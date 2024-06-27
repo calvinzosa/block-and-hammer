@@ -39,6 +39,7 @@ const Events = {
     'AddRagdollCount': ReplicatedStorage.WaitForChild('AddRagdollCount') as RemoteEvent,
     'ShowChatBubble': ReplicatedStorage.WaitForChild('ShowChatBubble') as RemoteEvent,
     'CompleteGame': ReplicatedStorage.WaitForChild('CompleteGame') as RemoteEvent,
+    'FlipGravity': ReplicatedStorage.WaitForChild('FlipGravity') as RemoteEvent,
 	
     'StartClientTutorial': ReplicatedStorage.WaitForChild('StartClientTutorial') as BindableEvent,
     'ClientCreateDebris': ReplicatedStorage.WaitForChild('ClientCreateDebris') as BindableEvent,
@@ -486,8 +487,9 @@ function updateModifiers() {
                         const head = cube.FindFirstChild('Head');
                         if (!head?.IsA('BasePart')) return;
                         
-                        let didSet = false;
                         AbilityCooldowns.ExplosiveHammer = true;
+						
+                        let didSet = false;
                         task.delay(2, () => {
                             if (!didSet) {
                                 didSet = true;
@@ -498,15 +500,17 @@ function updateModifiers() {
                         task.spawn(() => {
                             waitUntil(() => !AbilityCooldowns.ExplosiveHammer);
                             
-                            if (!didSet) TweenService.Create(head, new TweenInfo(0), { Color: Color3.fromRGB(255, 0, 0) }).Play();
+                            if (!didSet) head.Color = Color3.fromRGB(255, 0, 0);
                             didSet = true;
                         });
 						
 						head.Color = Color3.fromRGB(255, 175, 0);
 						TweenService.Create(head, new TweenInfo(2, Enum.EasingStyle.Linear), { Color: Color3.fromRGB(255, 0, 0) }).Play();
-                        
+						
+						const cubeScale = cube.GetAttribute('scale') as (number | undefined) ?? 1;
+						
                         const velocity = cube.AssemblyLinearVelocity;
-                        const force = cube.Position.sub(head.Position).Unit.mul(600);
+                        const force = cube.Position.sub(head.Position).Unit.mul(600 * cubeScale);
 						if (force.X === force.X && force.Y === force.Y && force.Z === force.Z) cube.AssemblyLinearVelocity = velocity.add(force);
                         
                         const explosion = new Instance('Explosion');
@@ -695,8 +699,6 @@ RunService.Heartbeat.Connect((dt) => {
 			else windForce.Force = Vector3.zero;
 		}
 		
-		if (!getSetting(GameSetting.Modifiers) && flippedGravity.Value) flippedGravity.Value = false;
-		
 		if (getTime() - startTime < 0.1) ragdollTime = 0;
 		
 		head.CustomPhysicalProperties = new PhysicalProperties(0.7, 0.6, 0, 100, 1);
@@ -791,7 +793,10 @@ RunService.Heartbeat.Connect((dt) => {
 			}
 			
 			wasModifiersEnabled = Settings.modifiers;
-			if (Workspace.GetPartsInPart(cube, params).size() > 0) wasModifiersEnabled = false;
+			if (Workspace.GetPartsInPart(cube, params).size() > 0) {
+				wasModifiersEnabled = false;
+				if (flippedGravity.Value) flippedGravity.Value = false;
+			}
 		}
 		
 		let cubePosition = cube.Position;
@@ -1087,11 +1092,14 @@ winArea.Touched.Connect((otherPart) => {
 	}
 });
 
-Events.ClientReset.Event.Connect(() => {
+Events.ClientReset.Event.Connect((fullReset: boolean) => {
 	player.SetAttribute(PlayerAttributes.CompletedGame, undefined);
 	for (const [ key ] of pairs(AbilityCooldowns)) AbilityCooldowns[key] = false;
 	
+	flippedGravity.Value = false;
 	ragdollTime = 0;
+	
+	if (!fullReset && getSetting(GameSetting.Modifiers)) updateModifiers();
 });
 
 Events.StartClientTutorial.Event.Connect(() => {
@@ -1100,6 +1108,11 @@ Events.StartClientTutorial.Event.Connect(() => {
 
 Events.ShowChatBubble.OnClientEvent.Connect((bubbleAttachment: BasePart, content: string) => {
 	TextChatService.DisplayBubble(bubbleAttachment, content);
+});
+
+Events.FlipGravity.OnClientEvent.Connect((isFlipped: boolean | undefined) => {
+	if (typeIs(isFlipped, 'boolean')) flippedGravity.Value = isFlipped;
+	else flippedGravity.Value = !flippedGravity.Value;
 });
 
 UserInputService.InputBegan.Connect((input, processed) => {

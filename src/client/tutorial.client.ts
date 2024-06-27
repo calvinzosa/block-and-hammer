@@ -23,6 +23,7 @@ const Events = {
 const player = Players.LocalPlayer;
 const GUI = player.WaitForChild('PlayerGui') as PlayerGui;
 
+const flippedGravity = ReplicatedStorage.WaitForChild('flipped_gravity') as BoolValue;
 const mapFolder = Workspace.WaitForChild('Map') as Folder;
 const tutorialFolder = mapFolder.WaitForChild('Tutorial') as Folder;
 const orb = tutorialFolder.WaitForChild('Orb') as BasePart;
@@ -38,14 +39,14 @@ function start() {
 	canMove.Value = true
 	
 	if (!player.GetAttribute(PlayerAttributes.InTutorial)) {
+        flippedGravity.Value = false;
+        
 		Events.PlayTutorial.FireServer();
 		
 		player.SetAttribute('finished', undefined);
 		
-		shadow.BackgroundTransparency = 0
-        TweenService.Create(shadow, tweenTypes.linear.short, { BackgroundTransparency: 1 }).Play();
-		
-		task.wait(1);
+		shadow.BackgroundTransparency = 0;
+        TweenService.Create(shadow, new TweenInfo(0.5, Enum.EasingStyle.Linear), { BackgroundTransparency: 1 }).Play();
 		
 		const cube = cubeTemplate.Clone();
 		cube.PivotTo(new CFrame(2532, 10, 0));

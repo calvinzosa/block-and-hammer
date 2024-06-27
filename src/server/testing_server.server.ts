@@ -18,7 +18,7 @@ const TestingServerStore = DataStoreService.GetDataStore('testing_server');
 const forceTestingServer = ReplicatedStorage.FindFirstChild('ForceTestingServer') as IntValue;
 const ownerId = ReplicatedStorage.FindFirstChild('PrivateServerOwnerId') as IntValue;
 
-if (RunService.IsStudio() && !forceTestingServer.Value) ownerId.Value = -1;
+if ((RunService.IsStudio() && !forceTestingServer.Value) || game.PrivateServerOwnerId === 0) ownerId.Value = -1;
 else ownerId.Value = game.PrivateServerOwnerId;
 
 if (isMainServer()) {

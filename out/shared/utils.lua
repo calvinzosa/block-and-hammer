@@ -35,8 +35,6 @@ end
 local PlayerAttributes = {}
 do
 	local _container = PlayerAttributes
-	local IsNew = "isNew"
-	_container.IsNew = IsNew
 	local HasDataLoaded = "DataLoaded"
 	_container.HasDataLoaded = HasDataLoaded
 	local InErrorLand = "inErrorLand"
@@ -45,34 +43,40 @@ do
 	_container.HasModifiers = HasModifiers
 	local Impacts = "impacts"
 	_container.Impacts = Impacts
-	local InTutorial = "inTutorial"
-	_container.InTutorial = InTutorial
-	local CompletedGame = "completedGame"
-	_container.CompletedGame = CompletedGame
+	local IsNew = "isNew"
+	_container.IsNew = IsNew
 	local HammerTexture = "hammer_Texture"
 	_container.HammerTexture = HammerTexture
+	local CompletedGame = "completedGame"
+	_container.CompletedGame = CompletedGame
+	local InTutorial = "inTutorial"
+	_container.InTutorial = InTutorial
 	local CubeColor = "cubeColor"
 	_container.CubeColor = CubeColor
-	local CubeHat = "cube_Hat"
-	_container.CubeHat = CubeHat
 	local CubeFace = "cube_Face"
 	_container.CubeFace = CubeFace
 	local CubeAura = "cube_Aura"
 	_container.CubeAura = CubeAura
-	local TotalTime = "totalTime"
-	_container.TotalTime = TotalTime
+	local CubeHat = "cube_Hat"
+	_container.CubeHat = CubeHat
+	local TotalModdedWins = "totalModdedWins"
+	_container.TotalModdedWins = TotalModdedWins
 	local TotalRagdolls = "totalRagdolls"
 	_container.TotalRagdolls = TotalRagdolls
 	local TotalRestarts = "totalRestarts"
 	_container.TotalRestarts = TotalRestarts
+	local TotalTime = "totalTime"
+	_container.TotalTime = TotalTime
 	local TotalWins = "totalWins"
 	_container.TotalWins = TotalWins
-	local TotalModdedWins = "totalModdedWins"
-	_container.TotalModdedWins = TotalModdedWins
+	local GravityFlipDebounce = "gravityFlipDebounce"
+	_container.GravityFlipDebounce = GravityFlipDebounce
 	local BadgeDebounce = "badgeDebounce"
 	_container.BadgeDebounce = BadgeDebounce
 	local HasCrashLandingBadge = "hasCrashLandingBadge"
 	_container.HasCrashLandingBadge = HasCrashLandingBadge
+	local HasExplosiveBadge = "hasExplosiveBadge"
+	_container.HasExplosiveBadge = HasExplosiveBadge
 	local HasGravityBadge = "hasGravityBadge"
 	_container.HasGravityBadge = HasGravityBadge
 	local HasSpeedBadge = "hasSpeedBadge"
@@ -80,8 +84,8 @@ do
 	local Device = "device"
 	_container.Device = Device
 	local Client = {
-		InMainMenu = "inMainMenu",
 		SettingsJSON = "clientSettingsJSON",
+		InMainMenu = "inMainMenu",
 	}
 	_container.Client = Client
 end
@@ -544,7 +548,7 @@ local function convertMetersToStuds(meters)
 	return roundDecimalPlaces(meters / 0.28)
 end
 local function getPlayerRank(player)
-	if player.UserId == game.CreatorId or player.UserId <= 0 then
+	if player.UserId == GameData.CreatorId or player.UserId <= 0 then
 		return 2
 	else
 		-- ▼ ReadonlyArray.findIndex ▼
@@ -655,7 +659,7 @@ local function giveBadge(player, badgeId)
 		return nil
 	end
 	if isTestingServer() then
-		warn("[src/shared/utils.ts:505]", "Badges are disabled in the Testing Server.")
+		warn("[src/shared/utils.ts:508]", `Badges are disabled in the Testing Server | Attempted to give badge {badgeId} to {player.Name}`)
 		return nil
 	end
 	local userId = player.UserId
@@ -668,22 +672,23 @@ local function giveBadge(player, badgeId)
 			player.AttributeChanged:Wait()
 		end
 		player:SetAttribute(PlayerAttributes.BadgeDebounce, true)
-		local success = false
 		while true do
 			local _exitType, _returns = TS.try(function()
 				if not BadgeService:UserHasBadgeAsync(userId, badgeId) then
 					BadgeService:AwardBadge(userId, badgeId)
+					print("[src/shared/utils.ts:521]", `Successfully badge {badgeId} to {player.Name}`)
 				end
 				return TS.TRY_BREAK
 			end, function(err)
-				warn("[src/shared/utils.ts:521]", err)
+				warn("[src/shared/utils.ts:526]", err)
 			end)
 			if _exitType then
 				break
 			end
 		end
-		task.wait(1)
-		player:SetAttribute(PlayerAttributes.BadgeDebounce, nil)
+		task.delay(2, function()
+			return player:SetAttribute(PlayerAttributes.BadgeDebounce, nil)
+		end)
 	end)
 end
 function isTestingServer()

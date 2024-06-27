@@ -40,11 +40,11 @@ const Events = {
 	'ForceReset': ReplicatedStorage.FindFirstChild('ForceReset') as BindableEvent,
 };
 
-const badgeDebounce: Record<number, boolean> = {  };
-
+const cubeTemplate = ReplicatedStorage.FindFirstChild('Cube') as BasePart;
+const targetCenter = Workspace.FindFirstChild('TargetCenter') as BasePart;
 const mapFolder = Workspace.FindFirstChild('Map') as Folder;
 const trappedArea = mapFolder.FindFirstChild('trapped_area') as BasePart;
-const cubeTemplate = ReplicatedStorage.FindFirstChild('Cube') as BasePart;
+const gravityFlipper = mapFolder.WaitForChild('gravity_flipper') as BasePart;
 
 function createCube(player: Player, firstTime: boolean) {
     Workspace.FindFirstChild(`cube${player.Name}`)?.Destroy();
@@ -75,7 +75,7 @@ function createCube(player: Player, firstTime: boolean) {
 	
 	icons.Visible = true;
 	
-	if (player.GetAttribute(PlayerAttributes.HasModifiers)) cube.SetAttribute('used_modifiers', true);
+	if (player.GetAttribute(PlayerAttributes.HasModifiers) || (cube.GetAttribute('scale') ?? 1) !== 1) cube.SetAttribute('used_modifiers', true);
 	
 	player.SetAttribute(PlayerAttributes.TotalTime, undefined);
 	cube.SetAttribute('start_time', getTime());
@@ -191,12 +191,22 @@ Events.GroundImpact.OnServerEvent.Connect((player, velocity, position) => {
 	const newImpacts = (player.GetAttribute(PlayerAttributes.Impacts) as (number | undefined) ?? 0) + 1;
 	player.SetAttribute(PlayerAttributes.Impacts, newImpacts);
 	
-	if (!(player.UserId in badgeDebounce)) {
-		badgeDebounce[player.UserId] = true;
-		task.delay(5, () => delete badgeDebounce[player.UserId]);
-		
-		if (newImpacts >= 15 && !player.GetAttribute(PlayerAttributes.HasCrashLandingBadge)) player.SetAttribute(PlayerAttributes.HasCrashLandingBadge, true);
+	if (newImpacts >= 15 && !player.GetAttribute(PlayerAttributes.HasExplosiveBadge)) {
+		player.SetAttribute(PlayerAttributes.HasExplosiveBadge, true);
+		giveBadge(player, 2146508969);
 	}
+	
+	if (velocity.Y > 892.857) giveBadge(player, 4279006041653694);
+	else if (velocity.Y > 357.142) {
+		if (player.GetAttribute('didShatter')) giveBadge(player, 2512066188170235);
+		else {
+			const params = new OverlapParams();
+			params.FilterDescendantsInstances = [ targetCenter ];
+			params.FilterType = Enum.RaycastFilterType.Include;
+			
+			if (Workspace.GetPartBoundsInBox(new CFrame(position), new Vector3(4, 4, 4), params).size() > 0) giveBadge(player, 2479031288528448);
+		}
+	} else giveBadge(player, 2146180612);
 });
 
 Events.CompleteGame.OnServerEvent.Connect((player, givenTime) => {
@@ -270,6 +280,25 @@ Players.PlayerAdded.Connect(playerAdded);
 
 Events.Reset.OnServerEvent.Connect(resetPlayer);
 Events.ForceReset.Event.Connect(resetPlayer);
+
+gravityFlipper.TouchEnded.Connect((otherPart) => {
+	for (const player of Players.GetPlayers()) {
+		if (otherPart.Name === `cube${player.UserId}`) {
+			if (!player.GetAttribute('gravityFlipDebounce')) {
+				player.SetAttribute(PlayerAttributes.GravityFlipDebounce, true);
+				
+				Events.FlipGravity.FireClient(player, true);
+				task.delay(2, () => {
+					Events.FlipGravity.FireClient(player, false);
+					
+					player.SetAttribute(PlayerAttributes.GravityFlipDebounce, undefined)
+				});
+			}
+			
+			break;
+		}
+	}
+});
 
 RunService.Stepped.Connect(() => {
 	for (const player of Players.GetPlayers()) {

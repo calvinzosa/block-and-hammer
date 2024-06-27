@@ -18,6 +18,7 @@ local Events = {
 }
 local player = Players.LocalPlayer
 local GUI = player:WaitForChild("PlayerGui")
+local flippedGravity = ReplicatedStorage:WaitForChild("flipped_gravity")
 local mapFolder = Workspace:WaitForChild("Map")
 local tutorialFolder = mapFolder:WaitForChild("Tutorial")
 local orb = tutorialFolder:WaitForChild("Orb")
@@ -32,13 +33,13 @@ local function start()
 	canMove.Value = true
 	local _value = player:GetAttribute(PlayerAttributes.InTutorial)
 	if not (_value ~= 0 and _value == _value and _value ~= "" and _value) then
+		flippedGravity.Value = false
 		Events.PlayTutorial:FireServer()
 		player:SetAttribute("finished", nil)
 		shadow.BackgroundTransparency = 0
-		TweenService:Create(shadow, tweenTypes.linear.short, {
+		TweenService:Create(shadow, TweenInfo.new(0.5, Enum.EasingStyle.Linear), {
 			BackgroundTransparency = 1,
 		}):Play()
-		task.wait(1)
 		local cube = cubeTemplate:Clone()
 		cube:PivotTo(CFrame.new(2532, 10, 0))
 		cube.Name = `cube{player.UserId}`

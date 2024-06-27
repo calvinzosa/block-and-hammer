@@ -35,10 +35,11 @@ local Events = {
 	UpdatePlayerTime = ReplicatedStorage:FindFirstChild("UpdatePlayerTime"),
 	ForceReset = ReplicatedStorage:FindFirstChild("ForceReset"),
 }
-local badgeDebounce = {}
+local cubeTemplate = ReplicatedStorage:FindFirstChild("Cube")
+local targetCenter = Workspace:FindFirstChild("TargetCenter")
 local mapFolder = Workspace:FindFirstChild("Map")
 local trappedArea = mapFolder:FindFirstChild("trapped_area")
-local cubeTemplate = ReplicatedStorage:FindFirstChild("Cube")
+local gravityFlipper = mapFolder:WaitForChild("gravity_flipper")
 local function createCube(player, firstTime)
 	local _result = Workspace:FindFirstChild(`cube{player.Name}`)
 	if _result ~= nil then
@@ -87,8 +88,15 @@ local function createCube(player, firstTime)
 		(icons:FindFirstChild("Developer")).Visible = true
 	end
 	icons.Visible = true
-	local _value = player:GetAttribute(PlayerAttributes.HasModifiers)
-	if _value ~= 0 and _value == _value and _value ~= "" and _value then
+	local _condition = player:GetAttribute(PlayerAttributes.HasModifiers)
+	if not (_condition ~= 0 and _condition == _condition and _condition ~= "" and _condition) then
+		local _condition_1 = cube:GetAttribute("scale")
+		if _condition_1 == nil then
+			_condition_1 = 1
+		end
+		_condition = _condition_1 ~= 1
+	end
+	if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
 		cube:SetAttribute("used_modifiers", true)
 	end
 	player:SetAttribute(PlayerAttributes.TotalTime, nil)
@@ -109,8 +117,8 @@ local function createCube(player, firstTime)
 		player:SetAttribute(PlayerAttributes.CompletedGame, false)
 	end
 	while true do
-		local _value_1 = player:GetAttribute(PlayerAttributes.HasDataLoaded)
-		if not not (_value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1) then
+		local _value = player:GetAttribute(PlayerAttributes.HasDataLoaded)
+		if not not (_value ~= 0 and _value == _value and _value ~= "" and _value) then
 			break
 		end
 		task.wait()
@@ -246,20 +254,31 @@ Events.GroundImpact.OnServerEvent:Connect(function(player, velocity, position)
 	end
 	local newImpacts = _condition_1 + 1
 	player:SetAttribute(PlayerAttributes.Impacts, newImpacts)
-	if not (badgeDebounce[player.UserId] ~= nil) then
-		badgeDebounce[player.UserId] = true
-		task.delay(5, function()
-			badgeDebounce[player.UserId] = nil
-			return true
-		end)
-		local _condition_2 = newImpacts >= 15
-		if _condition_2 then
-			local _value = player:GetAttribute(PlayerAttributes.HasCrashLandingBadge)
-			_condition_2 = not (_value ~= 0 and _value == _value and _value ~= "" and _value)
+	local _condition_2 = newImpacts >= 15
+	if _condition_2 then
+		local _value = player:GetAttribute(PlayerAttributes.HasExplosiveBadge)
+		_condition_2 = not (_value ~= 0 and _value == _value and _value ~= "" and _value)
+	end
+	if _condition_2 then
+		player:SetAttribute(PlayerAttributes.HasExplosiveBadge, true)
+		giveBadge(player, 2146508969)
+	end
+	if velocity.Y > 892.857 then
+		giveBadge(player, 4279006041653694)
+	elseif velocity.Y > 357.142 then
+		local _value = player:GetAttribute("didShatter")
+		if _value ~= 0 and _value == _value and _value ~= "" and _value then
+			giveBadge(player, 2512066188170235)
+		else
+			local params = OverlapParams.new()
+			params.FilterDescendantsInstances = { targetCenter }
+			params.FilterType = Enum.RaycastFilterType.Include
+			if #Workspace:GetPartBoundsInBox(CFrame.new(position), Vector3.new(4, 4, 4), params) > 0 then
+				giveBadge(player, 2479031288528448)
+			end
 		end
-		if _condition_2 then
-			player:SetAttribute(PlayerAttributes.HasCrashLandingBadge, true)
-		end
+	else
+		giveBadge(player, 2146180612)
 	end
 end)
 Events.CompleteGame.OnServerEvent:Connect(function(player, givenTime)
@@ -391,6 +410,22 @@ end
 Players.PlayerAdded:Connect(playerAdded)
 Events.Reset.OnServerEvent:Connect(resetPlayer)
 Events.ForceReset.Event:Connect(resetPlayer)
+gravityFlipper.TouchEnded:Connect(function(otherPart)
+	for _, player in Players:GetPlayers() do
+		if otherPart.Name == `cube{player.UserId}` then
+			local _value = player:GetAttribute("gravityFlipDebounce")
+			if not (_value ~= 0 and _value == _value and _value ~= "" and _value) then
+				player:SetAttribute(PlayerAttributes.GravityFlipDebounce, true)
+				Events.FlipGravity:FireClient(player, true)
+				task.delay(2, function()
+					Events.FlipGravity:FireClient(player, false)
+					player:SetAttribute(PlayerAttributes.GravityFlipDebounce, nil)
+				end)
+			end
+			break
+		end
+	end
+end)
 RunService.Stepped:Connect(function()
 	for _, player in Players:GetPlayers() do
 		local cube = Workspace:FindFirstChild(`cube{player.UserId}`)

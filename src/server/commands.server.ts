@@ -176,6 +176,8 @@ const Commands: Record<string, Command> = {
             for (const player of targets) {
                 const cube = Workspace.FindFirstChild(`cube${player.UserId}`) as BasePart;
                 if (cube && !cube.GetAttribute('isScaling')) {
+                    cube.SetAttribute('used_modifiers', true);
+                    
                     cube.SetAttribute('isScaling', true);
                     task.spawn(() => {
                         const previousScale = cube.GetAttribute('scale') as (number | undefined) ?? 1;

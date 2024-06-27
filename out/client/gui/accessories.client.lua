@@ -6,14 +6,17 @@ local BadgeService = _services.BadgeService
 local RunService = _services.RunService
 local Players = _services.Players
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
-local PlayerAttributes = _utils.PlayerAttributes
 local computeNameColor = _utils.computeNameColor
+local getHammerTexture = _utils.getHammerTexture
+local PlayerAttributes = _utils.PlayerAttributes
+local Accessories = _utils.Accessories
 local accessoryList = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "accessory_loader").accessoryList
 local Events = {
 	EquipAccessory = ReplicatedStorage:WaitForChild("EquipAccessory"),
 }
 local player = Players.LocalPlayer
 local GUI = player:WaitForChild("PlayerGui")
+local flippedGravity = ReplicatedStorage:WaitForChild("flipped_gravity")
 local templates = ReplicatedStorage:WaitForChild("GUI")
 local accessoryTemplate = templates:WaitForChild("AccessoryTemplate")
 local screenGui = GUI:WaitForChild("ScreenGui")
@@ -171,8 +174,12 @@ equipButton.MouseButton1Click:Connect(function()
 		return nil
 	end
 	local accessory = accessoryList[name]
+	local previousHammerAccessory = getHammerTexture(player)
 	local didEquip = Events.EquipAccessory:InvokeServer(name)
 	if didEquip ~= 0 and didEquip == didEquip and didEquip ~= "" and didEquip then
+		if previousHammerAccessory == Accessories.HammerTexture.InverterHammer and accessory.acc_type == "hammer_Texture" then
+			flippedGravity.Value = false
+		end
 		outline.Enabled = true
 		-- ▼ ReadonlyArray.findIndex ▼
 		local _callback = function(accessoryType)

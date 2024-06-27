@@ -726,9 +726,15 @@ local function newPart(part)
 						return nil
 					end
 					if getSetting(GameSetting.Modifiers) then
+						local _condition_2 = cube:GetAttribute("scale")
+						if _condition_2 == nil then
+							_condition_2 = 1
+						end
+						local cubeScale = _condition_2
 						local _assemblyLinearVelocity = cube.AssemblyLinearVelocity
-						local _arg0_1 = direction.Unit * 250
-						cube.AssemblyLinearVelocity = _assemblyLinearVelocity + _arg0_1
+						local _unit = direction.Unit
+						local _arg0_1 = 250 * cubeScale
+						cube.AssemblyLinearVelocity = _assemblyLinearVelocity + (_unit * _arg0_1)
 					end
 					if getSetting(GameSetting.Effects) then
 						local velocity = head.AssemblyLinearVelocity * 10
@@ -970,7 +976,7 @@ RunService.Stepped:Connect(function(_, dt)
 	prevCubePosition = cube.Position
 	cube:SetAttribute("lastVelocity", cube.AssemblyLinearVelocity)
 end)
-print("[src/client/visual_effects.client.ts:913]", "Started running visual_effects.client.ts")
+print("[src/client/visual_effects.client.ts:916]", "Started running visual_effects.client.ts")
 while true do
 	local _value = task.wait(0.05)
 	if not (_value ~= 0 and _value == _value and _value) then

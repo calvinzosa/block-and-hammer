@@ -6,11 +6,11 @@ import {
 
 import {
 	computeNameColor,
+	getHammerTexture,
 	Accessories,
 	getCubeAura,
 	getCubeHat,
 	giveBadge,
-	getHammerTexture
 } from './utils';
 
 import { $print, $warn } from 'rbxts-transform-debug';

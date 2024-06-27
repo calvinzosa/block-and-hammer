@@ -35,6 +35,7 @@ local Events = {
 	AddRagdollCount = ReplicatedStorage:WaitForChild("AddRagdollCount"),
 	ShowChatBubble = ReplicatedStorage:WaitForChild("ShowChatBubble"),
 	CompleteGame = ReplicatedStorage:WaitForChild("CompleteGame"),
+	FlipGravity = ReplicatedStorage:WaitForChild("FlipGravity"),
 	StartClientTutorial = ReplicatedStorage:WaitForChild("StartClientTutorial"),
 	ClientCreateDebris = ReplicatedStorage:WaitForChild("ClientCreateDebris"),
 	MakeReplayEvent = ReplicatedStorage:WaitForChild("MakeReplayEvent"),
@@ -120,7 +121,7 @@ local function newPropeller(propeller)
 		_condition = not (type(_arg0) == "number")
 	end
 	if _condition then
-		warn("[src/client/cube.client.ts:117]", "An invalid propeller was created.")
+		warn("[src/client/cube.client.ts:118]", "An invalid propeller was created.")
 		return nil
 	end
 	local _propeller = propeller
@@ -134,7 +135,7 @@ local function updatePropellers(cube, head, dt)
 			_result = _result:IsA("BasePart")
 		end
 		if not _result then
-			warn("[src/client/cube.client.ts:128]", "A propeller has broke!")
+			warn("[src/client/cube.client.ts:129]", "A propeller has broke!")
 			table.remove(cachedPropellers, i + 1)
 			break
 		end
@@ -670,8 +671,8 @@ local function updateModifiers()
 						if not _result then
 							return nil
 						end
-						local didSet = false
 						AbilityCooldowns.ExplosiveHammer = true
+						local didSet = false
 						task.delay(2, function()
 							if not didSet then
 								didSet = true
@@ -683,9 +684,7 @@ local function updateModifiers()
 								return not AbilityCooldowns.ExplosiveHammer
 							end)
 							if not didSet then
-								TweenService:Create(head, TweenInfo.new(0), {
-									Color = Color3.fromRGB(255, 0, 0),
-								}):Play()
+								head.Color = Color3.fromRGB(255, 0, 0)
 							end
 							didSet = true
 						end)
@@ -693,10 +692,17 @@ local function updateModifiers()
 						TweenService:Create(head, TweenInfo.new(2, Enum.EasingStyle.Linear), {
 							Color = Color3.fromRGB(255, 0, 0),
 						}):Play()
+						local _condition = cube:GetAttribute("scale")
+						if _condition == nil then
+							_condition = 1
+						end
+						local cubeScale = _condition
 						local velocity = cube.AssemblyLinearVelocity
 						local _position = cube.Position
 						local _position_1 = head.Position
-						local force = (_position - _position_1).Unit * 600
+						local _unit = (_position - _position_1).Unit
+						local _arg0 = 600 * cubeScale
+						local force = _unit * _arg0
 						if force.X == force.X and force.Y == force.Y and force.Z == force.Z then
 							cube.AssemblyLinearVelocity = velocity + force
 						end
@@ -1063,9 +1069,6 @@ RunService.Heartbeat:Connect(function(dt)
 				windForce.Force = Vector3.zero
 			end
 		end
-		if not getSetting(GameSetting.Modifiers) and flippedGravity.Value then
-			flippedGravity.Value = false
-		end
 		if getTime() - startTime < 0.1 then
 			ragdollTime = 0
 		end
@@ -1102,7 +1105,7 @@ RunService.Heartbeat:Connect(function(dt)
 			armAlignOrientation.Enabled = true
 		end
 		if ragdollTime == 0 and previousRagdollTime > 0 then
-			print("[src/client/cube.client.ts:736]", "Pivot hammer back to cube")
+			print("[src/client/cube.client.ts:738]", "Pivot hammer back to cube")
 			local _exp = (CFrame.new(cube.Position))
 			local _arg0 = CFrame.fromOrientation(0, 0, math.pi / 2)
 			arm.CFrame = _exp * _arg0
@@ -1176,6 +1179,9 @@ RunService.Heartbeat:Connect(function(dt)
 			wasModifiersEnabled = Settings.modifiers
 			if #Workspace:GetPartsInPart(cube, params) > 0 then
 				wasModifiersEnabled = false
+				if flippedGravity.Value then
+					flippedGravity.Value = false
+				end
 			end
 		end
 		local cubePosition = cube.Position
@@ -1479,23 +1485,35 @@ winArea.Touched:Connect(function(otherPart)
 	if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
 		player:SetAttribute(PlayerAttributes.CompletedGame, true)
 		local totalTime = getCubeTime(otherPart)
-		print("[src/client/cube.client.ts:1083]", `Completed game in {totalTime} seconds`)
+		print("[src/client/cube.client.ts:1088]", `Completed game in {totalTime} seconds`)
 		Events.CompleteGame:FireServer(totalTime)
 		Events.MakeReplayEvent:Fire(string.format("win,%d", totalTime * 1000))
 	end
 end)
-Events.ClientReset.Event:Connect(function()
+Events.ClientReset.Event:Connect(function(fullReset)
 	player:SetAttribute(PlayerAttributes.CompletedGame, nil)
 	for key in pairs(AbilityCooldowns) do
 		AbilityCooldowns[key] = false
 	end
+	flippedGravity.Value = false
 	ragdollTime = 0
+	if not fullReset and getSetting(GameSetting.Modifiers) then
+		updateModifiers()
+	end
 end)
 Events.StartClientTutorial.Event:Connect(function()
 	task.delay(0.1, updateModifiers)
 end)
 Events.ShowChatBubble.OnClientEvent:Connect(function(bubbleAttachment, content)
 	TextChatService:DisplayBubble(bubbleAttachment, content)
+end)
+Events.FlipGravity.OnClientEvent:Connect(function(isFlipped)
+	local _isFlipped = isFlipped
+	if type(_isFlipped) == "boolean" then
+		flippedGravity.Value = isFlipped
+	else
+		flippedGravity.Value = not flippedGravity.Value
+	end
 end)
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then

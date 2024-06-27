@@ -9,7 +9,7 @@ import {
 } from '@rbxts/services';
 
 import str from '@rbxts/string-utils';
-import { $warn } from 'rbxts-transform-debug';
+import { $print, $warn } from 'rbxts-transform-debug';
 
 const Events = {
     SettingChanged: ReplicatedStorage.WaitForChild('SettingChanged') as BindableEvent,
@@ -35,36 +35,39 @@ export namespace GameData {
 };
 
 export namespace PlayerAttributes {
-    export const IsNew = 'isNew';
     export const HasDataLoaded = 'DataLoaded';
     export const InErrorLand = 'inErrorLand';
     export const HasModifiers = 'modifiers';
     export const Impacts = 'impacts';
+    export const IsNew = 'isNew';
     
-    export const InTutorial = 'inTutorial';
-    export const CompletedGame = 'completedGame';
     export const HammerTexture = 'hammer_Texture';
+    export const CompletedGame = 'completedGame';
+    export const InTutorial = 'inTutorial';
     export const CubeColor = 'cubeColor';
-    export const CubeHat = 'cube_Hat';
     export const CubeFace = 'cube_Face';
     export const CubeAura = 'cube_Aura';
+    export const CubeHat = 'cube_Hat';
     
-    export const TotalTime = 'totalTime';
+    export const TotalModdedWins = 'totalModdedWins';
     export const TotalRagdolls = 'totalRagdolls';
     export const TotalRestarts = 'totalRestarts';
+    export const TotalTime = 'totalTime';
     export const TotalWins = 'totalWins';
-    export const TotalModdedWins = 'totalModdedWins';
     
+    export const GravityFlipDebounce = 'gravityFlipDebounce';
     export const BadgeDebounce = 'badgeDebounce';
+    
     export const HasCrashLandingBadge = 'hasCrashLandingBadge';
+    export const HasExplosiveBadge = 'hasExplosiveBadge';
     export const HasGravityBadge = 'hasGravityBadge';
     export const HasSpeedBadge = 'hasSpeedBadge';
     
     export const Device = 'device';
     
     export enum Client {
-        InMainMenu = 'inMainMenu',
         SettingsJSON = 'clientSettingsJSON',
+        InMainMenu = 'inMainMenu',
     };
 };
 
@@ -444,7 +447,7 @@ export function convertMetersToStuds(meters: number): number {
 }
 
 export function getPlayerRank(player: Player): number {
-    if (player.UserId === game.CreatorId || player.UserId <= 0) return 2;
+    if (player.UserId === GameData.CreatorId || player.UserId <= 0) return 2;
     else if (PlayerAdmins.findIndex((userId) => userId === player.UserId)) return 1;
     
     return 0;
@@ -502,7 +505,7 @@ export function giveBadge(player: Player, badgeId: number): void {
     if (!RunService.IsServer()) return;
     
     if (isTestingServer()) {
-        $warn('Badges are disabled in the Testing Server.');
+        $warn(`Badges are disabled in the Testing Server | Attempted to give badge ${badgeId} to ${player.Name}`);
         return;
     }
     
@@ -511,19 +514,20 @@ export function giveBadge(player: Player, badgeId: number): void {
         while (player.GetAttribute(PlayerAttributes.BadgeDebounce)) player.AttributeChanged.Wait();
         player.SetAttribute(PlayerAttributes.BadgeDebounce, true);
         
-        let success = false;
-        
         while (true) {
             try {
-                if (!BadgeService.UserHasBadgeAsync(userId, badgeId)) BadgeService.AwardBadge(userId, badgeId);
+                if (!BadgeService.UserHasBadgeAsync(userId, badgeId)) {
+                    BadgeService.AwardBadge(userId, badgeId);
+                    $print(`Successfully badge ${badgeId} to ${player.Name}`);
+                }
+                
                 break;
             } catch (err) {
                 $warn(err);
             }
         }
         
-        task.wait(1);
-        player.SetAttribute(PlayerAttributes.BadgeDebounce, undefined);
+        task.delay(2, () => player.SetAttribute(PlayerAttributes.BadgeDebounce, undefined));
     });
 }
 

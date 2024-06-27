@@ -18,7 +18,11 @@ if _condition then
 	local _value = forceTestingServer.Value
 	_condition = not (_value ~= 0 and _value == _value and _value)
 end
-if _condition then
+local _condition_1 = _condition
+if not _condition_1 then
+	_condition_1 = game.PrivateServerOwnerId == 0
+end
+if _condition_1 then
 	ownerId.Value = -1
 else
 	ownerId.Value = game.PrivateServerOwnerId
@@ -44,11 +48,11 @@ if isMainServer() then
 				end
 			end
 			local _savedServerId = savedServerId
-			local _condition_1 = not (type(_savedServerId) == "string")
-			if not _condition_1 then
-				_condition_1 = savedServerId == "none"
+			local _condition_2 = not (type(_savedServerId) == "string")
+			if not _condition_2 then
+				_condition_2 = savedServerId == "none"
 			end
-			if _condition_1 then
+			if _condition_2 then
 				local serverId = TeleportService:ReserveServer(GameData.TestingPlaceId)
 				savedServerId = serverId
 				while true do

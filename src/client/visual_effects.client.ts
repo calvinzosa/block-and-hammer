@@ -664,7 +664,10 @@ function newPart(part: Instance) {
 					const direction = cube.Position.sub(head.Position);
 					if (direction.Magnitude === 0) return;
 					
-					if (getSetting(GameSetting.Modifiers)) cube.AssemblyLinearVelocity = cube.AssemblyLinearVelocity.add(direction.Unit.mul(250));
+					if (getSetting(GameSetting.Modifiers)) {
+						const cubeScale = cube.GetAttribute('scale') as (number | undefined) ?? 1;
+						cube.AssemblyLinearVelocity = cube.AssemblyLinearVelocity.add(direction.Unit.mul(250 * cubeScale));
+					}
 					
 					if (getSetting(GameSetting.Effects)) {
 						const velocity = head.AssemblyLinearVelocity.mul(10);

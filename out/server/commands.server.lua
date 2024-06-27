@@ -174,6 +174,7 @@ Commands = {
 					_condition = not (_value ~= 0 and _value == _value and _value ~= "" and _value)
 				end
 				if _condition then
+					cube:SetAttribute("used_modifiers", true)
 					cube:SetAttribute("isScaling", true)
 					task.spawn(function()
 						local _condition_1 = cube:GetAttribute("scale")

@@ -8,9 +8,10 @@ import {
 } from '@rbxts/services';
 
 import {
-    Accessories,
+	computeNameColor,
+	getHammerTexture,
 	PlayerAttributes,
-	computeNameColor
+    Accessories,
 } from 'shared/utils';
 
 import {
@@ -25,6 +26,7 @@ const Events = {
 const player = Players.LocalPlayer;
 const GUI = player.WaitForChild('PlayerGui') as PlayerGui;
 
+const flippedGravity = ReplicatedStorage.WaitForChild('flipped_gravity') as BoolValue;
 const templates = ReplicatedStorage.WaitForChild('GUI') as Folder;
 const accessoryTemplate = templates.WaitForChild('AccessoryTemplate') as ImageButton;
 const screenGui = GUI.WaitForChild('ScreenGui') as ScreenGui;
@@ -151,8 +153,12 @@ equipButton.MouseButton1Click.Connect(() => {
     
 	const accessory = accessoryList[name];
 	
+	const previousHammerAccessory = getHammerTexture(player);
+	
 	const didEquip = Events.EquipAccessory.InvokeServer(name);
     if (didEquip) {
+		if (previousHammerAccessory === Accessories.HammerTexture.InverterHammer && accessory.acc_type === 'hammer_Texture') flippedGravity.Value = false;
+		
         outline.Enabled = true;
         selectedAccessory.LayoutOrder = accessoryOrder.findIndex((accessoryType) => accessoryType === accessory.acc_type) - 100;
         
