@@ -5,6 +5,7 @@ local ReplicatedStorage = _services.ReplicatedStorage
 local UserInputService = _services.UserInputService
 local TweenService = _services.TweenService
 local RunService = _services.RunService
+local StarterGui = _services.StarterGui
 local Workspace = _services.Workspace
 local Players = _services.Players
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
@@ -166,6 +167,18 @@ connection = RunService.RenderStepped:Connect(function()
 		menuGui.Enabled = false
 		if cube then
 			cube.Anchored = false
+		end
+		while true do
+			local _exitType, _returns = TS.try(function()
+				StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, true)
+				StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, true)
+				return TS.TRY_BREAK
+			end, function(err)
+				task.wait(0.1)
+			end)
+			if _exitType then
+				break
+			end
 		end
 		return nil
 	end

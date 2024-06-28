@@ -1,10 +1,6 @@
-import {
-    ReplicatedStorage,
-} from '@rbxts/services';
+import { ReplicatedStorage } from '@rbxts/services';
 
-import {
-    isTestingServer,
-} from 'shared/utils';
+import { isTestingServer } from 'shared/utils';
 
 const placeVersion = ReplicatedStorage.FindFirstChild('PlaceVersion') as IntValue;
 

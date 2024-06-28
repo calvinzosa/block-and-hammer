@@ -4,11 +4,8 @@
 	"workbench.editor.tabSizing": "fixed",
 	"workbench.editor.tabSizingFixedMinWidth": 200,
 	"workbench.editor.tabSizingFixedMaxWidth": 200,
+	"editor.renderWhitespace": "none",
 	"files.eol": "\n",
-	"[typescript]": {
-		"editor.defaultFormatter": "dbaeumer.vscode-eslint",
-		"editor.formatOnSave": true
-	},
 	"[typescriptreact]": {
 		"editor.defaultFormatter": "dbaeumer.vscode-eslint",
 		"editor.formatOnSave": true

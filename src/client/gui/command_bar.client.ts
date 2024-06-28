@@ -51,38 +51,38 @@ $warn('Command bar is not enabled yet');
 //         cursor.Visible = false;
 //         return;
 //     }
-    
+
 //     task.wait();
-    
+
 //     const text = inputBox.ContentText;
-    
+
 //     const startIndex = math.min(selectionStart, cursorPosition);
 //     const endIndex = math.max(selectionStart, cursorPosition);
-    
+
 //     const params = new Instance('GetTextBoundsParams');
 //     params.Font = inputBox.FontFace;
 //     params.Size = inputBox.TextSize;
 //     params.Width = inputBox.AbsoluteSize.X;
-    
+
 //     params.Text = 'A';
 //     const textSize = TextService.GetTextBoundsAsync(params);
-    
+
 //     if (startIndex !== -1) {
 //         params.Text = text.sub(1, startIndex - 1);
 //         const position = TextService.GetTextBoundsAsync(params);
-        
+
 //         cursor.Size = UDim2.fromOffset((endIndex - startIndex) * textSize.X, inputBox.AbsoluteSize.Y);
 //         cursor.Position = new UDim2(0, position.X, 1, 0);
 //         cursor.Transparency = 0.5;
 //     } else {
 //         params.Text = text.sub(1, endIndex - 1);
 //         const position = TextService.GetTextBoundsAsync(params);
-        
+
 //         cursor.Size = UDim2.fromOffset(textSize.X, 3);
 //         cursor.Position = new UDim2(0, position.X, 1, 0);
 //         cursor.Transparency = 0;
 //     }
-    
+
 //     cursor.Visible = true;
 // }
 
@@ -90,14 +90,14 @@ $warn('Command bar is not enabled yet');
 //     if (input.KeyCode === Enum.KeyCode.Tab && inputBox.IsFocused() && inputBox.CursorPosition > inputBox.ContentText.size()) {
 //         const tabCharacter = '	';
 //         while (!endsWith(inputBox.Text, tabCharacter)) inputBox.GetPropertyChangedSignal('ContentText').Wait();
-        
+
 //         const text = inputBox.Text.sub(1, inputBox.Text.size() - 1);
 //         inputBox.Text = text;
-        
+
 //         if (currentAutoFillText) {
 //             inputBox.Text = currentAutoFillText;
 //             inputBox.CursorPosition = currentAutoFillText.size() + 1;
-            
+
 //             currentAutoFillText = undefined;
 //         }
 //     }
@@ -105,21 +105,21 @@ $warn('Command bar is not enabled yet');
 
 // UserInputService.InputEnded.Connect((input, processed) => {
 //     if (processed) return;
-    
+
 //     if (input.KeyCode === Enum.KeyCode.Semicolon) {
 //         commandBarCanvas.GroupTransparency = 1;
 //         TweenService.Create(commandBarCanvas, new TweenInfo(0.25, Enum.EasingStyle.Linear), { GroupTransparency: 0 }).Play();
 //         commandBarCanvas.Visible = true;
-        
+
 //         inputBox.CaptureFocus();
 //     }
 // });
 
 // inputBox.FocusLost.Connect((enterPressed) => {
 //     if (enterPressed) Events.RunCommand.FireServer(inputBox.ContentText);
-    
+
 //     inputBox.Text = '';
-    
+
 //     commandBarCanvas.GroupTransparency = 0;
 //     TweenService.Create(commandBarCanvas, new TweenInfo(0.5, Enum.EasingStyle.Linear), { GroupTransparency: 1 }).Play();
 //     task.delay(0.6, () => {
@@ -130,15 +130,15 @@ $warn('Command bar is not enabled yet');
 // inputBox.GetPropertyChangedSignal('ContentText').Connect(() => {
 //     const text = inputBox.ContentText;
 //     textDisplay.Text = inputBox.ContentText;
-    
+
 //     task.wait();
-    
+
 //     if (text.size() > 0) {
 //         const wordsList = [  ] as string[];
-        
+
 //         if (wordsList.size() === 1) {
 //             let currentWord = '';
-            
+
 //             for (const i of $range(1, text.size())) {
 //                 const character = text.sub(i, i);
 //                 if ((character === ' ' || i === text.size() || i === inputBox.CursorPosition) && currentWord.size() > 0) {
@@ -147,16 +147,16 @@ $warn('Command bar is not enabled yet');
 //                     if (i === inputBox.CursorPosition) break;
 //                 } else currentWord += character;
 //             }
-            
+
 //             const autoCompletions = [  ];
 //             for (const [ commandName, rank ] of pairs(commands)) {
 //                 if (playerRank >= rank && startsWith(commandName, text)) autoCompletions.push(commandName);
 //             }
-            
+
 //             if (autoCompletions.size() > 0) {
 //                 const sortedAutoCompletions = autoCompletions.sort();
 //                 currentAutoFillText = sortedAutoCompletions[0];
-                
+
 //                 const completionText = currentAutoFillText.sub(text.size() + 1);
 //                 textDisplay.Text += `<font color="#aaa">${completionText}</font>`;
 //             }

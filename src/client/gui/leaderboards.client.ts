@@ -1,19 +1,13 @@
-import {
-    ReplicatedStorage,
-    HttpService,
-    Players,
-} from '@rbxts/services';
+import { ReplicatedStorage, HttpService, Players } from '@rbxts/services';
 
 import { $print, $warn } from 'rbxts-transform-debug';
 
-import {
-    getTimeUnits,
-} from 'shared/utils';
+import { getTimeUnits } from 'shared/utils';
 
 const Events = {
-    'UpdateLeaderboard': ReplicatedStorage.FindFirstChild('UpdateLeaderboard') as RemoteEvent,
-    
-    'UpdatePlayerTime': ReplicatedStorage.FindFirstChild('UpdatePlayerTime') as BindableEvent,
+	UpdateLeaderboard: ReplicatedStorage.FindFirstChild('UpdateLeaderboard') as RemoteEvent,
+
+	UpdatePlayerTime: ReplicatedStorage.FindFirstChild('UpdatePlayerTime') as BindableEvent,
 };
 
 const player = Players.LocalPlayer;
@@ -24,35 +18,38 @@ const playerTemplate = guiTemplates.WaitForChild('Player') as Frame;
 const screenGui = GUI.WaitForChild('ScreenGui') as ScreenGui;
 const leaderboardGui = screenGui.WaitForChild('LeaderboardGUI') as Frame;
 
-let data: Record<string, Record<number, [ number, number ]>> = { GlobalLeaderboard: {  }, ModdedLeaderboard: {  } };
+let data: Record<string, Record<number, [number, number]>> = {
+	GlobalLeaderboard: {},
+	ModdedLeaderboard: {},
+};
 
 Events.UpdateLeaderboard.OnClientEvent.Connect((encodedData: string) => {
-	data = HttpService.JSONDecode(encodedData) as Record<string, Record<number, [ number, number ]>>;
-    $print('Recieved new leaderboard info');
+	data = HttpService.JSONDecode(encodedData) as Record<string, Record<number, [number, number]>>;
+	$print('Recieved new leaderboard info');
 });
 
 leaderboardGui.GetPropertyChangedSignal('Visible').Connect(() => {
-    for (const [ name, values ] of pairs(data)) {
+	for (const [name, values] of pairs(data)) {
 		const frame = leaderboardGui.WaitForChild(name) as Frame;
-        const list = frame.WaitForChild('List') as ScrollingFrame;
-		
-        for (const item of list.GetChildren()) {
-            if (item.IsA('Frame')) item.Destroy();
-        }
-		
-        for (const [ number, data ] of pairs(values)) {
-            const userId = data[0];
-            const totalTimeMilliseconds = data[1];
-			
-            let name = `[ ${userId} ]`;
-            try {
-                name = Players.GetNameFromUserIdAsync(userId);
-            } catch (err) {
-                $warn(err);
-            }
-			
-			const [ , minutes, seconds, milliseconds ] = getTimeUnits(totalTimeMilliseconds);
-			
+		const list = frame.WaitForChild('List') as ScrollingFrame;
+
+		for (const item of list.GetChildren()) {
+			if (item.IsA('Frame')) item.Destroy();
+		}
+
+		for (const [number, data] of pairs(values)) {
+			const userId = data[0];
+			const totalTimeMilliseconds = data[1];
+
+			let name = `[ ${userId} ]`;
+			try {
+				name = Players.GetNameFromUserIdAsync(userId);
+			} catch (err) {
+				$warn(err);
+			}
+
+			const [, minutes, seconds, milliseconds] = getTimeUnits(totalTimeMilliseconds);
+
 			const item = playerTemplate.Clone();
 			item.LayoutOrder = number;
 			(item.FindFirstChild('Number') as TextLabel).Text = tostring(number);
@@ -62,4 +59,4 @@ leaderboardGui.GetPropertyChangedSignal('Visible').Connect(() => {
 			item.Parent = list;
 		}
 	}
-})
+});

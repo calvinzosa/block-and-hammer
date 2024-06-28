@@ -1,13 +1,6 @@
-import {
-    ReplicatedStorage,
-    Players,
-} from '@rbxts/services';
+import { ReplicatedStorage, Players } from '@rbxts/services';
 
-import {
-    isTestingServer,
-    isMainServer,
-    GameData,
-} from 'shared/utils';
+import { isTestingServer, isMainServer, GameData } from 'shared/utils';
 
 import { $print } from 'rbxts-transform-debug';
 
@@ -22,18 +15,18 @@ const testingServerGui = GUI.WaitForChild('TestingServerGui') as ScreenGui;
 if (serverOwnerId.Value === 0) serverOwnerId.Changed.Wait();
 
 if (isMainServer()) {
-    $print('Server Type: Main');
-    
-    if (serverOwnerId.Value === GameData.CreatorId) {
-        testingServerGui.Enabled = true;
-        mainMenuGui.Enabled = false;
-        screenGui.Enabled = false;
-    }
+	$print('Server Type: Main');
+
+	if (serverOwnerId.Value === GameData.CreatorId) {
+		testingServerGui.Enabled = true;
+		mainMenuGui.Enabled = false;
+		screenGui.Enabled = false;
+	}
 } else if (isTestingServer()) {
-    $print('Server Type: Testing');
-    
-    const button = screenGui.WaitForChild('TestingServerWarning') as TextButton;
-    button.Visible = true;
-    
-    button.MouseButton1Click.Once(() => button.Visible = false);
+	$print('Server Type: Testing');
+
+	const button = screenGui.WaitForChild('TestingServerWarning') as TextButton;
+	button.Visible = true;
+
+	button.MouseButton1Click.Once(() => (button.Visible = false));
 }

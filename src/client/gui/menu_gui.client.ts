@@ -1,43 +1,24 @@
-import {
-    ReplicatedStorage,
-    UserInputService,
-    HttpService,
-    RunService,
-    Workspace,
-    Players,
-	Lighting,
-} from '@rbxts/services';
+import { ReplicatedStorage, UserInputService, HttpService, RunService, Workspace, Players, Lighting } from '@rbxts/services';
 
-import {
-    PlayerAttributes,
-    getSettingAlias,
-    getSettingOrder,
-    canUseSetting,
-    fixSettings,
-	GameSetting,
-    getSetting,
-	setSetting,
-    Settings,
-    getTime,
-} from 'shared/utils';
+import { PlayerAttributes, getSettingAlias, getSettingOrder, canUseSetting, fixSettings, GameSetting, getSetting, setSetting, Settings, getTime } from 'shared/utils';
 
 import { $print, $warn } from 'rbxts-transform-debug';
 import { Icon } from '@rbxts/topbar-plus';
 
 const Events = {
-	'SetModifiersSetting': ReplicatedStorage.WaitForChild('SetModifiersSetting') as RemoteEvent,
-    'LoadSettingsJSON': ReplicatedStorage.WaitForChild('LoadSettingsJSON') as RemoteEvent,
-    'SaveSettingsJSON': ReplicatedStorage.WaitForChild('SaveSettingsJSON') as RemoteEvent,
-    'EndTutorial': ReplicatedStorage.WaitForChild('EndTutorial') as RemoteEvent,
-    'Reset': ReplicatedStorage.WaitForChild('Reset') as RemoteEvent,
-	
-	'StartClientTutorial': ReplicatedStorage.WaitForChild('StartClientTutorial') as BindableEvent,
-	'SettingChanged': ReplicatedStorage.WaitForChild('SettingChanged') as BindableEvent,
-	'ClientReset': ReplicatedStorage.WaitForChild('ClientReset') as BindableEvent,
+	SetModifiersSetting: ReplicatedStorage.WaitForChild('SetModifiersSetting') as RemoteEvent,
+	LoadSettingsJSON: ReplicatedStorage.WaitForChild('LoadSettingsJSON') as RemoteEvent,
+	SaveSettingsJSON: ReplicatedStorage.WaitForChild('SaveSettingsJSON') as RemoteEvent,
+	EndTutorial: ReplicatedStorage.WaitForChild('EndTutorial') as RemoteEvent,
+	Reset: ReplicatedStorage.WaitForChild('Reset') as RemoteEvent,
+
+	StartClientTutorial: ReplicatedStorage.WaitForChild('StartClientTutorial') as BindableEvent,
+	SettingChanged: ReplicatedStorage.WaitForChild('SettingChanged') as BindableEvent,
+	ClientReset: ReplicatedStorage.WaitForChild('ClientReset') as BindableEvent,
 };
 
 const debounces = {
-	reset: false
+	reset: false,
 };
 
 const player = Players.LocalPlayer;
@@ -69,7 +50,7 @@ const changelogsGui = screenGui.WaitForChild('Changelogs') as Frame;
 const replaysGui = screenGui.WaitForChild('ReplaysGUI') as Frame;
 const statsGui = screenGui.WaitForChild('StatsGUI') as Frame;
 
-const playerList: string[] = [  ];
+const playerList: string[] = [];
 const clickThreshold = 0.2;
 const menuToggle = new Icon().setLabel('Menu').lock();
 
@@ -97,36 +78,36 @@ let lastClickTime = 0;
 Icon.setDisplayOrder(999999999);
 
 function resetCharacter(fullReset: boolean = false) {
-    let cube = Workspace.FindFirstChild(`cube${player.UserId}`) as (BasePart | undefined);
-    
+	let cube = Workspace.FindFirstChild(`cube${player.UserId}`) as BasePart | undefined;
+
 	if (player.GetAttribute(PlayerAttributes.InErrorLand)) {
 		if (cube) cube.PivotTo(new CFrame(0, 14, 0));
 		return;
-    }
-	
+	}
+
 	if (player.GetAttribute(PlayerAttributes.InTutorial)) {
 		if (cube) {
-            cube.Destroy();
-            cube = undefined;
-        }
-		
+			cube.Destroy();
+			cube = undefined;
+		}
+
 		Events.EndTutorial.FireServer();
-    }
-	
+	}
+
 	if (!cube?.IsA('BasePart') || fullReset) {
 		Events.ClientReset.Fire(true);
 		Events.Reset.FireServer(true);
-    } else {
+	} else {
 		Events.ClientReset.Fire(false);
 		Events.Reset.FireServer(false);
-		
+
 		cube.PivotTo(new CFrame(0, 14, 0));
 		cube.AssemblyLinearVelocity = Vector3.zero;
-        for (const descendant of cube.GetDescendants()) {
-            if (descendant.IsA('BasePart')) descendant.AssemblyLinearVelocity = Vector3.zero;
-        }
-    }
-	
+		for (const descendant of cube.GetDescendants()) {
+			if (descendant.IsA('BasePart')) descendant.AssemblyLinearVelocity = Vector3.zero;
+		}
+	}
+
 	effectsFolder.ClearAllChildren();
 }
 
@@ -134,17 +115,17 @@ function updateSettingButtons() {
 	for (const button of settingButtons.GetChildren()) {
 		if (button.IsA('TextButton')) button.Destroy();
 	}
-	
-	for (const [ name, value ] of pairs(Settings)) {
+
+	for (const [name, value] of pairs(Settings)) {
 		const alias = getSettingAlias(name);
 		const isUsable = canUseSetting(name);
 		const order = getSettingOrder(name);
-		
+
 		const button = guiTemplates.FindFirstChild('SettingToggle')?.Clone() as TextButton;
 		button.LayoutOrder = order;
 		button.Name = alias;
 		button.Text = `${alias}: ${value ? '✅' : '❌'}`;
-		
+
 		if (isUsable) {
 			button.AutoButtonColor = true;
 			button.BackgroundTransparency = 0.7;
@@ -155,28 +136,28 @@ function updateSettingButtons() {
 			button.TextColor3 = Color3.fromRGB(175, 175, 175);
 			button.SetAttribute('disabled', true);
 		}
-		
+
 		button.Parent = settingButtons;
-		
+
 		if (isUsable) {
 			button.MouseButton1Click.Connect(() => {
 				const currentValue = !getSetting(name as GameSetting);
 				setSetting(name as GameSetting, currentValue);
 				if (name === GameSetting.Modifiers) Events.SetModifiersSetting.FireServer(getSetting(GameSetting.Modifiers));
 				else if (name === GameSetting.TimerGUI) (screenGui.FindFirstChild('Timer') as TextLabel).Visible = getSetting(GameSetting.TimerGUI);
-				
+
 				button.Text = `${alias}: ${currentValue ? '✅' : '❌'}`;
 			});
 		}
 	}
-	
+
 	fixSettings();
 	player.SetAttribute(PlayerAttributes.Client.SettingsJSON, HttpService.JSONEncode(Settings));
 }
 
 function toggleMenu() {
 	if (menuToggle.locked) return;
-	
+
 	if (!isSpectating.Value && (canMove.Value || menuOpen.Value)) {
 		canMove.Value = menuOpen.Value;
 		menuOpen.Value = !menuOpen.Value;
@@ -185,17 +166,17 @@ function toggleMenu() {
 			if (gui.Visible) {
 				gui.Visible = false;
 				menuOpen.Value = true;
-				
+
 				break;
 			}
 		}
 	}
-	
+
 	menuToggle.lock();
-	
+
 	if (!canMove.Value || menuOpen.Value) menuToggle.select();
 	else menuToggle.deselect();
-	
+
 	menuToggle.unlock();
 }
 
@@ -205,18 +186,18 @@ player.AttributeChanged.Connect((attr) => {
 
 UserInputService.InputBegan.Connect((input, processed) => {
 	if (processed) return;
-	
+
 	if (input.UserInputType === Enum.UserInputType.MouseButton1) {
 		const currentTime = getTime();
-		if ((currentTime - lastClickTime) < clickThreshold) {
+		if (currentTime - lastClickTime < clickThreshold) {
 			clickCount++;
-			
+
 			if (clickCount === 2) {
 				toggleMenu();
 				clickCount = 0;
 			}
 		} else clickCount = 1;
-		
+
 		lastClickTime = currentTime;
 	}
 });
@@ -227,60 +208,60 @@ UserInputService.InputEnded.Connect((input, processed) => {
 
 menuToggle.toggled.Connect(() => {
 	if (menuToggle.locked) return;
-	
+
 	toggleMenu();
 });
 
 RunService.RenderStepped.Connect((dt) => {
 	const currentTime = getTime();
-	
+
 	const alpha = dt * 15;
-	
+
 	if (menuOpen.Value) menuGui.AnchorPoint = menuGui.AnchorPoint.Lerp(new Vector2(0, 0.5), alpha);
 	else menuGui.AnchorPoint = menuGui.AnchorPoint.Lerp(new Vector2(1, 0.5), alpha);
-	
+
 	const shouldHideOthers = getSetting(GameSetting.HideOthers);
-	
+
 	for (const otherPlayer of Players.GetPlayers()) {
 		if (otherPlayer === player) continue;
-		
+
 		const cube = Workspace.FindFirstChild(`cube${otherPlayer.UserId}`);
 		if (cube?.IsA('BasePart')) {
-			const cubeTransparency = shouldHideOthers ? 1 : (cube.GetAttribute('transparency') as (number | undefined) ?? 0);
-			
+			const cubeTransparency = shouldHideOthers ? 1 : (cube.GetAttribute('transparency') as number | undefined) ?? 0;
+
 			cube.LocalTransparencyModifier = cubeTransparency;
-			for (const part of [ cube?.FindFirstChild('Arm'), cube.FindFirstChild('Head') ]) {
+			for (const part of [cube?.FindFirstChild('Arm'), cube.FindFirstChild('Head')]) {
 				if (part?.IsA('BasePart')) {
-					const transparency = shouldHideOthers ? 1 : (cube.GetAttribute('hammerTransparency') as (number | undefined) ?? 0);
+					const transparency = shouldHideOthers ? 1 : (cube.GetAttribute('hammerTransparency') as number | undefined) ?? 0;
 					part.LocalTransparencyModifier = transparency;
 				}
 			}
-			
-			const nameDisplay = cube.FindFirstChild('NameDisplay') as (BillboardGui | undefined);
+
+			const nameDisplay = cube.FindFirstChild('NameDisplay') as BillboardGui | undefined;
 			if (nameDisplay) nameDisplay.Enabled = !shouldHideOthers;
 		}
 	}
-	
+
 	if (playerList.size() > 0) {
 		let idx = playerList.findIndex((name) => name === spectatePlayer.Value);
 		if (idx <= 0) {
 			spectatePlayer.Value = playerList[0];
 			idx = 0;
 		}
-		
+
 		spectatePlayer.Value = playerList[idx];
 	}
-	
-	for (const [ name, value ] of pairs(Settings)) {
+
+	for (const [name, value] of pairs(Settings)) {
 		if (previousSettings[name] !== value) {
 			lastChange = currentTime;
 			areSettingsSaved = false;
-			
+
 			previousSettings[name] = value;
 		}
 	}
-	
-	if ((currentTime - lastChange) > 5 && !areSettingsSaved && !settingsGui.Visible) {
+
+	if (currentTime - lastChange > 5 && !areSettingsSaved && !settingsGui.Visible) {
 		$print(`Saved settings: ${HttpService.JSONEncode(Settings)}`);
 		Events.SaveSettingsJSON.FireServer(Settings);
 		areSettingsSaved = true;
@@ -296,23 +277,23 @@ Events.LoadSettingsJSON.OnClientEvent.Connect((settingsJSON: string) => {
 		$warn(`Unable to decode settings JSON | Error: ${err}`);
 		return;
 	}
-	
-	for (const [ name ] of pairs(Settings)) {
+
+	for (const [name] of pairs(Settings)) {
 		if (name in newSettings) setSetting(name, newSettings[name]);
 	}
-	
+
 	previousSettings = table.clone(Settings);
-	
+
 	if (getSetting(GameSetting.Modifiers)) Events.SetModifiersSetting.FireServer(true);
-	
+
 	updateSettingButtons();
-	
+
 	$print(`Loaded settings data: ${settingsJSON}`);
 });
 
 (menuButtons.WaitForChild('Reset') as TextButton).MouseButton1Click.Connect(() => {
 	if (debounces.reset) return;
-	
+
 	menuOpen.Value = false;
 	resetConfirmation.Visible = true;
 });
@@ -325,31 +306,31 @@ Events.LoadSettingsJSON.OnClientEvent.Connect((settingsJSON: string) => {
 (resetConfirmation.WaitForChild('Yes') as TextButton).MouseButton1Click.Connect(() => {
 	canMove.Value = true;
 	resetConfirmation.Visible = false;
-	
+
 	if (debounces.reset) return;
-	
+
 	debounces.reset = true;
-	task.delay(1.5, () => debounces.reset = false);
-	
+	task.delay(1.5, () => (debounces.reset = false));
+
 	resetCharacter();
 });
 
 (resetConfirmation.WaitForChild('FullReset') as TextButton).MouseButton1Click.Connect(() => {
 	canMove.Value = true;
 	resetConfirmation.Visible = false;
-	
+
 	if (debounces.reset) return;
-	
+
 	debounces.reset = true;
-	task.delay(1.5, () => debounces.reset = false);
-	
+	task.delay(1.5, () => (debounces.reset = false));
+
 	resetCharacter(true);
 });
 
 (menuButtons.WaitForChild('Settings') as TextButton).MouseButton1Click.Connect(() => {
 	menuOpen.Value = false;
 	settingsGui.Visible = true;
-	
+
 	updateSettingButtons();
 });
 
@@ -380,7 +361,7 @@ Events.LoadSettingsJSON.OnClientEvent.Connect((settingsJSON: string) => {
 	if (playerIndex >= 0) {
 		playerIndex++;
 		if (playerIndex >= playerList.size()) playerIndex = 0;
-		
+
 		spectatePlayer.Value = playerList[playerIndex];
 	}
 });
@@ -390,14 +371,14 @@ Events.LoadSettingsJSON.OnClientEvent.Connect((settingsJSON: string) => {
 	if (playerIndex >= 0) {
 		playerIndex--;
 		if (playerIndex < 0) playerIndex = playerList.size() - 1;
-		
+
 		spectatePlayer.Value = playerList[playerIndex];
 	}
 });
 
 (menuButtons.WaitForChild('Tutorial') as TextButton).MouseButton1Click.Connect(() => {
 	if (player.GetAttribute(PlayerAttributes.InErrorLand)) return;
-	
+
 	menuOpen.Value = false;
 	tutorialConfirmation.Visible = true;
 });
@@ -409,7 +390,7 @@ Events.LoadSettingsJSON.OnClientEvent.Connect((settingsJSON: string) => {
 
 (tutorialConfirmation.WaitForChild('Yes') as TextButton).MouseButton1Click.Connect(() => {
 	Events.StartClientTutorial.Fire();
-	
+
 	menuOpen.Value = false;
 	tutorialConfirmation.Visible = false;
 });

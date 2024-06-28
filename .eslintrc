@@ -12,12 +12,32 @@
 	],
 	"plugins": [
 		"@typescript-eslint",
-		"roblox-ts"
+		"roblox-ts",
+		"import"
 	],
 	"extends": [
 		"eslint:recommended",
 		"plugin:@typescript-eslint/recommended",
-		"plugin:roblox-ts/recommended"
+		"plugin:roblox-ts/recommended",
+		"plugin:import/errors",
+		"plugin:import/warnings",
+		"prettier",
+		"plugin:array-func/recommend"
 	],
-	"rules": {}
+	"rules": {
+		"array-bracket-spacing": [
+			"error",
+			"always",
+			{
+				"arraysInArrays": true
+			}
+		],
+		"object-curly-spacing": [
+			"error",
+			"always",
+			{
+				"objectsInObjects": true
+			}
+		]
+	}
 }

@@ -36,6 +36,9 @@ importers:
       eslint:
         specifier: ^9.5.0
         version: 9.5.0
+      eslint-plugin-array-func:
+        specifier: ^5.0.1
+        version: 5.0.1(eslint@9.5.0)
       eslint-plugin-roblox-ts:
         specifier: ^0.0.36
         version: 0.0.36(eslint@9.5.0)
@@ -334,6 +337,12 @@ packages:
   escape-string-regexp@4.0.0:
     resolution: {integrity: sha512-TtpcNJ3XAzx3Gq8sWRzJaVajRs0uVxA2YAkdb1jm2YkPz4G6egUFAyA3n5vtEIZefPk5Wa4UXbKuS5fKkJWdgA==}
     engines: {node: '>=10'}
+
+  eslint-plugin-array-func@5.0.1:
+    resolution: {integrity: sha512-bRydL/TorX9B6HMMGzggkTzoaY0dM1iCIdA/SGM8VB2P8+38TH+dqYmDdfLCR5LOdDUHq0XBFgkvVnb7DB61cw==}
+    engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
+    peerDependencies:
+      eslint: '>=8.51.0'
 
   eslint-plugin-roblox-ts@0.0.36:
     resolution: {integrity: sha512-vlbgfHY1heWSyDunVX3gIOamCy28KqrJlDkmuDOyYVBo8uLqdvbFkbWkdGxn59Vky1m6pFcvZGU6TObfmwm5Pg==}
@@ -1128,6 +1137,10 @@ snapshots:
   escalade@3.1.2: {}
 
   escape-string-regexp@4.0.0: {}
+
+  eslint-plugin-array-func@5.0.1(eslint@9.5.0):
+    dependencies:
+      eslint: 9.5.0
 
   eslint-plugin-roblox-ts@0.0.36(eslint@9.5.0):
     dependencies:
