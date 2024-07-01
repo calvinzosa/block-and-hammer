@@ -85,6 +85,8 @@ function playerAdded(player: Player) {
 			}
 			
 			success = true;
+			
+			break;
 		} catch (err) {
 			$warn(err);
 			success = false;

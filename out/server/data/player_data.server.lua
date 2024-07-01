@@ -35,7 +35,7 @@ local function playerAdded(player)
 	local totalDataChunks = 0
 	local data = ""
 	for _ = 1, 5 do
-		TS.try(function()
+		local _exitType, _returns = TS.try(function()
 			errorMessage = nil
 			totalDataChunks = 0
 			data = ""
@@ -64,11 +64,15 @@ local function playerAdded(player)
 				pages:AdvanceToNextPageAsync()
 			end
 			success = true
+			return TS.TRY_BREAK
 		end, function(err)
-			warn("[src/server/data/player_data.server.ts:89]", err)
+			warn("[src/server/data/player_data.server.ts:91]", err)
 			success = false
 			errorMessage = err
 		end)
+		if _exitType then
+			break
+		end
 	end
 	if success then
 		if #data > 0 then
@@ -76,7 +80,7 @@ local function playerAdded(player)
 			TS.try(function()
 				jsonData = HttpService:JSONDecode(data)
 			end, function(err)
-				warn("[src/server/data/player_data.server.ts:101]", err)
+				warn("[src/server/data/player_data.server.ts:103]", err)
 			end)
 			if not jsonData then
 				player:Kick("Your data is most likely corrupted! Please go to the discord server and tell the developer of this message and your username or try rejoining")
@@ -177,12 +181,12 @@ local function playerAdded(player)
 					return cube.Anchored
 				end)
 			end
-			print("[src/server/data/player_data.server.ts:168]", `Loaded data for player {player.Name} ({player.UserId}) | Total Data Chunks: {totalDataChunks}`)
+			print("[src/server/data/player_data.server.ts:170]", `Loaded data for player {player.Name} ({player.UserId}) | Total Data Chunks: {totalDataChunks}`)
 		else
-			print("[src/server/data/player_data.server.ts:169]", `No data was found for player {player.Name} ({player.UserId})`)
+			print("[src/server/data/player_data.server.ts:171]", `No data was found for player {player.Name} ({player.UserId})`)
 		end
 	else
-		warn("[src/server/data/player_data.server.ts:171]", `Unable to load data for player {player.Name}`)
+		warn("[src/server/data/player_data.server.ts:173]", `Unable to load data for player {player.Name}`)
 		player:Kick(`Unable to load data, please try again later | Error Message: {errorMessage}`)
 		return nil
 	end
@@ -264,10 +268,10 @@ local function playerRemoved(player)
 			end
 		end)
 		if success then
-			print("[src/server/data/player_data.server.ts:241]", `Saved data for player {player.Name} ({player.UserId}) succesfully.`)
+			print("[src/server/data/player_data.server.ts:243]", `Saved data for player {player.Name} ({player.UserId}) succesfully.`)
 			break
 		else
-			warn("[src/server/data/player_data.server.ts:243]", `Could not save data for player {player.Name} ({player.UserId})! | Retrying {5 - retryAttempt} more time(s) | Error: {errorMessage}`)
+			warn("[src/server/data/player_data.server.ts:245]", `Could not save data for player {player.Name} ({player.UserId})! | Retrying {5 - retryAttempt} more time(s) | Error: {errorMessage}`)
 		end
 	end
 end
@@ -305,9 +309,9 @@ Events.SaveSettingsJSON.OnServerEvent:Connect(function(player, settingsJSON)
 	end)
 	if success then
 		player:SetAttribute("settings_json", encodedData)
-		print("[src/server/data/player_data.server.ts:279]", `Updated setting data for player {player.Name}`)
+		print("[src/server/data/player_data.server.ts:281]", `Updated setting data for player {player.Name}`)
 	else
-		warn("[src/server/data/player_data.server.ts:280]", `Unable to convert setting data for player {player.Name} into JSON`)
+		warn("[src/server/data/player_data.server.ts:282]", `Unable to convert setting data for player {player.Name} into JSON`)
 	end
 end)
 Events.ForceEquip.Event:Connect(function(player, name)

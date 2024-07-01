@@ -863,10 +863,10 @@ RunService.Heartbeat.Connect((dt) => {
 
 		if (getSetting(GameSetting.OrthographicView)) {
 			wallPlane.Transparency = 0.75;
-
+			
 			zoom *= 64;
-
-			for (const [i, particle] of pairs(cachedParticles)) {
+			
+			for (const [ i, particle ] of pairs(cachedParticles)) {
 				if (!particle.IsDescendantOf(Workspace)) cachedParticles.remove(i - 1);
 
 				if (!particle.Enabled || particle.GetAttribute('__emitDebounce')) continue;
