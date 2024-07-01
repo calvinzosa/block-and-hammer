@@ -902,10 +902,7 @@ RunService.Stepped.Connect((_, dt) => {
 				task.delay(Info.Time + 5, () => {
 					const OuterInfo = new TweenInfo(math.min(relativeVelocity.Magnitude / 30, 10), Enum.EasingStyle.Linear);
 					for (const part of createdParts) {
-						TweenService.Create(part, OuterInfo, {
-							Size: Vector3.zero,
-							Transparency: 1,
-						}).Play();
+						TweenService.Create(part, OuterInfo, { Size: Vector3.zero, Transparency: 1 }).Play();
 						Debris.AddItem(part, OuterInfo.Time);
 					}
 				});
