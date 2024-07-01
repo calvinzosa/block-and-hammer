@@ -25,7 +25,7 @@ for i, line in pairs(string.split(text, "\n")) do
 				word = word .. char
 			end
 			if word == "-" then
-				result ..= "\u2022"
+				result ..= "•"
 			elseif string.sub(word, 1, 1) == "*" and string.sub(string.reverse(word), 1, 1) == "*" then
 				if string.sub(word, 2, 2) == "*" and string.sub(string.reverse(word), 2, 2) == "*" then
 					local _word = word

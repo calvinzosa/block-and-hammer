@@ -760,14 +760,7 @@ function newPart(part: Instance) {
 				
 				Events.MakeReplayEvent.Fire(dataString);
 				
-				playSound(
-					'hit1',
-					{
-						PlaybackSpeed: randomFloat(0.9, 1),
-						Volume: headVelocity.Magnitude / 30,
-					},
-					true,
-				);
+				playSound('hit1', { PlaybackSpeed: randomFloat(0.9, 1), Volume: headVelocity.Magnitude / 30 }, true);
 			}
 			
 			debounce = true;
@@ -851,35 +844,35 @@ RunService.Stepped.Connect((_, dt) => {
 	const previousVelocity = cube.GetAttribute('lastVelocity');
 	if (typeIs(previousVelocity, 'Vector3')) {
 		const relativeVelocity = cube.AssemblyLinearVelocity.sub(previousVelocity).div(cubeScale);
-
-		if (relativeVelocity.Magnitude > 300) {
+		
+		if (relativeVelocity.Magnitude > 360) {
 			Events.GroundImpact.FireServer(relativeVelocity, cube.Position);
-
+			
 			if (getSetting(GameSetting.Effects)) {
 				createDebris(relativeVelocity.mul(3.5), cube.Position, cube, 6);
-
+				
 				const explosion = new Instance('Explosion');
 				explosion.Position = cube.Position;
 				explosion.BlastRadius = 0;
 				explosion.BlastPressure = 0;
 				explosion.Parent = effectsFolder;
-
+				
 				const dataString = string.format(
 					'explosion,%d,%d,,%d',
 					math.round(cube.Position.X * 1000),
 					math.round(cube.Position.Y * 1000),
 					math.round((cube.AssemblyLinearVelocity.Magnitude / 10) * 1000),
 				);
-
+				
 				Events.MakeReplayEvent.Fire(dataString);
-
+				
 				const params = new RaycastParams();
 				params.FilterType = Enum.RaycastFilterType.Include;
 				params.FilterDescendantsInstances = [mapFolder];
-
-				const createdParts: BasePart[] = [];
+				
+				const createdParts: BasePart[] = [  ];
 				const Info = new TweenInfo(0.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out);
-
+				
 				const radius = 10 * (relativeVelocity.Magnitude / 300);
 				const debrisSize = Vector3.one.mul(6 * math.sqrt(radius / 10));
 				const step = (debrisSize.Magnitude / radius) * 35;
@@ -887,7 +880,7 @@ RunService.Stepped.Connect((_, dt) => {
 					const radians = math.rad(angle);
 					const axis = CFrame.fromAxisAngle(relativeVelocity.Unit, radians);
 					const relativePosition = axis.mul(new CFrame(radius, 0, 0)).Position;
-
+					
 					const result = Workspace.Raycast(cube.Position.add(relativePosition), relativeVelocity.mul(-4), params);
 					if (result) {
 						const part = new Instance('Part');
@@ -900,14 +893,12 @@ RunService.Stepped.Connect((_, dt) => {
 						part.TopSurface = Enum.SurfaceType.Smooth;
 						part.BottomSurface = Enum.SurfaceType.Smooth;
 						part.Parent = effectsFolder;
-
-						TweenService.Create(part, Info, {
-							Size: debrisSize,
-						}).Play();
+						
+						TweenService.Create(part, Info, { Size: debrisSize }).Play();
 						createdParts.push(part);
 					}
 				}
-
+				
 				task.delay(Info.Time + 5, () => {
 					const OuterInfo = new TweenInfo(math.min(relativeVelocity.Magnitude / 30, 10), Enum.EasingStyle.Linear);
 					for (const part of createdParts) {
@@ -919,14 +910,14 @@ RunService.Stepped.Connect((_, dt) => {
 					}
 				});
 			}
-
+			
 			Events.ClientRagdoll.Fire(1.4);
 			shakeIntensity.Value = 4;
 			playSound('explosion', {
 				PlaybackSpeed: randomFloat(0.9, 1),
 				Volume: cube.AssemblyLinearVelocity.Magnitude / 10,
 			});
-		} else if (relativeVelocity.Magnitude > 165) {
+		} else if (relativeVelocity.Magnitude > 230) {
 			Events.GroundImpact.FireServer(relativeVelocity, cube.Position);
 
 			if (getSetting(GameSetting.Effects)) {
