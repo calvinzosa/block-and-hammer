@@ -25,7 +25,7 @@ for (const [ i, line ] of pairs(text.split('\n'))) {
             if (char !== ' ') {
                 word = word + char;
             } if (word === '-') {
-                result += '\u2022';
+                result += '•';
             } else if (word.sub(1, 1) === '*' && word.reverse().sub(1, 1) === '*') {
                 if (word.sub(2, 2) === '*' && word.reverse().sub(2, 2) === '*') result += `<b>${word.sub(3, word.size() - 2)}</b>`
                 else result += `<i>${word.sub(2, word.size() - 1)}</i>`
