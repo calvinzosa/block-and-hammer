@@ -1241,6 +1241,7 @@ RunService.Heartbeat:Connect(function(dt)
 		if cubeScale ~= 1 then
 			zoom *= cubeScale
 		end
+		-- zoom *= math.log(1600 / camera.ViewportSize.X) + 1;
 		wallPlane.Transparency = 1
 		if getSetting(GameSetting.OrthographicView) then
 			wallPlane.Transparency = 0.75
@@ -1529,7 +1530,7 @@ winArea.Touched:Connect(function(otherPart)
 	if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
 		player:SetAttribute(PlayerAttributes.CompletedGame, true)
 		local totalTime = getCubeTime(otherPart)
-		print("[src/client/cube.client.ts:1153]", `Completed game in {totalTime} seconds`)
+		print("[src/client/cube.client.ts:1155]", `Completed game in {totalTime} seconds`)
 		Events.CompleteGame:FireServer(totalTime)
 		Events.MakeReplayEvent:Fire(string.format("win,%d", totalTime * 1000))
 	end

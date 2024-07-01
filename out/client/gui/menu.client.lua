@@ -109,6 +109,7 @@ local function resetCharacter(fullReset)
 			_condition_1 = 1
 		end
 		local cubeScale = _condition_1
+		cube:SetAttribute("previousVelocity", Vector3.zero)
 		cube:PivotTo(CFrame.new(0, if cubeScale > 10 then 400 else 14, 0))
 		cube.AssemblyLinearVelocity = Vector3.zero
 		for _, descendant in cube:GetDescendants() do
@@ -328,7 +329,7 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 	end
 	if currentTime - lastChange > 5 and not areSettingsSaved and not settingsGui.Visible then
-		print("[src/client/gui/menu_gui.client.ts:292]", `Saved settings: {HttpService:JSONEncode(Settings)}`)
+		print("[src/client/gui/menu.client.ts:293]", `Saved settings: {HttpService:JSONEncode(Settings)}`)
 		Events.SaveSettingsJSON:FireServer(Settings)
 		areSettingsSaved = true
 	end
@@ -339,7 +340,7 @@ Events.LoadSettingsJSON.OnClientEvent:Connect(function(settingsJSON)
 		local decodedSettings = HttpService:JSONDecode(settingsJSON)
 		newSettings = decodedSettings
 	end, function(err)
-		warn("[src/client/gui/menu_gui.client.ts:304]", `Unable to decode settings JSON | Error: {err}`)
+		warn("[src/client/gui/menu.client.ts:305]", `Unable to decode settings JSON | Error: {err}`)
 		return TS.TRY_RETURN, {}
 	end)
 	if _exitType then
@@ -355,7 +356,7 @@ Events.LoadSettingsJSON.OnClientEvent:Connect(function(settingsJSON)
 		Events.SetModifiersSetting:FireServer(true)
 	end
 	updateSettingButtons()
-	print("[src/client/gui/menu_gui.client.ts:318]", `Loaded settings data: {settingsJSON}`)
+	print("[src/client/gui/menu.client.ts:319]", `Loaded settings data: {settingsJSON}`)
 end);
 (menuButtons:WaitForChild("Reset")).MouseButton1Click:Connect(function()
 	if debounces.reset then

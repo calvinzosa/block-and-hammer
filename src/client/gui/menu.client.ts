@@ -123,6 +123,7 @@ function resetCharacter(fullReset: boolean = false) {
 		
 		const cubeScale = cube.GetAttribute('scale') as (number | undefined) ?? 1;
 		
+		cube.SetAttribute('previousVelocity', Vector3.zero);
 		cube.PivotTo(new CFrame(0, cubeScale > 10 ? 400 : 14, 0));
 		cube.AssemblyLinearVelocity = Vector3.zero;
 		for (const descendant of cube.GetDescendants()) {

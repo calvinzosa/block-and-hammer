@@ -856,9 +856,9 @@ RunService.Heartbeat.Connect((dt) => {
 			else if (currentHammer === Accessories.HammerTexture.GrapplingHammer) zoom = 50;
 			else if (currentHammer === Accessories.HammerTexture.ExplosiveHammer) zoom = 65;
 		}
-
+		
 		if (cubeScale !== 1) zoom *= cubeScale;
-
+		
 		wallPlane.Transparency = 1;
 
 		if (getSetting(GameSetting.OrthographicView)) {

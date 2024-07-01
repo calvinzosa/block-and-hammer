@@ -895,7 +895,7 @@ RunService.Stepped:Connect(function(_, dt)
 	local previousVelocity = cube:GetAttribute("lastVelocity")
 	if typeof(previousVelocity) == "Vector3" then
 		local relativeVelocity = (cube.AssemblyLinearVelocity - previousVelocity) / cubeScale
-		if relativeVelocity.Magnitude > 300 then
+		if relativeVelocity.Magnitude > 360 then
 			Events.GroundImpact:FireServer(relativeVelocity, cube.Position)
 			if getSetting(GameSetting.Effects) then
 				createDebris(relativeVelocity * 3.5, cube.Position, cube, 6)
@@ -956,7 +956,7 @@ RunService.Stepped:Connect(function(_, dt)
 				PlaybackSpeed = randomFloat(0.9, 1),
 				Volume = cube.AssemblyLinearVelocity.Magnitude / 10,
 			})
-		elseif relativeVelocity.Magnitude > 165 then
+		elseif relativeVelocity.Magnitude > 230 then
 			Events.GroundImpact:FireServer(relativeVelocity, cube.Position)
 			if getSetting(GameSetting.Effects) then
 				createDebris(cube.AssemblyLinearVelocity * 3.5, cube.Position, cube, 6)
@@ -987,7 +987,7 @@ RunService.Stepped:Connect(function(_, dt)
 	prevCubePosition = cube.Position
 	cube:SetAttribute("lastVelocity", cube.AssemblyLinearVelocity)
 end)
-print("[src/client/visual_effects.client.ts:971]", "Started running visual_effects.client.ts")
+print("[src/client/visual_effects.client.ts:959]", "Started running visual_effects.client.ts")
 while true do
 	local _value = task.wait(0.05)
 	if not (_value ~= 0 and _value == _value and _value) then
