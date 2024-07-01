@@ -15,7 +15,7 @@ shadow.Visible = true
 mainMenuGui.Parent = GUI
 player:SetAttribute("inMainMenu", true)
 ReplicatedFirst:RemoveDefaultLoadingScreen()
-print("[src/first/asset_preloader.client.ts:36]", "Created loading screen")
+print("[src/first/asset_preloader.client.ts:54]", "Created loading screen")
 task.spawn(function()
 	while true do
 		local success = pcall(function()
@@ -39,5 +39,5 @@ for _, audioId in AssetIds.Audios do
 		end
 	end)
 end
-print("[src/first/asset_preloader.client.ts:58]", "Finished preloading assets")
+print("[src/first/asset_preloader.client.ts:76]", "Finished preloading assets")
 mainMenuGui:SetAttribute("done", true)

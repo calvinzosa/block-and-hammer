@@ -7,6 +7,7 @@ local HttpService = _services.HttpService
 local RunService = _services.RunService
 local Workspace = _services.Workspace
 local Players = _services.Players
+local Icon = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "topbar-plus", "out").Icon
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
 local PlayerAttributes = _utils.PlayerAttributes
 local getSettingAlias = _utils.getSettingAlias
@@ -18,7 +19,7 @@ local getSetting = _utils.getSetting
 local setSetting = _utils.setSetting
 local Settings = _utils.Settings
 local getTime = _utils.getTime
-local Icon = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "topbar-plus", "out").Icon
+local update = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "mobile_buttons").update
 local Events = {
 	SetModifiersSetting = ReplicatedStorage:WaitForChild("SetModifiersSetting"),
 	LoadSettingsJSON = ReplicatedStorage:WaitForChild("LoadSettingsJSON"),
@@ -103,12 +104,27 @@ local function resetCharacter(fullReset)
 	else
 		Events.ClientReset:Fire(false)
 		Events.Reset:FireServer(false)
-		cube:PivotTo(CFrame.new(0, 14, 0))
+		local _condition_1 = cube:GetAttribute("scale")
+		if _condition_1 == nil then
+			_condition_1 = 1
+		end
+		local cubeScale = _condition_1
+		cube:PivotTo(CFrame.new(0, if cubeScale > 10 then 400 else 14, 0))
 		cube.AssemblyLinearVelocity = Vector3.zero
 		for _, descendant in cube:GetDescendants() do
 			if descendant:IsA("BasePart") then
 				descendant.AssemblyLinearVelocity = Vector3.zero
 			end
+		end
+		local arm = cube:FindFirstChild("Arm")
+		local _result_1 = arm
+		if _result_1 ~= nil then
+			_result_1 = _result_1:IsA("BasePart")
+		end
+		if _result_1 then
+			local _cFrame = CFrame.new(cube.Position)
+			local _arg0 = CFrame.fromOrientation(0, 0, math.pi / 2)
+			arm.CFrame = _cFrame * _arg0
 		end
 	end
 	effectsFolder:ClearAllChildren()
@@ -150,6 +166,8 @@ local function updateSettingButtons()
 					Events.SetModifiersSetting:FireServer(getSetting(GameSetting.Modifiers))
 				elseif name == GameSetting.TimerGUI then
 					(screenGui:FindFirstChild("Timer")).Visible = getSetting(GameSetting.TimerGUI)
+				elseif name == GameSetting.InvertMobileButtons then
+					update()
 				end
 				button.Text = `{alias}: {if currentValue then "✅" else "❌"}`
 			end)
@@ -198,7 +216,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	end
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then
 		local currentTime = getTime()
-		if (currentTime - lastClickTime) < clickThreshold then
+		if currentTime - lastClickTime < clickThreshold then
 			clickCount += 1
 			if clickCount == 2 then
 				toggleMenu()
@@ -244,7 +262,7 @@ RunService.RenderStepped:Connect(function(dt)
 			if shouldHideOthers then
 				_result_1 = 1
 			else
-				local _condition = cube:GetAttribute("transparency")
+				local _condition = (cube:GetAttribute("transparency"))
 				if _condition == nil then
 					_condition = 0
 				end
@@ -266,7 +284,7 @@ RunService.RenderStepped:Connect(function(dt)
 					if shouldHideOthers then
 						_result_4 = 1
 					else
-						local _condition = cube:GetAttribute("hammerTransparency")
+						local _condition = (cube:GetAttribute("hammerTransparency"))
 						if _condition == nil then
 							_condition = 0
 						end
@@ -309,8 +327,8 @@ RunService.RenderStepped:Connect(function(dt)
 			previousSettings[name] = value
 		end
 	end
-	if (currentTime - lastChange) > 5 and not areSettingsSaved and not settingsGui.Visible then
-		print("[src/client/gui/menu_gui.client.ts:284]", `Saved settings: {HttpService:JSONEncode(Settings)}`)
+	if currentTime - lastChange > 5 and not areSettingsSaved and not settingsGui.Visible then
+		print("[src/client/gui/menu_gui.client.ts:292]", `Saved settings: {HttpService:JSONEncode(Settings)}`)
 		Events.SaveSettingsJSON:FireServer(Settings)
 		areSettingsSaved = true
 	end
@@ -321,7 +339,7 @@ Events.LoadSettingsJSON.OnClientEvent:Connect(function(settingsJSON)
 		local decodedSettings = HttpService:JSONDecode(settingsJSON)
 		newSettings = decodedSettings
 	end, function(err)
-		warn("[src/client/gui/menu_gui.client.ts:296]", `Unable to decode settings JSON | Error: {err}`)
+		warn("[src/client/gui/menu_gui.client.ts:304]", `Unable to decode settings JSON | Error: {err}`)
 		return TS.TRY_RETURN, {}
 	end)
 	if _exitType then
@@ -337,7 +355,7 @@ Events.LoadSettingsJSON.OnClientEvent:Connect(function(settingsJSON)
 		Events.SetModifiersSetting:FireServer(true)
 	end
 	updateSettingButtons()
-	print("[src/client/gui/menu_gui.client.ts:310]", `Loaded settings data: {settingsJSON}`)
+	print("[src/client/gui/menu_gui.client.ts:318]", `Loaded settings data: {settingsJSON}`)
 end);
 (menuButtons:WaitForChild("Reset")).MouseButton1Click:Connect(function()
 	if debounces.reset then

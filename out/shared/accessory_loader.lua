@@ -10,11 +10,9 @@ local Accessories = _utils.Accessories
 local getCubeAura = _utils.getCubeAura
 local getCubeHat = _utils.getCubeHat
 local giveBadge = _utils.giveBadge
-local _result = ReplicatedStorage:WaitForChild("Modules")
-if _result ~= nil then
-	_result = _result:WaitForChild("Accessories")
-end
-local accessoryList = require(_result)
+local Badge = _utils.Badge
+local accessories = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "accessories").default
+local accessoryList = accessories
 local function emptyFunction()
 	return emptyFunction
 end
@@ -23,17 +21,17 @@ local hammerFunctions = {
 	golden = function(cube, _)
 		local arm = cube:FindFirstChild("Arm")
 		local head = cube:FindFirstChild("Head")
-		local _result_1 = arm
-		if _result_1 ~= nil then
-			_result_1 = _result_1:IsA("BasePart")
+		local _result = arm
+		if _result ~= nil then
+			_result = _result:IsA("BasePart")
 		end
-		local _condition = not _result_1
+		local _condition = not _result
 		if not _condition then
-			local _result_2 = head
-			if _result_2 ~= nil then
-				_result_2 = _result_2:IsA("BasePart")
+			local _result_1 = head
+			if _result_1 ~= nil then
+				_result_1 = _result_1:IsA("BasePart")
 			end
-			_condition = not _result_2
+			_condition = not _result_1
 		end
 		if _condition then
 			return emptyFunction
@@ -55,17 +53,17 @@ local hammerFunctions = {
 	explosive = function(cube, _)
 		local arm = cube:FindFirstChild("Arm")
 		local head = cube:FindFirstChild("Head")
-		local _result_1 = arm
-		if _result_1 ~= nil then
-			_result_1 = _result_1:IsA("BasePart")
+		local _result = arm
+		if _result ~= nil then
+			_result = _result:IsA("BasePart")
 		end
-		local _condition = not _result_1
+		local _condition = not _result
 		if not _condition then
-			local _result_2 = head
-			if _result_2 ~= nil then
-				_result_2 = _result_2:IsA("BasePart")
+			local _result_1 = head
+			if _result_1 ~= nil then
+				_result_1 = _result_1:IsA("BasePart")
 			end
-			_condition = not _result_2
+			_condition = not _result_1
 		end
 		if _condition then
 			return emptyFunction
@@ -87,17 +85,17 @@ local hammerFunctions = {
 	steelhammer = function(cube)
 		local arm = cube:FindFirstChild("Arm")
 		local head = cube:FindFirstChild("Head")
-		local _result_1 = arm
-		if _result_1 ~= nil then
-			_result_1 = _result_1:IsA("BasePart")
+		local _result = arm
+		if _result ~= nil then
+			_result = _result:IsA("BasePart")
 		end
-		local _condition = not _result_1
+		local _condition = not _result
 		if not _condition then
-			local _result_2 = head
-			if _result_2 ~= nil then
-				_result_2 = _result_2:IsA("BasePart")
+			local _result_1 = head
+			if _result_1 ~= nil then
+				_result_1 = _result_1:IsA("BasePart")
 			end
-			_condition = not _result_2
+			_condition = not _result_1
 		end
 		if _condition then
 			return emptyFunction
@@ -119,17 +117,17 @@ local hammerFunctions = {
 	inverterhammer = function(cube)
 		local arm = cube:FindFirstChild("Arm")
 		local head = cube:FindFirstChild("Head")
-		local _result_1 = arm
-		if _result_1 ~= nil then
-			_result_1 = _result_1:IsA("BasePart")
+		local _result = arm
+		if _result ~= nil then
+			_result = _result:IsA("BasePart")
 		end
-		local _condition = not _result_1
+		local _condition = not _result
 		if not _condition then
-			local _result_2 = head
-			if _result_2 ~= nil then
-				_result_2 = _result_2:IsA("BasePart")
+			local _result_1 = head
+			if _result_1 ~= nil then
+				_result_1 = _result_1:IsA("BasePart")
 			end
-			_condition = not _result_2
+			_condition = not _result_1
 		end
 		if _condition then
 			return emptyFunction
@@ -153,17 +151,17 @@ local hammerFunctions = {
 			_connector = _connector:FindFirstChild("ConnectionAttachment")
 		end
 		local connector = _connector
-		local _result_1 = arm
-		if _result_1 ~= nil then
-			_result_1 = _result_1:IsA("BasePart")
+		local _result = arm
+		if _result ~= nil then
+			_result = _result:IsA("BasePart")
 		end
-		local _condition = not _result_1
+		local _condition = not _result
 		if not _condition then
-			local _result_2 = connector
-			if _result_2 ~= nil then
-				_result_2 = _result_2:IsA("Attachment")
+			local _result_1 = connector
+			if _result_1 ~= nil then
+				_result_1 = _result_1:IsA("Attachment")
 			end
-			_condition = not _result_2
+			_condition = not _result_1
 		end
 		if _condition then
 			return emptyFunction
@@ -185,17 +183,17 @@ local hammerFunctions = {
 	ice = function(cube)
 		local arm = cube:FindFirstChild("Arm")
 		local head = cube:FindFirstChild("Head")
-		local _result_1 = arm
-		if _result_1 ~= nil then
-			_result_1 = _result_1:IsA("BasePart")
+		local _result = arm
+		if _result ~= nil then
+			_result = _result:IsA("BasePart")
 		end
-		local _condition = not _result_1
+		local _condition = not _result
 		if not _condition then
-			local _result_2 = head
-			if _result_2 ~= nil then
-				_result_2 = _result_2:IsA("BasePart")
+			local _result_1 = head
+			if _result_1 ~= nil then
+				_result_1 = _result_1:IsA("BasePart")
 			end
-			_condition = not _result_2
+			_condition = not _result_1
 		end
 		if _condition then
 			return emptyFunction
@@ -220,17 +218,17 @@ local hammerFunctions = {
 	_God = function(cube)
 		local arm = cube:FindFirstChild("Arm")
 		local head = cube:FindFirstChild("Head")
-		local _result_1 = arm
-		if _result_1 ~= nil then
-			_result_1 = _result_1:IsA("BasePart")
+		local _result = arm
+		if _result ~= nil then
+			_result = _result:IsA("BasePart")
 		end
-		local _condition = not _result_1
+		local _condition = not _result
 		if not _condition then
-			local _result_2 = head
-			if _result_2 ~= nil then
-				_result_2 = _result_2:IsA("BasePart")
+			local _result_1 = head
+			if _result_1 ~= nil then
+				_result_1 = _result_1:IsA("BasePart")
 			end
-			_condition = not _result_2
+			_condition = not _result_1
 		end
 		if _condition then
 			return emptyFunction
@@ -239,14 +237,14 @@ local hammerFunctions = {
 		arm.Material = Enum.Material.Neon
 		head.Color = Color3.fromRGB(255, 255, 255)
 		head.Material = Enum.Material.Neon
-		local _result_2 = ReplicatedStorage:FindFirstChild("Particles")
-		if _result_2 ~= nil then
-			_result_2 = _result_2:FindFirstChild("Lighting")
-			if _result_2 ~= nil then
-				_result_2 = _result_2:Clone()
+		local _result_1 = ReplicatedStorage:FindFirstChild("Particles")
+		if _result_1 ~= nil then
+			_result_1 = _result_1:FindFirstChild("Lighting")
+			if _result_1 ~= nil then
+				_result_1 = _result_1:Clone()
 			end
 		end
-		local particles = _result_2
+		local particles = _result_1
 		particles.Parent = arm
 		return function()
 			arm.BrickColor = BrickColor.new("Brown")
@@ -259,17 +257,17 @@ local hammerFunctions = {
 	_realgold = function(cube)
 		local arm = cube:FindFirstChild("Arm")
 		local head = cube:FindFirstChild("Head")
-		local _result_1 = arm
-		if _result_1 ~= nil then
-			_result_1 = _result_1:IsA("BasePart")
+		local _result = arm
+		if _result ~= nil then
+			_result = _result:IsA("BasePart")
 		end
-		local _condition = not _result_1
+		local _condition = not _result
 		if not _condition then
-			local _result_2 = head
-			if _result_2 ~= nil then
-				_result_2 = _result_2:IsA("BasePart")
+			local _result_1 = head
+			if _result_1 ~= nil then
+				_result_1 = _result_1:IsA("BasePart")
 			end
-			_condition = not _result_2
+			_condition = not _result_1
 		end
 		if _condition then
 			return emptyFunction
@@ -293,23 +291,23 @@ local hammerFunctions = {
 			_connector = _connector:FindFirstChild("ConnectionAttachment")
 		end
 		local connector = _connector
-		local _result_1 = arm
-		if _result_1 ~= nil then
-			_result_1 = _result_1:IsA("BasePart")
+		local _result = arm
+		if _result ~= nil then
+			_result = _result:IsA("BasePart")
 		end
-		local _condition = not _result_1
+		local _condition = not _result
 		if not _condition then
-			local _result_2 = head
-			if _result_2 ~= nil then
-				_result_2 = _result_2:IsA("BasePart")
+			local _result_1 = head
+			if _result_1 ~= nil then
+				_result_1 = _result_1:IsA("BasePart")
 			end
-			_condition = not _result_2
+			_condition = not _result_1
 			if not _condition then
-				local _result_3 = connector
-				if _result_3 ~= nil then
-					_result_3 = _result_3:IsA("Attachment")
+				local _result_2 = connector
+				if _result_2 ~= nil then
+					_result_2 = _result_2:IsA("Attachment")
 				end
-				_condition = not _result_3
+				_condition = not _result_2
 			end
 		end
 		if _condition then
@@ -337,17 +335,17 @@ local hammerFunctions = {
 	_platform = function(cube)
 		local arm = cube:FindFirstChild("Arm")
 		local head = cube:FindFirstChild("Head")
-		local _result_1 = arm
-		if _result_1 ~= nil then
-			_result_1 = _result_1:IsA("BasePart")
+		local _result = arm
+		if _result ~= nil then
+			_result = _result:IsA("BasePart")
 		end
-		local _condition = not _result_1
+		local _condition = not _result
 		if not _condition then
-			local _result_2 = head
-			if _result_2 ~= nil then
-				_result_2 = _result_2:IsA("BasePart")
+			local _result_1 = head
+			if _result_1 ~= nil then
+				_result_1 = _result_1:IsA("BasePart")
 			end
-			_condition = not _result_2
+			_condition = not _result_1
 		end
 		if _condition then
 			return emptyFunction
@@ -378,17 +376,17 @@ local hammerFunctions = {
 	_build = function(cube)
 		local arm = cube:FindFirstChild("Arm")
 		local head = cube:FindFirstChild("Head")
-		local _result_1 = arm
-		if _result_1 ~= nil then
-			_result_1 = _result_1:IsA("BasePart")
+		local _result = arm
+		if _result ~= nil then
+			_result = _result:IsA("BasePart")
 		end
-		local _condition = not _result_1
+		local _condition = not _result
 		if not _condition then
-			local _result_2 = head
-			if _result_2 ~= nil then
-				_result_2 = _result_2:IsA("BasePart")
+			local _result_1 = head
+			if _result_1 ~= nil then
+				_result_1 = _result_1:IsA("BasePart")
 			end
-			_condition = not _result_2
+			_condition = not _result_1
 		end
 		if _condition then
 			return emptyFunction
@@ -406,17 +404,17 @@ local hammerFunctions = {
 	_grapple = function(cube)
 		local arm = cube:FindFirstChild("Arm")
 		local head = cube:FindFirstChild("Head")
-		local _result_1 = arm
-		if _result_1 ~= nil then
-			_result_1 = _result_1:IsA("BasePart")
+		local _result = arm
+		if _result ~= nil then
+			_result = _result:IsA("BasePart")
 		end
-		local _condition = not _result_1
+		local _condition = not _result
 		if not _condition then
-			local _result_2 = head
-			if _result_2 ~= nil then
-				_result_2 = _result_2:IsA("BasePart")
+			local _result_1 = head
+			if _result_1 ~= nil then
+				_result_1 = _result_1:IsA("BasePart")
 			end
-			_condition = not _result_2
+			_condition = not _result_1
 		end
 		if _condition then
 			return emptyFunction
@@ -435,17 +433,17 @@ local hammerFunctions = {
 	_shotgun = function(cube, player)
 		local arm = cube:FindFirstChild("Arm")
 		local head = cube:FindFirstChild("Head")
-		local _result_1 = arm
-		if _result_1 ~= nil then
-			_result_1 = _result_1:IsA("BasePart")
+		local _result = arm
+		if _result ~= nil then
+			_result = _result:IsA("BasePart")
 		end
-		local _condition = not _result_1
+		local _condition = not _result
 		if not _condition then
-			local _result_2 = head
-			if _result_2 ~= nil then
-				_result_2 = _result_2:IsA("BasePart")
+			local _result_1 = head
+			if _result_1 ~= nil then
+				_result_1 = _result_1:IsA("BasePart")
 			end
-			_condition = not _result_2
+			_condition = not _result_1
 		end
 		if _condition then
 			return emptyFunction
@@ -455,11 +453,11 @@ local hammerFunctions = {
 		head.CanCollide = false
 		head.Transparency = 1
 		trail.Enabled = false
-		local _result_2 = ReplicatedStorage:FindFirstChild("Shotgun")
-		if _result_2 ~= nil then
-			_result_2 = _result_2:Clone()
+		local _result_1 = ReplicatedStorage:FindFirstChild("Shotgun")
+		if _result_1 ~= nil then
+			_result_1 = _result_1:Clone()
 		end
-		local shotgun = _result_2
+		local shotgun = _result_1
 		shotgun.Parent = cube
 		if RunService:IsServer() then
 			for _, part in shotgun:GetDescendants() do
@@ -484,17 +482,17 @@ local hammerFunctions = {
 	_spring = function(cube)
 		local arm = cube:FindFirstChild("Arm")
 		local head = cube:FindFirstChild("Head")
-		local _result_1 = arm
-		if _result_1 ~= nil then
-			_result_1 = _result_1:IsA("BasePart")
+		local _result = arm
+		if _result ~= nil then
+			_result = _result:IsA("BasePart")
 		end
-		local _condition = not _result_1
+		local _condition = not _result
 		if not _condition then
-			local _result_2 = head
-			if _result_2 ~= nil then
-				_result_2 = _result_2:IsA("BasePart")
+			local _result_1 = head
+			if _result_1 ~= nil then
+				_result_1 = _result_1:IsA("BasePart")
 			end
-			_condition = not _result_2
+			_condition = not _result_1
 		end
 		if _condition then
 			return emptyFunction
@@ -506,7 +504,7 @@ local hammerFunctions = {
 		attachment.Parent = arm
 		local spring = Instance.new("SpringConstraint")
 		spring.Attachment0 = attachment
-		spring.Attachment1 = head:FindFirstChild("ConnectionAttachment") or attachment
+		spring.Attachment1 = (head:FindFirstChild("ConnectionAttachment")) or attachment
 		spring.MaxForce = 0
 		spring.Visible = true
 		spring.Color = BrickColor.new("Bright blue")
@@ -522,17 +520,17 @@ local hammerFunctions = {
 	_hitbox = function(cube)
 		local arm = cube:FindFirstChild("Arm")
 		local head = cube:FindFirstChild("Head")
-		local _result_1 = arm
-		if _result_1 ~= nil then
-			_result_1 = _result_1:IsA("BasePart")
+		local _result = arm
+		if _result ~= nil then
+			_result = _result:IsA("BasePart")
 		end
-		local _condition = not _result_1
+		local _condition = not _result
 		if not _condition then
-			local _result_2 = head
-			if _result_2 ~= nil then
-				_result_2 = _result_2:IsA("BasePart")
+			local _result_1 = head
+			if _result_1 ~= nil then
+				_result_1 = _result_1:IsA("BasePart")
 			end
-			_condition = not _result_2
+			_condition = not _result_1
 		end
 		if _condition then
 			return emptyFunction
@@ -577,11 +575,11 @@ local function loadAccessories(cube, data, player, hammerRemoveFunction)
 	local aura = _binding.aura
 	if type(face) == "string" then
 		local accessoryData = accessoryList[face]
-		local _result_1 = accessoryData
-		if _result_1 ~= nil then
-			_result_1 = _result_1.data
+		local _result = accessoryData
+		if _result ~= nil then
+			_result = _result.data
 		end
-		if type(_result_1) == "string" then
+		if type(_result) == "string" then
 			local faceDecal = cube:FindFirstChild("Face")
 			faceDecal.Texture = accessoryData.data
 		end
@@ -589,11 +587,11 @@ local function loadAccessories(cube, data, player, hammerRemoveFunction)
 	local clonedHat = cube:FindFirstChild("CLONED_HAT")
 	if clonedHat then
 		clonedHat:Destroy()
-		local _result_1 = cube:FindFirstChild("HatAccessory")
-		if _result_1 ~= nil then
-			_result_1 = _result_1:FindFirstChild("AccessoryWelder")
+		local _result = cube:FindFirstChild("HatAccessory")
+		if _result ~= nil then
+			_result = _result:FindFirstChild("AccessoryWelder")
 		end
-		local accessoryWelder = _result_1
+		local accessoryWelder = _result
 		if accessoryWelder then
 			accessoryWelder.Attachment1 = nil
 		end
@@ -604,9 +602,9 @@ local function loadAccessories(cube, data, player, hammerRemoveFunction)
 			local data = accessoryData.data
 			local hatPart = cube:FindFirstChild("HatAccessory")
 			hatPart.Transparency = 1
-			local _result_1 = hatPart:FindFirstChild("Mesh")
-			if _result_1 ~= nil then
-				_result_1:Destroy()
+			local _result = hatPart:FindFirstChild("Mesh")
+			if _result ~= nil then
+				_result:Destroy()
 			end
 			if typeof(data) == "Instance" then
 				if data:IsA("BasePart") then
@@ -646,11 +644,11 @@ local function loadAccessories(cube, data, player, hammerRemoveFunction)
 						hatPart.Color = data.Color
 						hatPart.Material = data.Material
 						if hat == "Free Accessory" and RunService:IsServer() then
-							local _result_2 = data:FindFirstChild("SurfaceGui")
-							if _result_2 ~= nil then
-								_result_2 = _result_2:Clone()
+							local _result_1 = data:FindFirstChild("SurfaceGui")
+							if _result_1 ~= nil then
+								_result_1 = _result_1:Clone()
 							end
-							local surfaceGui = _result_2
+							local surfaceGui = _result_1
 							surfaceGui.Parent = hatPart
 							local clickDetector = Instance.new("ClickDetector")
 							clickDetector.MaxActivationDistance = math.huge
@@ -663,20 +661,20 @@ local function loadAccessories(cube, data, player, hammerRemoveFunction)
 									local _callback = function(userId)
 										return userId == otherPlayer.UserId
 									end
-									local _result_3
+									local _result_2
 									for _i, _v in debounce do
 										if _callback(_v, _i - 1, debounce) == true then
-											_result_3 = _v
+											_result_2 = _v
 											break
 										end
 									end
 									-- ▲ ReadonlyArray.find ▲
-									_condition = _result_3
+									_condition = _result_2
 								end
 								if _condition ~= 0 and _condition == _condition and _condition then
 									return nil
 								end
-								giveBadge(otherPlayer, 2146357550)
+								giveBadge(otherPlayer, Badge.FreeAccessory)
 								local userId = otherPlayer.UserId
 								table.insert(debounce, userId)
 								task.delay(1, function()
@@ -684,15 +682,15 @@ local function loadAccessories(cube, data, player, hammerRemoveFunction)
 									local _callback = function(otherUserId)
 										return otherUserId == userId
 									end
-									local _result_3 = -1
+									local _result_2 = -1
 									for _i, _v in debounce do
 										if _callback(_v, _i - 1, debounce) == true then
-											_result_3 = _i - 1
+											_result_2 = _i - 1
 											break
 										end
 									end
 									-- ▲ ReadonlyArray.findIndex ▲
-									local i = _result_3
+									local i = _result_2
 									if i >= 0 then
 										table.remove(debounce, i + 1)
 									end
@@ -763,7 +761,7 @@ local function reloadAccessories(cube, b, hatAccessory, auraAccessory, hammerAcc
 		_condition = b:IsA("Player")
 	end
 	if _condition then
-		cubeColor = b:GetAttribute("CUBE_COLOR") or computeNameColor(b.Name)
+		cubeColor = (b:GetAttribute("CUBE_COLOR")) or computeNameColor(b.Name)
 		hatAccessory = getCubeHat(b)
 		auraAccessory = getCubeAura(b)
 		hammerAccessory = getHammerTexture(b)
@@ -775,11 +773,11 @@ local function reloadAccessories(cube, b, hatAccessory, auraAccessory, hammerAcc
 	TS.try(function()
 		local _condition_1 = hatAccessory == Accessories.CubeHat.InstantGyro
 		if _condition_1 then
-			local _result_1 = hat
-			if _result_1 ~= nil then
-				_result_1 = _result_1:IsA("BasePart")
+			local _result = hat
+			if _result ~= nil then
+				_result = _result:IsA("BasePart")
 			end
-			_condition_1 = _result_1
+			_condition_1 = _result
 		end
 		if _condition_1 then
 			hat.Color = Color3.new(1 - cubeColor.R, 1 - cubeColor.G, 1 - cubeColor.B)
@@ -787,11 +785,11 @@ local function reloadAccessories(cube, b, hatAccessory, auraAccessory, hammerAcc
 	end, function(err) end)
 	TS.try(function()
 		if auraAccessory == Accessories.CubeAura.Glow and aura then
-			local _result_1 = aura:FindFirstChild("Glow")
-			if _result_1 ~= nil then
-				_result_1 = _result_1:FindFirstChild("Glow")
+			local _result = aura:FindFirstChild("Glow")
+			if _result ~= nil then
+				_result = _result:FindFirstChild("Glow")
 			end
-			_result_1.Color = ColorSequence.new(cubeColor)
+			_result.Color = ColorSequence.new(cubeColor)
 		end
 	end, function(err) end)
 	TS.try(function()
@@ -800,7 +798,7 @@ local function reloadAccessories(cube, b, hatAccessory, auraAccessory, hammerAcc
 			(cube:FindFirstChild("CubeOutline")).Color3 = cubeColor
 		end
 	end, function(err) end)
-	print("[src/shared/accessory_loader.ts:543]", `Updated accessories for {cube.Name}`)
+	print("[src/shared/accessory_loader.ts:571]", `Updated accessories for {cube.Name}`)
 end
 return {
 	loadAccessories = loadAccessories,

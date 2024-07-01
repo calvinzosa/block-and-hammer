@@ -1,33 +1,61 @@
 import { DataStoreService, ReplicatedStorage, RunService } from '@rbxts/services';
 
-import { computeNameColor, getHammerTexture, Accessories, getCubeAura, getCubeHat, giveBadge } from './utils';
+import { computeNameColor, getHammerTexture, Accessories, getCubeAura, getCubeHat, giveBadge, Badge } from './utils';
 
-import { $print, $warn } from 'rbxts-transform-debug';
+import { $print } from 'rbxts-transform-debug';
 
-export type AccessoryData = {
-	acc_type: Accessories.Type;
-	icon: string;
-	badge_id: number;
-	badge_name: string;
-	always_show: boolean;
-	data: string | number | Instance;
-	description: string;
-	modifier: boolean;
-	never?: boolean;
+import accessories from './accessories';
 
+export type BaseAccessoryData = {
+	acc_type: Accessories.Type,
+	icon: string,
+	badge_id: number,
+	badge_name: string,
+	always_show: boolean,
+	data: unknown,
+	modifier: boolean,
+	description?: string,
+	never?: boolean,
+	
 	spritesheet_data?: {
-		tileWidth: number;
-		tileHeight: number;
-		rows: number;
-		columns: number;
-		loopDelay: number;
-		fps: number;
-	};
-
-	copy_cube_color?: boolean;
+		tileWidth: number,
+		tileHeight: number,
+		rows: number,
+		columns: number,
+		loopDelay: number,
+		fps: number,
+	},
+	
+	copy_cube_color?: boolean,
 };
 
-export const accessoryList = require(ReplicatedStorage.WaitForChild('Modules')?.WaitForChild('Accessories') as ModuleScript) as Record<string, AccessoryData>;
+export type FaceAccessory = {
+	acc_type: 'cube_Face',
+	data: string,
+} & BaseAccessoryData;
+
+export type HatAccessory = {
+	acc_type: 'cube_Hat',
+	data: BasePart | 0,
+} & BaseAccessoryData;
+
+export type AuraAccessory = {
+	acc_type: 'cube_Aura',
+	data: Attachment | 0,
+} & BaseAccessoryData;
+
+export type HammerAccessory = {
+	acc_type: 'hammer_Texture',
+	data: string | 0,
+} & BaseAccessoryData;
+
+export type AccessoryData =
+	| FaceAccessory
+	| HatAccessory
+	| AuraAccessory
+	| HammerAccessory;
+
+export const accessoryList = accessories;
 
 function emptyFunction() {
 	return emptyFunction;
@@ -391,23 +419,23 @@ export function loadAccessories(
 			faceDecal.Texture = accessoryData.data;
 		}
 	}
-
+	
 	const clonedHat = cube.FindFirstChild('CLONED_HAT');
 	if (clonedHat) {
 		clonedHat.Destroy();
 		const accessoryWelder = cube.FindFirstChild('HatAccessory')?.FindFirstChild('AccessoryWelder') as RigidConstraint;
 		if (accessoryWelder) accessoryWelder.Attachment1 = undefined;
 	}
-
+	
 	if (typeIs(hat, 'string')) {
 		const accessoryData = accessoryList[hat];
 		if (accessoryData) {
 			const data = accessoryData.data;
-
+			
 			const hatPart = cube.FindFirstChild('HatAccessory') as BasePart;
 			hatPart.Transparency = 1;
 			hatPart.FindFirstChild('Mesh')?.Destroy();
-
+			
 			if (typeIs(data, 'Instance')) {
 				if (data.IsA('BasePart')) {
 					if (data.GetAttribute('weldToCube')) {
@@ -415,47 +443,47 @@ export function loadAccessories(
 						clone.PivotTo(cube.CFrame);
 						clone.Name = 'CLONED_HAT';
 						clone.Parent = cube;
-
+						
 						if (RunService.IsServer() && player) {
 							task.delay(0.5, () => {
 								while (task.wait()) {
 									const [canSet] = clone.CanSetNetworkOwnership();
 									if (canSet) break;
 								}
-
+								
 								clone.SetNetworkOwner(player);
 								for (const descendant of clone.GetDescendants()) {
 									if (descendant.IsA('BasePart')) descendant.SetNetworkOwner(player);
 								}
 							});
 						}
-
+						
 						const accessoryWelder = hatPart.FindFirstChild('AccessoryWelder') as RigidConstraint;
 						accessoryWelder.Attachment1 = clone.FindFirstChild('HatWeld') as Attachment;
 					} else {
 						const hatAttachment = hatPart.FindFirstChild('Attachment') as Attachment;
 						hatAttachment.CFrame = (data.FindFirstChild('HatAttachment') as Attachment).CFrame;
-
+						
 						hatPart.Transparency = 0;
 						hatPart.Size = data.Size;
 						hatPart.Color = data.Color;
 						hatPart.Material = data.Material;
-
+						
 						if (hat === 'Free Accessory' && RunService.IsServer()) {
 							const surfaceGui = data.FindFirstChild('SurfaceGui')?.Clone() as SurfaceGui;
 							surfaceGui.Parent = hatPart;
-
+							
 							const clickDetector = new Instance('ClickDetector');
 							clickDetector.MaxActivationDistance = math.huge;
 							clickDetector.Parent = hatPart;
-
+							
 							const debounce: number[] = [];
-
+							
 							clickDetector.MouseClick.Connect((otherPlayer) => {
 								if (otherPlayer === player || debounce.find((userId) => userId === otherPlayer.UserId)) return;
-
-								giveBadge(otherPlayer, 2146357550);
-
+								
+								giveBadge(otherPlayer, Badge.FreeAccessory);
+								
 								const userId = otherPlayer.UserId;
 								debounce.push(userId);
 								task.delay(1, () => {
@@ -464,7 +492,7 @@ export function loadAccessories(
 								});
 							});
 						}
-
+						
 						const mesh = data.FindFirstChild('Mesh') as SpecialMesh | undefined;
 						if (mesh) mesh.Clone().Parent = hatPart;
 					}

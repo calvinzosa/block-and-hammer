@@ -2,7 +2,7 @@ import { ReplicatedStorage, TeleportService, TweenService, RunService, Workspace
 
 import { startsWith } from '@rbxts/string-utils';
 
-import { isTestingServer, getPlayerRank, giveBadge, numLerp } from 'shared/utils';
+import { isTestingServer, getPlayerRank, giveBadge, numLerp, Badge } from 'shared/utils';
 
 import { accessoryList } from 'shared/accessory_loader';
 
@@ -77,7 +77,7 @@ const Commands: Record<string, Command> = {
 
 			for (const target of targets) {
 				Events.FlipGravity.FireClient(target);
-				giveBadge(target, 2146247056);
+				giveBadge(target, Badge.Flipped);
 			}
 		},
 	},
@@ -196,30 +196,6 @@ const Commands: Record<string, Command> = {
 						cube.Parent = Workspace;
 					});
 				}
-			}
-		},
-	},
-	error: {
-		rank: 2,
-		parameters: ['players'],
-		callback: (sender: Player, a) => {
-			const targets = a as Player[];
-
-			for (const player of targets) {
-				if (player.GetAttribute('ERROR_LAND')) {
-					continue;
-				}
-
-				task.spawn(() => {
-					const cube = Workspace.FindFirstChild(`cube${player.UserId}`) as BasePart;
-					if (cube) {
-						cube.Destroy();
-						player.SetAttribute('ERROR_LAND', true);
-						Events.StartErrorEvent.FireClient(player);
-
-						giveBadge(player, 2146357550);
-					}
-				});
 			}
 		},
 	},

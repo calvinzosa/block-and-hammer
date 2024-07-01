@@ -9,16 +9,17 @@ local Players = _services.Players
 local Chat = _services.Chat
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
 local convertStudsToMeters = _utils.convertStudsToMeters
-local PlayerAttributes = _utils.PlayerAttributes
 local computeNameColor = _utils.computeNameColor
+local getHammerTexture = _utils.getHammerTexture
+local PlayerAttributes = _utils.PlayerAttributes
+local getTimeUnits = _utils.getTimeUnits
 local Accessories = _utils.Accessories
 local giveBadge = _utils.giveBadge
 local getTime = _utils.getTime
-local getTimeUnits = _utils.getTimeUnits
-local getHammerTexture = _utils.getHammerTexture
+local Badge = _utils.Badge
 local reloadAccessories = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "accessory_loader").reloadAccessories
 local startsWith = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "string-utils").startsWith
-local Admins = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "admins").Admins
+local admins = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "admins").default
 local Events = {
 	SayMessageRequest = ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents"):WaitForChild("SayMessageRequest"),
 	SetModifiersSetting = ReplicatedStorage:FindFirstChild("SetModifiersSetting"),
@@ -30,6 +31,7 @@ local Events = {
 	CompleteGame = ReplicatedStorage:FindFirstChild("CompleteGame"),
 	GroundImpact = ReplicatedStorage:FindFirstChild("GroundImpact"),
 	FlipGravity = ReplicatedStorage:FindFirstChild("FlipGravity"),
+	SetColor = ReplicatedStorage:FindFirstChild("SetColor"),
 	Reset = ReplicatedStorage:FindFirstChild("Reset"),
 	LoadPlayerAccessories = ReplicatedStorage:FindFirstChild("LoadPlayerAccessories"),
 	UpdatePlayerTime = ReplicatedStorage:FindFirstChild("UpdatePlayerTime"),
@@ -74,8 +76,8 @@ local function createCube(player, firstTime)
 		return userId == player.UserId
 	end
 	local _result_1
-	for _i, _v in Admins do
-		if _callback(_v, _i - 1, Admins) == true then
+	for _i, _v in admins do
+		if _callback(_v, _i - 1, admins) == true then
 			_result_1 = _v
 			break
 		end
@@ -110,7 +112,7 @@ local function createCube(player, firstTime)
 	end)
 	cube.Touched:Connect(function(otherPart)
 		if otherPart == trappedArea then
-			giveBadge(player, 2146259996)
+			giveBadge(player, Badge.Trapped)
 		end
 	end)
 	if not firstTime then
@@ -144,11 +146,12 @@ local function characterAdded(character)
 end
 local function playerAdded(player)
 	task.spawn(function()
-		if not BadgeService:UserHasBadgeAsync(player.UserId, 1967915839777317) then
-			giveBadge(player, 1967915839777317)
+		if not BadgeService:UserHasBadgeAsync(player.UserId, Badge.Welcome) then
+			giveBadge(player, Badge.Welcome)
 			player:SetAttribute(PlayerAttributes.IsNew, true)
 		end
-		giveBadge(player, 4410861265533965)
+		giveBadge(player, Badge.Visits35k)
+		giveBadge(player, Badge.Visits1k)
 	end)
 	createCube(player, true)
 	if player.Character then
@@ -189,7 +192,7 @@ local function resetPlayer(player, fullReset)
 	end
 	local _fn = player
 	local _exp = PlayerAttributes.TotalRestarts
-	local _condition_1 = player:GetAttribute(PlayerAttributes.TotalRestarts)
+	local _condition_1 = (player:GetAttribute(PlayerAttributes.TotalRestarts))
 	if _condition_1 == nil then
 		_condition_1 = 0
 	end
@@ -232,7 +235,7 @@ end)
 Events.AddRagdollCount.OnServerEvent:Connect(function(player)
 	local _fn = player
 	local _exp = PlayerAttributes.TotalRagdolls
-	local _condition = player:GetAttribute(PlayerAttributes.TotalRagdolls)
+	local _condition = (player:GetAttribute(PlayerAttributes.TotalRagdolls))
 	if _condition == nil then
 		_condition = 0
 	end
@@ -248,7 +251,7 @@ Events.GroundImpact.OnServerEvent:Connect(function(player, velocity, position)
 	if _condition then
 		return nil
 	end
-	local _condition_1 = player:GetAttribute(PlayerAttributes.Impacts)
+	local _condition_1 = (player:GetAttribute(PlayerAttributes.Impacts))
 	if _condition_1 == nil then
 		_condition_1 = 0
 	end
@@ -261,24 +264,29 @@ Events.GroundImpact.OnServerEvent:Connect(function(player, velocity, position)
 	end
 	if _condition_2 then
 		player:SetAttribute(PlayerAttributes.HasExplosiveBadge, true)
-		giveBadge(player, 2146508969)
+		task.delay(30, function()
+			if player.Parent == Players then
+				player:SetAttribute(PlayerAttributes.HasExplosiveBadge, nil)
+			end
+		end)
+		giveBadge(player, Badge.Explosive)
 	end
 	if velocity.Y > 892.857 then
-		giveBadge(player, 4279006041653694)
+		giveBadge(player, Badge.METEOR)
 	elseif velocity.Y > 357.142 then
 		local _value = player:GetAttribute("didShatter")
 		if _value ~= 0 and _value == _value and _value ~= "" and _value then
-			giveBadge(player, 2512066188170235)
+			giveBadge(player, Badge.FreezingMisfortune)
 		else
 			local params = OverlapParams.new()
 			params.FilterDescendantsInstances = { targetCenter }
 			params.FilterType = Enum.RaycastFilterType.Include
 			if #Workspace:GetPartBoundsInBox(CFrame.new(position), Vector3.new(4, 4, 4), params) > 0 then
-				giveBadge(player, 2479031288528448)
+				giveBadge(player, Badge.LongShot)
 			end
 		end
 	else
-		giveBadge(player, 2146180612)
+		giveBadge(player, Badge.CrashLanding)
 	end
 end)
 Events.CompleteGame.OnServerEvent:Connect(function(player, givenTime)
@@ -298,7 +306,7 @@ Events.CompleteGame.OnServerEvent:Connect(function(player, givenTime)
 	local totalTime = math.min(givenTime, 3599.999)
 	cube:SetAttribute("finishTotalTime", totalTime)
 	player:SetAttribute("finished", true)
-	local hours, minutes, seconds, milliseconds = getTimeUnits(totalTime * 1000)
+	local _, minutes, seconds, milliseconds = getTimeUnits(totalTime * 1000)
 	local formattedTime = string.format("%02d:%02d.%03d", minutes, seconds, milliseconds)
 	local _value = cube:GetAttribute("used_modifiers")
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
@@ -306,7 +314,7 @@ Events.CompleteGame.OnServerEvent:Connect(function(player, givenTime)
 		Events.UpdatePlayerTime:Fire(player.UserId, totalTime, 1)
 		local _fn = player
 		local _exp = PlayerAttributes.TotalModdedWins
-		local _condition_1 = player:GetAttribute(PlayerAttributes.TotalModdedWins)
+		local _condition_1 = (player:GetAttribute(PlayerAttributes.TotalModdedWins))
 		if _condition_1 == nil then
 			_condition_1 = 0
 		end
@@ -316,22 +324,22 @@ Events.CompleteGame.OnServerEvent:Connect(function(player, givenTime)
 		Events.UpdatePlayerTime:Fire(player.UserId, totalTime, 0)
 		local _fn = player
 		local _exp = PlayerAttributes.TotalWins
-		local _condition_1 = player:GetAttribute(PlayerAttributes.TotalWins)
+		local _condition_1 = (player:GetAttribute(PlayerAttributes.TotalWins))
 		if _condition_1 == nil then
 			_condition_1 = 0
 		end
 		_fn:SetAttribute(_exp, _condition_1 + 1)
 	end
-	giveBadge(player, 2146411244)
+	giveBadge(player, Badge.ProfessionalClimber)
 	if cube:GetAttribute("destroyed_counter") == 0 then
 		Events.SaySystemMessage:FireClient(player, `nice! you completed a pacifist run in: {formattedTime}`)
-		giveBadge(player, 2146295992)
+		giveBadge(player, Badge.Pacifist)
 	else
 		Events.SaySystemMessage:FireClient(player, `nice! you completed a normal run in: {formattedTime}`)
 	end
 	cube:SetAttribute("start_time", getTime() - totalTime)
 	if totalTime < 210 then
-		giveBadge(player, 2146538368)
+		giveBadge(player, Badge.Speedrunner)
 	end
 end)
 Events.DestroyedPart.OnServerEvent:Connect(function(player, otherPart)
@@ -356,7 +364,7 @@ Events.DestroyedPart.OnServerEvent:Connect(function(player, otherPart)
 			end
 		end)
 	end
-	local _condition_1 = cube:GetAttribute("destroyed_counter")
+	local _condition_1 = (cube:GetAttribute("destroyed_counter"))
 	if _condition_1 == nil then
 		_condition_1 = 0
 	end
@@ -364,6 +372,21 @@ Events.DestroyedPart.OnServerEvent:Connect(function(player, otherPart)
 	cube:SetAttribute("destroyed_counter", count)
 	if otherPart.Name == `part{player.UserId}` and getHammerTexture(player) == Accessories.HammerTexture.BuilderHammer then
 		otherPart:SetAttribute("timer", 0)
+	end
+end)
+Events.SetColor.OnServerEvent:Connect(function(player, color)
+	local _color = color
+	if not (typeof(_color) == "Color3") then
+		return nil
+	end
+	player:SetAttribute(PlayerAttributes.CubeColor, color)
+	local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
+	local _result = cube
+	if _result ~= nil then
+		_result = _result:IsA("BasePart")
+	end
+	if _result then
+		cube.Color = color
 	end
 end)
 Events.SayMessageRequest.OnServerEvent:Connect(function(player, message, channel)
@@ -435,7 +458,7 @@ RunService.Stepped:Connect(function()
 			if altitude > 800 then
 				if player:GetAttribute(PlayerAttributes.HasGravityBadge) == nil then
 					player:SetAttribute(PlayerAttributes.HasGravityBadge, true)
-					giveBadge(player, 1719451122385638)
+					giveBadge(player, Badge.FreeFloater)
 					continue
 				end
 			elseif player:GetAttribute(PlayerAttributes.HasGravityBadge) ~= nil then
@@ -446,7 +469,7 @@ RunService.Stepped:Connect(function()
 			if speed > 70 then
 				if player:GetAttribute(PlayerAttributes.HasSpeedBadge) == nil then
 					player:SetAttribute(PlayerAttributes.HasSpeedBadge, true)
-					giveBadge(player, 2146687990)
+					giveBadge(player, Badge.UltraSpeed)
 				end
 			else
 				local _value = player:GetAttribute(PlayerAttributes.HasSpeedBadge)

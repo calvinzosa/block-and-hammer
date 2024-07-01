@@ -13,6 +13,7 @@ local isTestingServer = _utils.isTestingServer
 local getPlayerRank = _utils.getPlayerRank
 local giveBadge = _utils.giveBadge
 local numLerp = _utils.numLerp
+local Badge = _utils.Badge
 local accessoryList = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "accessory_loader").accessoryList
 local Events = {
 	SaySystemMessage = ReplicatedStorage:FindFirstChild("SaySystemMessage"),
@@ -78,7 +79,7 @@ Commands = {
 			local targets = a
 			for _, target in targets do
 				Events.FlipGravity:FireClient(target)
-				giveBadge(target, 2146247056)
+				giveBadge(target, Badge.Flipped)
 			end
 		end,
 	},
@@ -177,7 +178,7 @@ Commands = {
 					cube:SetAttribute("used_modifiers", true)
 					cube:SetAttribute("isScaling", true)
 					task.spawn(function()
-						local _condition_1 = cube:GetAttribute("scale")
+						local _condition_1 = (cube:GetAttribute("scale"))
 						if _condition_1 == nil then
 							_condition_1 = 1
 						end
@@ -189,7 +190,7 @@ Commands = {
 						local currentTime = time()
 						local startTime = currentTime
 						local totalTime = 0.4
-						while (currentTime - startTime) < totalTime do
+						while currentTime - startTime < totalTime do
 							local alpha = TweenService:GetValue((currentTime - startTime) / totalTime, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
 							local currentScale = numLerp(previousScale, newScale, alpha)
 							model:ScaleTo(currentScale)
@@ -202,28 +203,6 @@ Commands = {
 						cube.Parent = Workspace
 					end)
 				end
-			end
-		end,
-	},
-	error = {
-		rank = 2,
-		parameters = { "players" },
-		callback = function(sender, a)
-			local targets = a
-			for _, player in targets do
-				local _value = player:GetAttribute("ERROR_LAND")
-				if _value ~= 0 and _value == _value and _value ~= "" and _value then
-					continue
-				end
-				task.spawn(function()
-					local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
-					if cube then
-						cube:Destroy()
-						player:SetAttribute("ERROR_LAND", true)
-						Events.StartErrorEvent:FireClient(player)
-						giveBadge(player, 2146357550)
-					end
-				end)
 			end
 		end,
 	},
@@ -259,7 +238,7 @@ local function parseCommand(message)
 				escaping = false
 			elseif char == "\\" then
 				escaping = true
-			elseif char == "\'" and not inDoubleQuote then
+			elseif char == "'" and not inDoubleQuote then
 				if inSingleQuote then
 					local _currentArg = currentArg
 					table.insert(results, _currentArg)

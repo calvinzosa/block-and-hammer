@@ -24,7 +24,7 @@ export type DictValue = string | number | symbol;
 
 export namespace GameData {
 	export const CreatorId = 156926145;
-
+	
 	export const MainPlaceId = 13458875976;
 	export const TestingPlaceId = 17837400665;
 }
@@ -35,7 +35,7 @@ export namespace PlayerAttributes {
 	export const HasModifiers = 'modifiers';
 	export const Impacts = 'impacts';
 	export const IsNew = 'isNew';
-
+	
 	export const HammerTexture = 'hammer_Texture';
 	export const CompletedGame = 'completedGame';
 	export const InTutorial = 'inTutorial';
@@ -43,30 +43,31 @@ export namespace PlayerAttributes {
 	export const CubeFace = 'cube_Face';
 	export const CubeAura = 'cube_Aura';
 	export const CubeHat = 'cube_Hat';
-
+	
 	export const TotalModdedWins = 'totalModdedWins';
 	export const TotalRagdolls = 'totalRagdolls';
 	export const TotalRestarts = 'totalRestarts';
 	export const TotalTime = 'totalTime';
 	export const TotalWins = 'totalWins';
-
+	
 	export const GravityFlipDebounce = 'gravityFlipDebounce';
 	export const BadgeDebounce = 'badgeDebounce';
-
+	
 	export const HasCrashLandingBadge = 'hasCrashLandingBadge';
 	export const HasExplosiveBadge = 'hasExplosiveBadge';
 	export const HasGravityBadge = 'hasGravityBadge';
 	export const HasSpeedBadge = 'hasSpeedBadge';
-
+	
 	export const ActiveQuest = 'activeQuest';
 	export const GlowPhase = 'glowPhase';
 	export const HasSteelHammer = 'hasSteelHammer';
-
+	
 	export const Device = 'device';
-
+	
 	export enum Client {
 		SettingsJSON = 'clientSettingsJSON',
 		InMainMenu = 'inMainMenu',
+		HideMouse = 'hideMouse',
 	}
 }
 
@@ -122,17 +123,50 @@ export namespace Accessories {
 	}
 }
 
+export enum Badge {
+	CrashLanding        = 2146180612,
+	Flipped             = 2146247056,
+	Trapped             = 2146259996,
+	TheDuck             = 2146289079,
+	Pacifist            = 2146295992,
+	_404                = 2146308286,
+	ErrorLand           = 2146357550,
+	ProfessionalClimber = 2146411244,
+	FreeAccessory       = 2146441455,
+	Explosive           = 2146508969,
+	Speedrunner         = 2146538368,
+	Visits1k            = 2146588764,
+	UltraSpeed          = 2146687990,
+	Learner             = 2146706248,
+	MadeOfSteel         = 4010328408057079,
+	Welcome             = 1967915839777317,
+	METEOR              = 4279006041653694,
+	FreeFloater         = 1719451122385638,
+	LongShot            = 2479031288528448,
+	FreezingMisfortune  = 2512066188170235,
+	Visits35k           = 4410861265533965,
+	Glowing             = 254003402602004,
+};
+
+export enum MouseImageIcon {
+	Default = '',
+	Pointer = 'rbxassetid://18255443201',
+	DragHover = 'rbxassetid://18255440538',
+	DragActive = 'rbxassetid://18255440762',
+};
+
 export enum GameSetting {
-	'HideOthers' = 'hideothers',
-	'ShowRange' = 'showrange',
-	'Effects' = 'effects',
-	'ScreenShake' = 'screenshake',
-	'Sounds' = 'sounds',
-	'Music' = 'music',
-	'TimerGUI' = 'timergui',
-	'Modifiers' = 'modifiers',
-	'CSG' = 'csg',
-	'OrthographicView' = 'orthographic',
+	HideOthers = 'hideothers',
+	ShowRange = 'showrange',
+	Effects = 'effects',
+	ScreenShake = 'screenshake',
+	Sounds = 'sounds',
+	Music = 'music',
+	TimerGUI = 'timergui',
+	Modifiers = 'modifiers',
+	CSG = 'csg',
+	OrthographicView = 'orthographic',
+	InvertMobileButtons = 'invertmobilebuttons',
 }
 
 export type BaseSettings = Record<GameSetting, boolean>;
@@ -148,6 +182,7 @@ export const Settings: BaseSettings = {
 	modifiers: false,
 	csg: true,
 	orthographic: false,
+	invertmobilebuttons: false,
 };
 
 export const DefaultSettings = table.clone(Settings);
@@ -176,6 +211,7 @@ const settingAlias: Record<GameSetting, string> = {
 	[GameSetting.Modifiers]: 'Modifiers',
 	[GameSetting.CSG]: 'CSG',
 	[GameSetting.OrthographicView]: 'Orthographic View',
+	[GameSetting.InvertMobileButtons]: 'Invert Mobile Buttons',
 };
 
 const settingOrder: Record<GameSetting, number> = {
@@ -189,6 +225,7 @@ const settingOrder: Record<GameSetting, number> = {
 	[GameSetting.HideOthers]: 8,
 	[GameSetting.TimerGUI]: 9,
 	[GameSetting.OrthographicView]: 10,
+	[GameSetting.InvertMobileButtons]: 11,
 };
 
 export function numLerp(a: number, b: number, t: number) {
@@ -311,9 +348,9 @@ export function isClientCube(cube: BasePart | undefined): boolean {
 
 export function playSound(name: string, properties: Record<string, DictValue> = {}, ignoreReplay: boolean = false): void {
 	if (!getSetting(GameSetting.Sounds)) properties.Volume = 0;
-
+	
 	let dataString = `sound,${name}`;
-
+	
 	const sound = ReplicatedStorage.FindFirstChild('SFX')?.FindFirstChild(name)?.Clone() as Sound | undefined;
 	if (sound === undefined) return;
 	sound.PlayOnRemove = false;
@@ -321,45 +358,45 @@ export function playSound(name: string, properties: Record<string, DictValue> = 
 		for (const [name, value] of pairs(properties)) {
 			try {
 				(sound as unknown as Record<string, DictValue>)[name] = value;
-			} catch (err) {}
-
+			} catch (err) {  }
+			
 			if (typeIs(value, 'number')) dataString += `,${name}=${math.round(value * 1000)}`;
 			else dataString += `,${name}=${tostring(value)}`;
 		}
 	}
-
+	
 	if (player.GetAttribute(PlayerAttributes.InErrorLand)) sound.PlaybackSpeed *= 0.5;
 	sound.Volume = math.min(sound.Volume, 1.5);
 	sound.Parent = Workspace;
-
+	
 	if (!ignoreReplay) Events.MakeReplayEvent.Fire(dataString);
-
+	
 	if (player.GetAttribute(PlayerAttributes.HammerTexture) === '404 Hammer' && getSetting(GameSetting.Modifiers)) {
 		sound.PlaybackSpeed *= 0.5;
-
+		
 		const pitchShift = new Instance('PitchShiftSoundEffect');
 		pitchShift.Octave = 2;
 		pitchShift.Parent = sound;
 	}
-
+	
 	sound.Play();
 	sound.Ended.Connect(() => sound.Destroy());
 }
 
 export function getCubeTime(cube: Instance | undefined): LuaTuple<[number, number]> {
 	if (!cube?.IsA('BasePart') || !cube.GetAttribute('isCube')) return $tuple(-1, -1);
-
+	
 	const currentTime = getTime();
-
+	
 	const finishTotalTime = cube.GetAttribute('finishTotalTime');
 	if (typeIs(finishTotalTime, 'number')) return $tuple(finishTotalTime, getTime() - finishTotalTime);
-
+	
 	let extraTime = cube.GetAttribute('extra_time');
 	if (!typeIs(extraTime, 'number')) extraTime = 0;
-
+	
 	let startTime = cube.GetAttribute('start_time');
 	if (!typeIs(startTime, 'number')) startTime = 0;
-
+	
 	return $tuple(math.min(currentTime - startTime + extraTime, 3599), startTime);
 }
 
@@ -368,20 +405,20 @@ export function getTimeUnits(ms: number): LuaTuple<[number, number, number, numb
 	const minutes = math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
 	const seconds = math.floor((ms % (1000 * 60)) / 1000);
 	const milliseconds = ms % 1000;
-
+	
 	return $tuple(hours, minutes, seconds, milliseconds);
 }
 
 export function formatBytes(bytes: number): string {
 	const units = ['bytes', 'kb', 'mb', 'gb', 'tb'];
 	const scale = 1024;
-
+	
 	let unitIndex = 1;
 	while (bytes >= scale && unitIndex < units.size()) {
 		bytes /= scale;
 		unitIndex++;
 	}
-
+	
 	const roundedBytes = string.format(bytes % 1 === 0 ? '%d' : '%.1f', bytes);
 	return `${roundedBytes} ${units[unitIndex]}`;
 }
@@ -397,20 +434,20 @@ export function computeNameColor(playerName: string): Color3 {
 		new BrickColor('Light reddish violet').Color,
 		new BrickColor('Brick yellow').Color,
 	];
-
+	
 	const nameLength = playerName.size();
-
+	
 	let value = 0;
 	for (let i = 1; i <= nameLength; i++) {
-		let [cValue] = string.byte(playerName.sub(i, i));
+		let [ cValue ] = string.byte(playerName.sub(i, i));
 		let reverseIndex = nameLength - i + 1;
-
+		
 		if (nameLength % 2 === 1) reverseIndex--;
 		if (reverseIndex % 4 >= 2) cValue *= -1;
-
+		
 		value += cValue;
 	}
-
+	
 	return nameColors[value % nameColors.size()];
 }
 

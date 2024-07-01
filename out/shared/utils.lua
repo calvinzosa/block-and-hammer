@@ -9,6 +9,8 @@ local RunService = _services.RunService
 local Workspace = _services.Workspace
 local Players = _services.Players
 local str = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "string-utils")
+local TextCompression = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "lua", "text_compression")
+local admins = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "admins").default
 local Events = {
 	SettingChanged = ReplicatedStorage:WaitForChild("SettingChanged"),
 	MakeReplayEvent = ReplicatedStorage:WaitForChild("MakeReplayEvent"),
@@ -81,11 +83,18 @@ do
 	_container.HasGravityBadge = HasGravityBadge
 	local HasSpeedBadge = "hasSpeedBadge"
 	_container.HasSpeedBadge = HasSpeedBadge
+	local ActiveQuest = "activeQuest"
+	_container.ActiveQuest = ActiveQuest
+	local GlowPhase = "glowPhase"
+	_container.GlowPhase = GlowPhase
+	local HasSteelHammer = "hasSteelHammer"
+	_container.HasSteelHammer = HasSteelHammer
 	local Device = "device"
 	_container.Device = Device
 	local Client = {
 		SettingsJSON = "clientSettingsJSON",
 		InMainMenu = "inMainMenu",
+		HideMouse = "hideMouse",
 	}
 	_container.Client = Client
 end
@@ -141,6 +150,63 @@ do
 	}
 	_container.CubeAura = CubeAura
 end
+local Badge
+do
+	local _inverse = {}
+	Badge = setmetatable({}, {
+		__index = _inverse,
+	})
+	Badge.CrashLanding = 2146180612
+	_inverse[2146180612] = "CrashLanding"
+	Badge.Flipped = 2146247056
+	_inverse[2146247056] = "Flipped"
+	Badge.Trapped = 2146259996
+	_inverse[2146259996] = "Trapped"
+	Badge.TheDuck = 2146289079
+	_inverse[2146289079] = "TheDuck"
+	Badge.Pacifist = 2146295992
+	_inverse[2146295992] = "Pacifist"
+	Badge._404 = 2146308286
+	_inverse[2146308286] = "_404"
+	Badge.ErrorLand = 2146357550
+	_inverse[2146357550] = "ErrorLand"
+	Badge.ProfessionalClimber = 2146411244
+	_inverse[2146411244] = "ProfessionalClimber"
+	Badge.FreeAccessory = 2146441455
+	_inverse[2146441455] = "FreeAccessory"
+	Badge.Explosive = 2146508969
+	_inverse[2146508969] = "Explosive"
+	Badge.Speedrunner = 2146538368
+	_inverse[2146538368] = "Speedrunner"
+	Badge.Visits1k = 2146588764
+	_inverse[2146588764] = "Visits1k"
+	Badge.UltraSpeed = 2146687990
+	_inverse[2146687990] = "UltraSpeed"
+	Badge.Learner = 2146706248
+	_inverse[2146706248] = "Learner"
+	Badge.MadeOfSteel = 4010328408057079
+	_inverse[4010328408057079] = "MadeOfSteel"
+	Badge.Welcome = 1967915839777317
+	_inverse[1967915839777317] = "Welcome"
+	Badge.METEOR = 4279006041653694
+	_inverse[4279006041653694] = "METEOR"
+	Badge.FreeFloater = 1719451122385638
+	_inverse[1719451122385638] = "FreeFloater"
+	Badge.LongShot = 2479031288528448
+	_inverse[2479031288528448] = "LongShot"
+	Badge.FreezingMisfortune = 2512066188170235
+	_inverse[2512066188170235] = "FreezingMisfortune"
+	Badge.Visits35k = 4410861265533965
+	_inverse[4410861265533965] = "Visits35k"
+	Badge.Glowing = 254003402602004
+	_inverse[254003402602004] = "Glowing"
+end
+local MouseImageIcon = {
+	Default = "",
+	Pointer = "rbxassetid://18255443201",
+	DragHover = "rbxassetid://18255440538",
+	DragActive = "rbxassetid://18255440762",
+}
 local GameSetting = {
 	HideOthers = "hideothers",
 	ShowRange = "showrange",
@@ -152,6 +218,7 @@ local GameSetting = {
 	Modifiers = "modifiers",
 	CSG = "csg",
 	OrthographicView = "orthographic",
+	InvertMobileButtons = "invertmobilebuttons",
 }
 local Settings = {
 	hideothers = false,
@@ -164,6 +231,7 @@ local Settings = {
 	modifiers = false,
 	csg = true,
 	orthographic = false,
+	invertmobilebuttons = false,
 }
 local DefaultSettings = table.clone(Settings)
 local tweenTypes = {
@@ -190,6 +258,7 @@ local settingAlias = {
 	[GameSetting.Modifiers] = "Modifiers",
 	[GameSetting.CSG] = "CSG",
 	[GameSetting.OrthographicView] = "Orthographic View",
+	[GameSetting.InvertMobileButtons] = "Invert Mobile Buttons",
 }
 local settingOrder = {
 	[GameSetting.Modifiers] = 1,
@@ -202,9 +271,8 @@ local settingOrder = {
 	[GameSetting.HideOthers] = 8,
 	[GameSetting.TimerGUI] = 9,
 	[GameSetting.OrthographicView] = 10,
+	[GameSetting.InvertMobileButtons] = 11,
 }
-local PlayerAdmins = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Admins"))
-local TextCompression = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("TextCompression"))
 local function numLerp(a, b, t)
 	return a + (b - a) * t
 end
@@ -249,7 +317,7 @@ local function waitUntil(callback, maxTime)
 		maxTime = math.huge
 	end
 	local startTime = time()
-	while not callback() and (time() - startTime) < maxTime do
+	while not callback() and time() - startTime < maxTime do
 		task.wait()
 	end
 end
@@ -474,7 +542,7 @@ local function getCubeTime(cube)
 	if not (type(_startTime) == "number") then
 		startTime = 0
 	end
-	return math.min((currentTime - startTime) + extraTime, 3599), startTime
+	return math.min(currentTime - startTime + extraTime, 3599), startTime
 end
 local function getTimeUnits(ms)
 	local hours = math.floor(ms / (1000 * 60 * 60))
@@ -556,8 +624,8 @@ local function getPlayerRank(player)
 			return userId == player.UserId
 		end
 		local _result_1 = -1
-		for _i, _v in PlayerAdmins do
-			if _callback(_v, _i - 1, PlayerAdmins) == true then
+		for _i, _v in admins do
+			if _callback(_v, _i - 1, admins) == true then
 				_result_1 = _i - 1
 				break
 			end
@@ -644,10 +712,10 @@ local function compressData(data, isJSON)
 	if isJSON then
 		data = encodeObjectToJSON(data)
 	end
-	return TextCompression:compress(HttpService:JSONEncode(data))
+	return TextCompression.compress(HttpService:JSONEncode(data))
 end
 local function decompressData(data, isJSON)
-	local decompressedData = HttpService:JSONDecode(TextCompression:decompress(data))
+	local decompressedData = HttpService:JSONDecode(TextCompression.decompress(data))
 	if isJSON then
 		return decodeJSONObject(decompressedData)
 	end
@@ -659,7 +727,7 @@ local function giveBadge(player, badgeId)
 		return nil
 	end
 	if isTestingServer() then
-		warn("[src/shared/utils.ts:508]", `Badges are disabled in the Testing Server | Attempted to give badge {badgeId} to {player.Name}`)
+		warn("[src/shared/utils.ts:536]", `Badges are disabled in the Testing Server | Attempted to give badge {badgeId} to {player.Name}`)
 		return nil
 	end
 	local userId = player.UserId
@@ -676,11 +744,11 @@ local function giveBadge(player, badgeId)
 			local _exitType, _returns = TS.try(function()
 				if not BadgeService:UserHasBadgeAsync(userId, badgeId) then
 					BadgeService:AwardBadge(userId, badgeId)
-					print("[src/shared/utils.ts:521]", `Successfully badge {badgeId} to {player.Name}`)
+					print("[src/shared/utils.ts:549]", `Successfully badge {badgeId} to {player.Name}`)
 				end
 				return TS.TRY_BREAK
 			end, function(err)
-				warn("[src/shared/utils.ts:526]", err)
+				warn("[src/shared/utils.ts:554]", err)
 			end)
 			if _exitType then
 				break
@@ -741,6 +809,8 @@ return {
 	GameData = GameData,
 	PlayerAttributes = PlayerAttributes,
 	Accessories = Accessories,
+	Badge = Badge,
+	MouseImageIcon = MouseImageIcon,
 	GameSetting = GameSetting,
 	Settings = Settings,
 	DefaultSettings = DefaultSettings,

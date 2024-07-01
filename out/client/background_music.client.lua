@@ -108,9 +108,9 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 	local isMusicEnabled = _condition
 	for name, sound in pairs(sounds) do
-		local targetVolume = if (name == activeMusic and isMusicEnabled) then (sound:GetAttribute("originalVolume")) else 0
+		local targetVolume = if name == activeMusic and isMusicEnabled then (sound:GetAttribute("originalVolume")) else 0
 		sound.Volume = numLerp(sound.Volume, targetVolume, dt * 5)
-		local _value_1 = (currentHammer == Accessories.HammerTexture.Hammer404 and targetPlayer:GetAttribute(PlayerAttributes.HasModifiers))
+		local _value_1 = currentHammer == Accessories.HammerTexture.Hammer404 and targetPlayer:GetAttribute(PlayerAttributes.HasModifiers)
 		sound.PlaybackSpeed = if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then 0.5 else 1
 	end
 end)

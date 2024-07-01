@@ -3,7 +3,7 @@ import { ReplicatedStorage, DataStoreService, BadgeService, HttpService, RunServ
 import { $print, $warn } from 'rbxts-transform-debug';
 
 import { PlayerAttributes, decodeJSONObject, encodeObjectToJSON, getCubeTime, getTime, isTestingServer } from 'shared/utils';
-
+import quests from 'shared/quests';
 import { accessoryList } from 'shared/accessory_loader';
 
 const Events = {
@@ -45,90 +45,107 @@ type PlayerData = {
 		| undefined;
 };
 
-const QuestData = require(ReplicatedStorage.WaitForChild('Modules').WaitForChild('QuestData') as ModuleScript) as Record<string, unknown>;
-
 const PlayerData = DataStoreService.GetDataStore('player_data');
 
 const accessoryData: Record<string, Record<string, string>> = {};
 
 function playerAdded(player: Player) {
 	player.SetAttribute('serverJoinTime', getTime());
-
+	
 	const playerId = tostring(player.UserId);
-
+	
+	let errorMessage = undefined as (string | undefined);
+	let success = false;
+	
 	let totalDataChunks = 0;
 	let data = '';
-
-	let [success, errorMessage] = pcall(() => {
-		const pages = PlayerData.ListKeysAsync(playerId, 255);
-
-		while (true) {
-			totalDataChunks++;
-
-			const currentPage = pages.GetCurrentPage() as DataStoreKey[];
-			currentPage.sort((a, b) => a.KeyName < b.KeyName);
-
-			if (currentPage.size() > 0) {
-				for (const key of currentPage) {
-					const [chunk] = PlayerData.GetAsync(key.KeyName);
-					if (typeIs(chunk, 'string')) data += chunk;
-					else error(`Data of player ${player.Name} is invalid.`);
-				}
-			} else break;
-
-			if (pages.IsFinished) break;
-			pages.AdvanceToNextPageAsync();
+	
+	for (const _ of $range(1, 5)) {
+		try {
+			errorMessage = undefined;
+			totalDataChunks = 0;
+			data = ''
+			
+			const pages = PlayerData.ListKeysAsync(playerId, 255);
+			while (true) {
+				totalDataChunks++;
+				const currentPage = pages.GetCurrentPage() as DataStoreKey[];
+				currentPage.sort((a, b) => a.KeyName < b.KeyName);
+				
+				if (currentPage.size() > 0) {
+					for (const key of currentPage) {
+						const [chunk] = PlayerData.GetAsync(key.KeyName);
+						if (typeIs(chunk, 'string')) data += chunk;
+						else error(`Data of player ${player.Name} is invalid.`);
+					}
+				} else break;
+				
+				if (pages.IsFinished) break;
+				pages.AdvanceToNextPageAsync();
+			}
+			
+			success = true;
+		} catch (err) {
+			$warn(err);
+			success = false;
+			errorMessage = err as string;
 		}
-	});
-
+	}
+	
 	if (success) {
 		if (data.size() > 0) {
-			const [success, jsonData] = pcall(() => HttpService.JSONDecode(data));
-			if (!success) {
-				player.Kick('Your data is most likely corrupted! Please go to the discord server and tell the developer of this message and your username');
+			let jsonData = undefined as (object | undefined);
+			try {
+				jsonData = HttpService.JSONDecode(data) as object;
+			} catch (err) {
+				$warn(err);
+			}
+			
+			if (!jsonData) {
+				player.Kick('Your data is most likely corrupted! Please go to the discord server and tell the developer of this message and your username or try rejoining');
 				return;
 			}
-
+			
 			const decodedData = decodeJSONObject(jsonData) as PlayerData;
-
+			
 			const position = decodedData.position;
 			const velocity = decodedData.velocity;
 			const destroyedCounter = decodedData.destroyed_counter;
-
+			
 			const cube = Workspace.WaitForChild(`cube${player.UserId}`) as BasePart;
-
+			
 			if (typeIs(destroyedCounter, 'number')) cube.SetAttribute('destroyed_counter', destroyedCounter);
 			if (typeIs(decodedData.settings_json, 'string')) Events.LoadSettingsJSON.FireClient(player, decodedData.settings_json);
-
+			
 			if (typeIs(decodedData.accessories, 'table')) {
 				accessoryData[playerId] = decodedData.accessories;
-
-				for (const [_, name] of pairs(decodedData.accessories)) {
+				
+				for (const [ , name ] of pairs(decodedData.accessories)) {
 					const targetAccessory = accessoryList[name];
 					if (targetAccessory && (targetAccessory.badge_id === 0 || BadgeService.UserHasBadgeAsync(player.UserId, targetAccessory.badge_id))) {
 						player.SetAttribute(targetAccessory.acc_type as string, name);
 					}
 				}
-
+				
 				Events.LoadPlayerAccessories.Fire(player, cube);
-			} else accessoryData[playerId] = {};
-
+			} else accessoryData[playerId] = {  };
+			
 			if (typeIs(decodedData.cube_color, 'Color3')) player.SetAttribute('CUBE_COLOR', decodedData.cube_color);
-
+			
 			if (decodedData.time_data) {
 				if (decodedData.time_data.modded) {
 					player.SetAttribute('modifiers', true);
 					cube.SetAttribute('used_modifiers', true);
 				}
-
+				
 				player.SetAttribute('finished', decodedData.time_data.finished);
 				cube.SetAttribute('extra_time', decodedData.time_data.extra_time);
-
+				
 				cube.SetAttribute('finishTotalTime', decodedData.time_data.finish_total_time);
 			}
-
-			if (decodedData.active_quest && decodedData.active_quest in QuestData) player.SetAttribute('activeQuest', decodedData.active_quest);
-
+			
+			if (decodedData.active_quest && decodedData.active_quest in quests) player.SetAttribute('activeQuest', decodedData.active_quest);
+			
 			if (decodedData.stats) {
 				const serverJoinTime = player.GetAttribute('serverJoinTime') as number;
 				player.SetAttribute('serverJoinTime', serverJoinTime - (decodedData.stats.total_time_played ?? 0));
@@ -138,16 +155,16 @@ function playerAdded(player: Player) {
 				player.SetAttribute('totalWins', decodedData.stats.total_wins ?? 0);
 				player.SetAttribute('totalModdedWins', decodedData.stats.total_modded_wins ?? 0);
 			}
-
+			
 			if (typeIs(position, 'Vector3')) {
 				cube.Anchored = true;
-
+				
 				cube.PivotTo(new CFrame(position));
 				if (typeIs(velocity, 'Vector3')) cube.AssemblyLinearVelocity = velocity;
-
+				
 				task.delay(1, () => (cube.Anchored = false));
 			}
-
+			
 			$print(`Loaded data for player ${player.Name} (${player.UserId}) | Total Data Chunks: ${totalDataChunks}`);
 		} else $print(`No data was found for player ${player.Name} (${player.UserId})`);
 	} else {
@@ -155,18 +172,18 @@ function playerAdded(player: Player) {
 		player.Kick(`Unable to load data, please try again later | Error Message: ${errorMessage}`);
 		return;
 	}
-
+	
 	player.SetAttribute(PlayerAttributes.HasDataLoaded, true);
 }
 
 function playerRemoved(player: Player) {
 	if (!player.GetAttribute(PlayerAttributes.HasDataLoaded) || (RunService.IsStudio() && time() < 5) || isTestingServer()) return;
-
+	
 	const playerId = tostring(player.UserId);
-
+	
 	const cube = Workspace.FindFirstChild(`cube${playerId}`) as BasePart | undefined;
 	if (!cube || player.UserId <= 0 || player.GetAttribute('in_tutorial')) return;
-
+	
 	const currentTime = getTime();
 	const serverJoinTime = (player.GetAttribute('serverJoinTime') as number) ?? currentTime;
 	const cubeColor = player.GetAttribute('CUBE_COLOR') as Color3 | undefined;
@@ -174,7 +191,7 @@ function playerRemoved(player: Player) {
 	const [extraTime] = getCubeTime(cube);
 	const settingsJSON = player.GetAttribute('settings_json') as string | undefined;
 	const activeQuest = player.GetAttribute('activeQuest') as string | undefined;
-
+	
 	const dataToSave = encodeObjectToJSON({
 		position: cube.Position,
 		velocity: cube.AssemblyLinearVelocity,
@@ -198,28 +215,28 @@ function playerRemoved(player: Player) {
 			total_modded_wins: player.GetAttribute('totalModdedWins') as number | undefined,
 		},
 	} as PlayerData);
-
+	
 	cube.Destroy();
-
+	
 	const encodedData = HttpService.JSONEncode(dataToSave);
-
+	
 	for (const retryAttempt of $range(1, 5)) {
 		const [success, errorMessage] = pcall(() => {
 			let currentData = encodedData.sub(1, encodedData.size());
-
+			
 			let iteration = 0;
 			const chunkSize = 4194303;
 			while (currentData.size() > 0) {
 				const chunk = currentData.sub(1, chunkSize);
 				const key = playerId + (iteration > 1 ? `_${iteration}` : '');
-
+				
 				PlayerData.SetAsync(key, chunk);
 				currentData = currentData.sub(chunkSize + 1);
-
+				
 				iteration++;
 			}
 		});
-
+		
 		if (success) {
 			$print(`Saved data for player ${player.Name} (${player.UserId}) succesfully.`);
 			break;

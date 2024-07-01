@@ -1,6 +1,11 @@
-import { Workspace } from '@rbxts/services';
+import {
+	Workspace,
+} from '@rbxts/services';
 
-import { giveBadge } from 'shared/utils';
+import {
+	giveBadge,
+	Badge,
+} from 'shared/utils';
 
 const interactablesFolder = Workspace.FindFirstChild('Interactables') as Folder;
 const steelHammer = interactablesFolder.FindFirstChild('SteelHammer') as Model;
@@ -9,7 +14,7 @@ const glowPart = interactablesFolder.FindFirstChild('Glow') as Model;
 (steelHammer.FindFirstChild('Interacted') as RemoteEvent).OnServerEvent.Connect((player) => {
 	const cube = Workspace.FindFirstChild(`cube${player.UserId}`);
 	if (!cube?.IsA('BasePart')) return;
-
+	
 	if (player.GetAttribute('activeQuest') === 'LostSteelHammer') player.SetAttribute('hasSteelHammer', true);
 });
 
@@ -27,6 +32,6 @@ const glowPart = interactablesFolder.FindFirstChild('Glow') as Model;
 
 	if (currentPhase === 5) {
 		player.SetAttribute('glowPhase', undefined);
-		giveBadge(player, 254003402602004);
+		giveBadge(player, Badge.Glowing);
 	}
 });

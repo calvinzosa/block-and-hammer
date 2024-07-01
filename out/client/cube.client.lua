@@ -4,17 +4,18 @@ local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts
 local ContextActionService = _services.ContextActionService
 local ReplicatedStorage = _services.ReplicatedStorage
 local UserInputService = _services.UserInputService
+local TextChatService = _services.TextChatService
 local TweenService = _services.TweenService
 local RunService = _services.RunService
 local StarterGui = _services.StarterGui
 local Workspace = _services.Workspace
 local Players = _services.Players
-local TextChatService = _services.TextChatService
+local GuiService = _services.GuiService
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
-local convertStudsToMeters = _utils.convertStudsToMeters
 local roundDecimalPlaces = _utils.roundDecimalPlaces
 local getHammerTexture = _utils.getHammerTexture
 local PlayerAttributes = _utils.PlayerAttributes
+local convertStudsToMeters = _utils.convertStudsToMeters
 local getTimeUnits = _utils.getTimeUnits
 local isClientCube = _utils.isClientCube
 local GameSetting = _utils.GameSetting
@@ -29,6 +30,9 @@ local waitUntil = _utils.waitUntil
 local Settings = _utils.Settings
 local numLerp = _utils.numLerp
 local getTime = _utils.getTime
+local _mobile_buttons = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "mobile_buttons")
+local createMobileButton = _mobile_buttons.createMobileButton
+local getMobileButtonsByCategory = _mobile_buttons.getMobileButtonsByCategory
 local Events = {
 	BuildingHammerPlace = ReplicatedStorage:WaitForChild("BuildingHammerPlace"),
 	SaySystemMessage = ReplicatedStorage:WaitForChild("SaySystemMessage"),
@@ -44,14 +48,16 @@ local Events = {
 	ClientReset = ReplicatedStorage:WaitForChild("ClientReset"),
 }
 local player = Players.LocalPlayer
-local camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera")
+local camera = Workspace.CurrentCamera or (Workspace:WaitForChild("Camera"))
 local GUI = player:WaitForChild("PlayerGui")
 local valueInstances = GUI:WaitForChild("Values")
 local shakeIntensity = valueInstances:WaitForChild("shake_intensity")
 local isSpectating = valueInstances:WaitForChild("is_spectating")
 local spectatePlayer = isSpectating:WaitForChild("player")
 local canMove = valueInstances:WaitForChild("can_move")
+local isButtonHovered = valueInstances:WaitForChild("is_button_hovered")
 local screenGui = GUI:WaitForChild("ScreenGui")
+local mobileButtons = GUI:WaitForChild("MobileButtons")
 local replayGui = GUI:WaitForChild("ReplayGui")
 local mouseIcon = screenGui:WaitForChild("MouseIcon")
 local debugInfo = screenGui:WaitForChild("DebugInfo")
@@ -121,7 +127,7 @@ local function newPropeller(propeller)
 		_condition = not (type(_arg0) == "number")
 	end
 	if _condition then
-		warn("[src/client/cube.client.ts:118]", "An invalid propeller was created.")
+		warn("[src/client/cube.client.ts:129]", "An invalid propeller was created.")
 		return nil
 	end
 	local _propeller = propeller
@@ -135,13 +141,13 @@ local function updatePropellers(cube, head, dt)
 			_result = _result:IsA("BasePart")
 		end
 		if not _result then
-			warn("[src/client/cube.client.ts:129]", "A propeller has broke!")
+			warn("[src/client/cube.client.ts:140]", "A propeller has broke!")
 			table.remove(cachedPropellers, i + 1)
 			break
 		end
 		for _, descendant in propeller:GetDescendants() do
 			if descendant:IsA("ParticleEmitter") then
-				descendant.Enabled = (blades.AssemblyAngularVelocity.Magnitude >= 5)
+				descendant.Enabled = blades.AssemblyAngularVelocity.Magnitude >= 5
 			end
 		end
 	end
@@ -213,7 +219,7 @@ local function updatePropellers(cube, head, dt)
 			table.insert(usedPropellers, propeller)
 		end
 	end
-	local _condition = Workspace:GetAttribute("default_gravity")
+	local _condition = (Workspace:GetAttribute("default_gravity"))
 	if _condition == nil then
 		_condition = 196.2
 	end
@@ -252,23 +258,23 @@ local function updatePlatforms(cube, head)
 		if not platform:IsA("BasePart") then
 			continue
 		end
-		local cubeCollision = platform:FindFirstChild("CubeCollision") or Instance.new("NoCollisionConstraint")
+		local cubeCollision = (platform:FindFirstChild("CubeCollision")) or Instance.new("NoCollisionConstraint")
 		cubeCollision.Name = "CubeCollision"
 		cubeCollision.Part0 = platform
 		cubeCollision.Part1 = cube
-		cubeCollision.Enabled = (platform.Position.Y + platform.Size.Y / 2) > (cube.Position.Y - cube.Size.Y / 2 + 0.25)
+		cubeCollision.Enabled = platform.Position.Y + platform.Size.Y / 2 > cube.Position.Y - cube.Size.Y / 2 + 0.25
 		cubeCollision.Parent = platform
-		local headCollision = platform:FindFirstChild("HeadCollision") or Instance.new("NoCollisionConstraint")
+		local headCollision = (platform:FindFirstChild("HeadCollision")) or Instance.new("NoCollisionConstraint")
 		headCollision.Name = "HeadCollision"
 		headCollision.Part0 = platform
 		headCollision.Part1 = head
-		headCollision.Enabled = (platform.Position.Y + platform.Size.Y / 2) > head.Position.Y
+		headCollision.Enabled = platform.Position.Y + platform.Size.Y / 2 > head.Position.Y
 		headCollision.Parent = platform
 		platform:SetAttribute("notCollidable", headCollision.Enabled)
 	end
 end
 local function updateMud(cube, head, dt)
-	local slowdownFactor = math.clamp(1 - (dt * 15), 0.01, 1)
+	local slowdownFactor = math.clamp(1 - dt * 15, 0.01, 1)
 	local params = OverlapParams.new()
 	params.FilterType = Enum.RaycastFilterType.Include
 	params.FilterDescendantsInstances = { mudParts }
@@ -378,8 +384,18 @@ local function updateModifiers()
 		end
 	end
 	hitboxFolder:ClearAllChildren()
-	for hammer, actions in pairs(ActionNames) do
-		for abilityName, actionName in pairs(actions) do
+	local modifierCategory = "ModifierAbilities"
+	local _exp = getMobileButtonsByCategory(modifierCategory)
+	-- ▼ ReadonlyArray.forEach ▼
+	local _callback = function(button)
+		return button:Destroy()
+	end
+	for _k, _v in _exp do
+		_callback(_v, _k - 1, _exp)
+	end
+	-- ▲ ReadonlyArray.forEach ▲
+	for _, actions in pairs(ActionNames) do
+		for _1, actionName in pairs(actions) do
 			ContextActionService:UnbindAction(actionName)
 		end
 	end
@@ -428,10 +444,14 @@ local function updateModifiers()
 					end
 				end
 			end
-			ContextActionService:BindAction(ActionNames.BuildingHammer.Place, place, true, Enum.KeyCode.E)
-			ContextActionService:SetTitle(ActionNames.BuildingHammer.Place, "Place")
-			ContextActionService:BindAction(ActionNames.BuildingHammer.Switch, switchType, true, Enum.KeyCode.E)
-			ContextActionService:SetTitle(ActionNames.BuildingHammer.Switch, "switch")
+			ContextActionService:BindAction(ActionNames.BuildingHammer.Place, place, false, Enum.KeyCode.E)
+			ContextActionService:BindAction(ActionNames.BuildingHammer.Switch, switchType, false, Enum.KeyCode.E)
+			createMobileButton("🧱", modifierCategory, Vector2.zero, 1, ActionNames.BuildingHammer.Place, function(action, state, input)
+				place(action, state, input)
+			end)
+			createMobileButton("➡️", modifierCategory, Vector2.yAxis * (-1), 0.5, ActionNames.BuildingHammer.Switch, function(action, state, input)
+				switchType(action, state, input)
+			end)
 		elseif currentHammer == Accessories.HammerTexture.GrapplingHammer then
 			local function activate(action, state, input)
 				if not cube or not isClientCube(cube) then
@@ -544,9 +564,11 @@ local function updateModifiers()
 					end
 				end
 			end
-			ContextActionService:BindAction(ActionNames.GrapplingHammer.Activate, activate, true, Enum.KeyCode.E)
-			ContextActionService:SetTitle(ActionNames.GrapplingHammer.Activate, "Grapple")
+			ContextActionService:BindAction(ActionNames.GrapplingHammer.Activate, activate, false, Enum.KeyCode.E)
 			ContextActionService:BindAction(ActionNames.GrapplingHammer.Scroll, scroll, false, Enum.UserInputType.MouseWheel)
+			createMobileButton("🪢", modifierCategory, Vector2.zero, 1, ActionNames.GrapplingHammer.Activate, function(action, state, input)
+				activate(action, state, input)
+			end)
 		elseif currentHammer == Accessories.HammerTexture.Shotgun then
 			local function fire(action, state, input)
 				if not cube or not isClientCube(cube) then
@@ -654,8 +676,10 @@ local function updateModifiers()
 					end
 				end
 			end
-			ContextActionService:BindAction(ActionNames.Shotgun.Fire, fire, true, Enum.KeyCode.E)
-			ContextActionService:SetTitle(ActionNames.Shotgun.Fire, "Fire")
+			ContextActionService:BindAction(ActionNames.Shotgun.Fire, fire, false, Enum.KeyCode.E)
+			createMobileButton("🔫", modifierCategory, Vector2.zero, 1, ActionNames.Shotgun.Fire, function(action, state, input)
+				fire(action, state, input)
+			end)
 		elseif currentHammer == Accessories.HammerTexture.ExplosiveHammer then
 			local function explode(name, state, input)
 				if not cube or not isClientCube(cube) then
@@ -692,7 +716,7 @@ local function updateModifiers()
 						TweenService:Create(head, TweenInfo.new(2, Enum.EasingStyle.Linear), {
 							Color = Color3.fromRGB(255, 0, 0),
 						}):Play()
-						local _condition = cube:GetAttribute("scale")
+						local _condition = (cube:GetAttribute("scale"))
 						if _condition == nil then
 							_condition = 1
 						end
@@ -720,8 +744,10 @@ local function updateModifiers()
 					end
 				end
 			end
-			ContextActionService:BindAction(ActionNames.ExplosiveHammer.Explode, explode, true, Enum.KeyCode.E)
-			ContextActionService:SetTitle(ActionNames.ExplosiveHammer.Explode, "💥")
+			ContextActionService:BindAction(ActionNames.ExplosiveHammer.Explode, explode, false, Enum.KeyCode.E)
+			createMobileButton("💥", modifierCategory, Vector2.zero, 1, ActionNames.Shotgun.Fire, function(action, state, input)
+				explode(action, state, input)
+			end)
 		elseif currentHammer == Accessories.HammerTexture.InverterHammer then
 			local function invert(action, state, input)
 				if not cube or not isClientCube(cube) then
@@ -756,13 +782,14 @@ local function updateModifiers()
 							Color = Color3.fromRGB(7, 114, 172),
 						}):Play()
 						flippedGravity.Value = not flippedGravity.Value
-						ContextActionService:SetTitle(ActionNames.InverterHammer.Invert, if flippedGravity.Value then "⬇️" else "⬆️")
 						playSound("invert")
 					end
 				end
 			end
-			ContextActionService:BindAction(ActionNames.InverterHammer.Invert, invert, true, Enum.KeyCode.E)
-			ContextActionService:SetTitle(ActionNames.InverterHammer.Invert, "⬆️")
+			ContextActionService:BindAction(ActionNames.InverterHammer.Invert, invert, false, Enum.KeyCode.E)
+			createMobileButton("⤴️", modifierCategory, Vector2.zero, 1, ActionNames.InverterHammer.Invert, function(action, state, input)
+				invert(action, state, input)
+			end)
 		elseif currentHammer == Accessories.HammerTexture.HitboxHammer then
 			local _array = {}
 			local _length = #_array
@@ -782,7 +809,7 @@ local function updateModifiers()
 					descendant:SetAttribute("hitboxOutline", true)
 					local outline = Instance.new("SelectionBox")
 					outline.Adornee = descendant
-					outline.Color3 = if (descendant:IsA("Part") and descendant.Shape == Enum.PartType.Block) then Color3.fromRGB(255, 0, 0) else Color3.fromRGB(0, 0, 255)
+					outline.Color3 = if descendant:IsA("Part") and descendant.Shape == Enum.PartType.Block then Color3.fromRGB(255, 0, 0) else Color3.fromRGB(0, 0, 255)
 					outline.Transparency = math.min(descendant.Transparency, 0.5)
 					outline.Parent = hitboxFolder
 				end
@@ -1042,7 +1069,7 @@ RunService.Heartbeat:Connect(function(dt)
 		if not (type(startTime) == "number") then
 			return nil
 		end
-		local _condition_5 = cube:GetAttribute("scale")
+		local _condition_5 = (cube:GetAttribute("scale"))
 		if _condition_5 == nil then
 			_condition_5 = 1
 		end
@@ -1105,10 +1132,10 @@ RunService.Heartbeat:Connect(function(dt)
 			armAlignOrientation.Enabled = true
 		end
 		if ragdollTime == 0 and previousRagdollTime > 0 then
-			print("[src/client/cube.client.ts:738]", "Pivot hammer back to cube")
-			local _exp = (CFrame.new(cube.Position))
+			print("[src/client/cube.client.ts:774]", "Pivot hammer back to cube")
+			local _cFrame = CFrame.new(cube.Position)
 			local _arg0 = CFrame.fromOrientation(0, 0, math.pi / 2)
-			arm.CFrame = _exp * _arg0
+			arm.CFrame = _cFrame * _arg0
 		end
 		local _condition_6 = (cube:GetAttribute("transparency"))
 		if _condition_6 == nil then
@@ -1247,7 +1274,7 @@ RunService.Heartbeat:Connect(function(dt)
 		for _, obstructingPart in Workspace:GetPartBoundsInBox(CFrame.new(start.X, start.Y, 0), Vector3.new(10, 10, 4096), params) do
 			local _value_1 = obstructingPart:GetAttribute("CAMERA_TRANSPARENT")
 			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
-				local _condition_8 = obstructingPart:GetAttribute("CAMERA_TRANSPARENCY")
+				local _condition_8 = (obstructingPart:GetAttribute("CAMERA_TRANSPARENCY"))
 				if _condition_8 == nil then
 					_condition_8 = 0.9
 				end
@@ -1410,30 +1437,47 @@ RunService.Heartbeat:Connect(function(dt)
 					trail.Enabled = true
 				end
 			end
-			UserInputService.MouseIconEnabled = not isMouseIconVisible
+			local hideMouse = player:GetAttribute(PlayerAttributes.Client.HideMouse)
+			if hideMouse == true then
+				UserInputService.MouseIconEnabled = true
+			else
+				UserInputService.MouseIconEnabled = not isMouseIconVisible
+			end
 			mouseVisual.Transparency = if isMouseIconVisible then 1 else 0
 		end
 		if canMove.Value then
-			for _, gui in StarterGui:GetGuiObjectsAtPosition(mouse.X, mouse.Y) do
-				if gui.Name == "ContextButtonFrame" then
-					return nil
+			local inset = GuiService:GetGuiInset()
+			local canMove = true
+			for _, gui in GUI:GetGuiObjectsAtPosition(mouse.X - inset.X, mouse.Y - inset.Y) do
+				if gui:IsDescendantOf(mobileButtons) then
+					canMove = false
+					break
 				end
 			end
-			armCFrame.WorldCFrame = CFrame.lookAt(hammerPosition * plane, cube.Position * plane, Vector3.zAxis)
-			if currentHammer == Accessories.HammerTexture.Platform then
-				armRotation.WorldCFrame = CFrame.fromOrientation(0, 0, math.pi / 2)
-			else
-				armRotation.WorldCFrame = CFrame.lookAt(cube.Position * plane, head.Position * plane, Vector3.zAxis) * rotationOffset
+			if canMove then
+				armCFrame.WorldCFrame = CFrame.lookAt(hammerPosition * plane, cube.Position * plane, Vector3.zAxis)
+				if currentHammer == Accessories.HammerTexture.Platform then
+					armRotation.WorldCFrame = CFrame.fromOrientation(0, 0, math.pi / 2)
+				else
+					armRotation.WorldCFrame = CFrame.lookAt(cube.Position * plane, head.Position * plane, Vector3.zAxis) * rotationOffset
+				end
 			end
 		end
 		if cubeScale ~= 1 then
-			armAlignPosition.MaxForce *= cubeScale ^ 2
+			armAlignPosition.MaxForce *= (cubeScale - 1) ^ 3 + 1
 			if cubeScale > 1 then
-				armAlignPosition.Responsiveness *= cubeScale ^ 2
-				armAlignOrientation.Responsiveness *= cubeScale ^ 2
+				armAlignPosition.Responsiveness *= (cubeScale - 1) ^ 2 + 1
+				armAlignOrientation.Responsiveness *= (cubeScale - 1) ^ 2 + 1
 			end
-			Workspace.Gravity *= math.log(math.abs(cubeScale - 1) + 1) * -1 + 1
 		end
+		local densityMultiplier = 1 - math.log(math.min(cubeScale, 2))
+		local cubeProperties = cube.CurrentPhysicalProperties
+		local headProperties = head.CurrentPhysicalProperties
+		local armProperties = arm.CurrentPhysicalProperties
+		cube.CustomPhysicalProperties = PhysicalProperties.new(0.5 * densityMultiplier, cubeProperties.Friction, cubeProperties.Elasticity, cubeProperties.FrictionWeight, cubeProperties.ElasticityWeight)
+		head.CustomPhysicalProperties = PhysicalProperties.new(0.7 * densityMultiplier, headProperties.Friction, headProperties.Elasticity, headProperties.FrictionWeight, headProperties.ElasticityWeight)
+		arm.CustomPhysicalProperties = PhysicalProperties.new(0.7 * densityMultiplier, armProperties.Friction, armProperties.Elasticity, armProperties.FrictionWeight, armProperties.ElasticityWeight)
+		-- Workspace.Gravity *= math.log(math.abs(cubeScale - 1) + 1) * -1 + 1;
 		mouseVisual.Size = Vector3.new(0.5, 0.5, 0.5) * cubeScale
 		if debugInfo.Visible then
 			local left = debugInfo:FindFirstChild("Left")
@@ -1485,7 +1529,7 @@ winArea.Touched:Connect(function(otherPart)
 	if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
 		player:SetAttribute(PlayerAttributes.CompletedGame, true)
 		local totalTime = getCubeTime(otherPart)
-		print("[src/client/cube.client.ts:1088]", `Completed game in {totalTime} seconds`)
+		print("[src/client/cube.client.ts:1153]", `Completed game in {totalTime} seconds`)
 		Events.CompleteGame:FireServer(totalTime)
 		Events.MakeReplayEvent:Fire(string.format("win,%d", totalTime * 1000))
 	end

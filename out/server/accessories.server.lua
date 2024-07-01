@@ -44,7 +44,7 @@ Events.LoadPlayerAccessories.Event:Connect(function(player, cube)
 	if cube.Parent ~= Workspace then
 		return nil
 	end
-	local hasRemoveFunction = (removeFunctions[player.UserId] ~= nil)
+	local hasRemoveFunction = removeFunctions[player.UserId] ~= nil
 	local hammerRemoveFunction = loadAccessories(cube, {
 		face = player:GetAttribute(PlayerAttributes.CubeFace),
 		hammer = player:GetAttribute(PlayerAttributes.HammerTexture),

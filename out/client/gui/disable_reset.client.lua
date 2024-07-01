@@ -5,7 +5,9 @@ while true do
 	local _exitType, _returns = TS.try(function()
 		StarterGui:SetCore("ResetButtonCallback", false)
 		return TS.TRY_BREAK
-	end, function(err) end)
+	end, function(err)
+		task.wait(0.1)
+	end)
 	if _exitType then
 		break
 	end

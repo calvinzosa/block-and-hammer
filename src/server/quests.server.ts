@@ -1,8 +1,14 @@
-import { ReplicatedStorage } from '@rbxts/services';
+import {
+	ReplicatedStorage,
+} from '@rbxts/services';
 
-import { PlayerAttributes, giveBadge } from 'shared/utils';
+import {
+	PlayerAttributes,
+	giveBadge,
+	Badge,
+} from 'shared/utils';
 
-import questData from 'shared/quest_data';
+import questData from 'shared/quests';
 
 const Events = {
 	CancelQuest: ReplicatedStorage.FindFirstChild('CancelQuest') as RemoteEvent,
@@ -24,7 +30,7 @@ Events.FinishQuest.OnServerEvent.Connect(function (player) {
 	const questName = player.GetAttribute(PlayerAttributes.ActiveQuest);
 
 	if (questName === 'LostSteelHammer') {
-		if (player.GetAttribute(PlayerAttributes.HasSteelHammer)) giveBadge(player, 4010328408057079);
+		if (player.GetAttribute(PlayerAttributes.HasSteelHammer)) giveBadge(player, Badge.MadeOfSteel);
 	}
 
 	player.SetAttribute(PlayerAttributes.ActiveQuest, undefined);

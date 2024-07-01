@@ -1,9 +1,29 @@
-import { ReplicatedStorage, UserInputService, HttpService, RunService, Workspace, Players, Lighting } from '@rbxts/services';
-
-import { PlayerAttributes, getSettingAlias, getSettingOrder, canUseSetting, fixSettings, GameSetting, getSetting, setSetting, Settings, getTime } from 'shared/utils';
+import {
+	ReplicatedStorage,
+	UserInputService,
+	HttpService,
+	RunService,
+	Workspace,
+	Players,
+} from '@rbxts/services';
 
 import { $print, $warn } from 'rbxts-transform-debug';
 import { Icon } from '@rbxts/topbar-plus';
+
+import {
+	PlayerAttributes,
+	getSettingAlias,
+	getSettingOrder,
+	canUseSetting,
+	fixSettings,
+	GameSetting,
+	getSetting,
+	setSetting,
+	Settings,
+	getTime
+} from 'shared/utils';
+
+import { update } from 'shared/mobile_buttons';
 
 const Events = {
 	SetModifiersSetting: ReplicatedStorage.WaitForChild('SetModifiersSetting') as RemoteEvent,
@@ -79,33 +99,38 @@ Icon.setDisplayOrder(999999999);
 
 function resetCharacter(fullReset: boolean = false) {
 	let cube = Workspace.FindFirstChild(`cube${player.UserId}`) as BasePart | undefined;
-
+	
 	if (player.GetAttribute(PlayerAttributes.InErrorLand)) {
 		if (cube) cube.PivotTo(new CFrame(0, 14, 0));
 		return;
 	}
-
+	
 	if (player.GetAttribute(PlayerAttributes.InTutorial)) {
 		if (cube) {
 			cube.Destroy();
 			cube = undefined;
 		}
-
+		
 		Events.EndTutorial.FireServer();
 	}
-
+	
 	if (!cube?.IsA('BasePart') || fullReset) {
 		Events.ClientReset.Fire(true);
 		Events.Reset.FireServer(true);
 	} else {
 		Events.ClientReset.Fire(false);
 		Events.Reset.FireServer(false);
-
-		cube.PivotTo(new CFrame(0, 14, 0));
+		
+		const cubeScale = cube.GetAttribute('scale') as (number | undefined) ?? 1;
+		
+		cube.PivotTo(new CFrame(0, cubeScale > 10 ? 400 : 14, 0));
 		cube.AssemblyLinearVelocity = Vector3.zero;
 		for (const descendant of cube.GetDescendants()) {
 			if (descendant.IsA('BasePart')) descendant.AssemblyLinearVelocity = Vector3.zero;
 		}
+		
+		const arm = cube.FindFirstChild('Arm');
+		if (arm?.IsA('BasePart')) arm.CFrame = new CFrame(cube.Position).mul(CFrame.fromOrientation(0, 0, math.pi / 2));
 	}
 
 	effectsFolder.ClearAllChildren();
@@ -136,16 +161,18 @@ function updateSettingButtons() {
 			button.TextColor3 = Color3.fromRGB(175, 175, 175);
 			button.SetAttribute('disabled', true);
 		}
-
+		
 		button.Parent = settingButtons;
-
+		
 		if (isUsable) {
 			button.MouseButton1Click.Connect(() => {
 				const currentValue = !getSetting(name as GameSetting);
 				setSetting(name as GameSetting, currentValue);
+				
 				if (name === GameSetting.Modifiers) Events.SetModifiersSetting.FireServer(getSetting(GameSetting.Modifiers));
 				else if (name === GameSetting.TimerGUI) (screenGui.FindFirstChild('Timer') as TextLabel).Visible = getSetting(GameSetting.TimerGUI);
-
+				else if (name === GameSetting.InvertMobileButtons) update();
+				
 				button.Text = `${alias}: ${currentValue ? '✅' : '❌'}`;
 			});
 		}

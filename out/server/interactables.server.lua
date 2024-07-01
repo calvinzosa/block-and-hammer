@@ -1,7 +1,9 @@
 -- Compiled with roblox-ts v2.3.0
 local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
 local Workspace = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services").Workspace
-local giveBadge = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils").giveBadge
+local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
+local giveBadge = _utils.giveBadge
+local Badge = _utils.Badge
 local interactablesFolder = Workspace:FindFirstChild("Interactables")
 local steelHammer = interactablesFolder:FindFirstChild("SteelHammer")
 local glowPart = interactablesFolder:FindFirstChild("Glow");
@@ -35,7 +37,7 @@ end);
 	task.delay(20, function()
 		return player:SetAttribute("glowDebounce", nil)
 	end)
-	local _condition = player:GetAttribute("glowPhase")
+	local _condition = (player:GetAttribute("glowPhase"))
 	if _condition == nil then
 		_condition = 0
 	end
@@ -43,6 +45,6 @@ end);
 	player:SetAttribute("glowPhase", currentPhase)
 	if currentPhase == 5 then
 		player:SetAttribute("glowPhase", nil)
-		giveBadge(player, 254003402602004)
+		giveBadge(player, Badge.Glowing)
 	end
 end)

@@ -5,9 +5,11 @@ local UserInputService = _services.UserInputService
 local TweenService = _services.TweenService
 local Workspace = _services.Workspace
 local Players = _services.Players
-local playSound = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils").playSound
+local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
+local PlayerAttributes = _utils.PlayerAttributes
+local playSound = _utils.playSound
 local player = Players.LocalPlayer
-local camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera")
+local camera = Workspace.CurrentCamera or (Workspace:WaitForChild("Camera"))
 local GUI = player:WaitForChild("PlayerGui")
 local screenGui = GUI:WaitForChild("ScreenGui")
 local mouseIcon = screenGui:WaitForChild("MouseIcon")
@@ -83,7 +85,7 @@ UserInputService.InputEnded:Connect(function(input, processed)
 	end
 end)
 player.AttributeChanged:Connect(function(attr)
-	if attr == "hasSteelHammer" then
+	if attr == PlayerAttributes.HasSteelHammer then
 		local hasSteelHammer = player:GetAttribute(attr)
 		local steelHammer = interactablesFolder:FindFirstChild("SteelHammer")
 		local _arm = steelHammer
@@ -114,7 +116,7 @@ player.AttributeChanged:Connect(function(attr)
 		local transparency = if hasSteelHammer then 1 else 0
 		arm.Transparency = transparency
 		head.Transparency = transparency
-	elseif attr == "glowPhase" then
+	elseif attr == PlayerAttributes.GlowPhase then
 		local phase = player:GetAttribute(attr)
 		local glowPart = interactablesFolder:FindFirstChild("Glow")
 		local _result = glowPart

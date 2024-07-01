@@ -17,14 +17,14 @@ if serverOwnerId.Value == 0 then
 	serverOwnerId.Changed:Wait()
 end
 if isMainServer() then
-	print("[src/client/testing_server.client.ts:25]", "Server Type: Main")
+	print("[src/client/testing_server.client.ts:18]", "Server Type: Main")
 	if serverOwnerId.Value == GameData.CreatorId then
 		testingServerGui.Enabled = true
 		mainMenuGui.Enabled = false
 		screenGui.Enabled = false
 	end
 elseif isTestingServer() then
-	print("[src/client/testing_server.client.ts:33]", "Server Type: Testing")
+	print("[src/client/testing_server.client.ts:26]", "Server Type: Testing")
 	local button = screenGui:WaitForChild("TestingServerWarning")
 	button.Visible = true
 	button.MouseButton1Click:Once(function()

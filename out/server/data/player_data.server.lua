@@ -15,6 +15,7 @@ local encodeObjectToJSON = _utils.encodeObjectToJSON
 local getCubeTime = _utils.getCubeTime
 local getTime = _utils.getTime
 local isTestingServer = _utils.isTestingServer
+local quests = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "quests").default
 local accessoryList = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "accessory_loader").accessoryList
 local Events = {
 	LoadSettingsJSON = ReplicatedStorage:FindFirstChild("LoadSettingsJSON"),
@@ -24,47 +25,61 @@ local Events = {
 	ForceEquip = ReplicatedStorage:FindFirstChild("ForceEquip"),
 	EquipAccessory = ReplicatedStorage:FindFirstChild("EquipAccessory"),
 }
-local QuestData = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("QuestData"))
 local PlayerData = DataStoreService:GetDataStore("player_data")
 local accessoryData = {}
 local function playerAdded(player)
 	player:SetAttribute("serverJoinTime", getTime())
 	local playerId = tostring(player.UserId)
+	local errorMessage = nil
+	local success = false
 	local totalDataChunks = 0
 	local data = ""
-	local success, errorMessage = pcall(function()
-		local pages = PlayerData:ListKeysAsync(playerId, 255)
-		while true do
-			totalDataChunks += 1
-			local currentPage = pages:GetCurrentPage()
-			table.sort(currentPage, function(a, b)
-				return a.KeyName < b.KeyName
-			end)
-			if #currentPage > 0 then
-				for _, key in currentPage do
-					local chunk = PlayerData:GetAsync(key.KeyName)
-					if type(chunk) == "string" then
-						data ..= chunk
-					else
-						error(`Data of player {player.Name} is invalid.`)
+	for _ = 1, 5 do
+		TS.try(function()
+			errorMessage = nil
+			totalDataChunks = 0
+			data = ""
+			local pages = PlayerData:ListKeysAsync(playerId, 255)
+			while true do
+				totalDataChunks += 1
+				local currentPage = pages:GetCurrentPage()
+				table.sort(currentPage, function(a, b)
+					return a.KeyName < b.KeyName
+				end)
+				if #currentPage > 0 then
+					for _, key in currentPage do
+						local chunk = PlayerData:GetAsync(key.KeyName)
+						if type(chunk) == "string" then
+							data ..= chunk
+						else
+							error(`Data of player {player.Name} is invalid.`)
+						end
 					end
+				else
+					break
 				end
-			else
-				break
+				if pages.IsFinished then
+					break
+				end
+				pages:AdvanceToNextPageAsync()
 			end
-			if pages.IsFinished then
-				break
-			end
-			pages:AdvanceToNextPageAsync()
-		end
-	end)
+			success = true
+		end, function(err)
+			warn("[src/server/data/player_data.server.ts:89]", err)
+			success = false
+			errorMessage = err
+		end)
+	end
 	if success then
 		if #data > 0 then
-			local success, jsonData = pcall(function()
-				return HttpService:JSONDecode(data)
+			local jsonData = nil
+			TS.try(function()
+				jsonData = HttpService:JSONDecode(data)
+			end, function(err)
+				warn("[src/server/data/player_data.server.ts:101]", err)
 			end)
-			if not success then
-				player:Kick("Your data is most likely corrupted! Please go to the discord server and tell the developer of this message and your username")
+			if not jsonData then
+				player:Kick("Your data is most likely corrupted! Please go to the discord server and tell the developer of this message and your username or try rejoining")
 				return nil
 			end
 			local decodedData = decodeJSONObject(jsonData)
@@ -107,7 +122,7 @@ local function playerAdded(player)
 			end
 			local _condition = decodedData.active_quest
 			if _condition ~= "" and _condition then
-				_condition = QuestData[decodedData.active_quest] ~= nil
+				_condition = quests[decodedData.active_quest] ~= nil
 			end
 			if _condition ~= "" and _condition then
 				player:SetAttribute("activeQuest", decodedData.active_quest)
@@ -162,12 +177,12 @@ local function playerAdded(player)
 					return cube.Anchored
 				end)
 			end
-			print("[src/server/data/player_data.server.ts:162]", `Loaded data for player {player.Name} ({player.UserId}) | Total Data Chunks: {totalDataChunks}`)
+			print("[src/server/data/player_data.server.ts:168]", `Loaded data for player {player.Name} ({player.UserId}) | Total Data Chunks: {totalDataChunks}`)
 		else
-			print("[src/server/data/player_data.server.ts:163]", `No data was found for player {player.Name} ({player.UserId})`)
+			print("[src/server/data/player_data.server.ts:169]", `No data was found for player {player.Name} ({player.UserId})`)
 		end
 	else
-		warn("[src/server/data/player_data.server.ts:165]", `Unable to load data for player {player.Name}`)
+		warn("[src/server/data/player_data.server.ts:171]", `Unable to load data for player {player.Name}`)
 		player:Kick(`Unable to load data, please try again later | Error Message: {errorMessage}`)
 		return nil
 	end
@@ -189,7 +204,7 @@ local function playerRemoved(player)
 		return nil
 	end
 	local currentTime = getTime()
-	local _condition_1 = player:GetAttribute("serverJoinTime")
+	local _condition_1 = (player:GetAttribute("serverJoinTime"))
 	if _condition_1 == nil then
 		_condition_1 = currentTime
 	end
@@ -222,7 +237,7 @@ local function playerRemoved(player)
 	_object.settings_json = settingsJSON
 	_object.active_quest = activeQuest
 	_object.stats = {
-		total_time_played = (currentTime - serverJoinTime),
+		total_time_played = currentTime - serverJoinTime,
 		total_restarts = player:GetAttribute("totalRestarts"),
 		total_ragdolls = player:GetAttribute("totalRagdolls"),
 		times_joined = player:GetAttribute("times_joined"),
@@ -249,10 +264,10 @@ local function playerRemoved(player)
 			end
 		end)
 		if success then
-			print("[src/server/data/player_data.server.ts:235]", `Saved data for player {player.Name} ({player.UserId}) succesfully.`)
+			print("[src/server/data/player_data.server.ts:241]", `Saved data for player {player.Name} ({player.UserId}) succesfully.`)
 			break
 		else
-			warn("[src/server/data/player_data.server.ts:237]", `Could not save data for player {player.Name} ({player.UserId})! | Retrying {5 - retryAttempt} more time(s) | Error: {errorMessage}`)
+			warn("[src/server/data/player_data.server.ts:243]", `Could not save data for player {player.Name} ({player.UserId})! | Retrying {5 - retryAttempt} more time(s) | Error: {errorMessage}`)
 		end
 	end
 end
@@ -290,9 +305,9 @@ Events.SaveSettingsJSON.OnServerEvent:Connect(function(player, settingsJSON)
 	end)
 	if success then
 		player:SetAttribute("settings_json", encodedData)
-		print("[src/server/data/player_data.server.ts:273]", `Updated setting data for player {player.Name}`)
+		print("[src/server/data/player_data.server.ts:279]", `Updated setting data for player {player.Name}`)
 	else
-		warn("[src/server/data/player_data.server.ts:274]", `Unable to convert setting data for player {player.Name} into JSON`)
+		warn("[src/server/data/player_data.server.ts:280]", `Unable to convert setting data for player {player.Name} into JSON`)
 	end
 end)
 Events.ForceEquip.Event:Connect(function(player, name)

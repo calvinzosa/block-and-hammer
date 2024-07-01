@@ -8,7 +8,7 @@ local RunService = _services.RunService
 local Players = _services.Players
 local isTestingServer = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils").isTestingServer
 if isTestingServer() then
-	warn("[src/server/leaderboards.server.ts:16]", "Leaderboards are not enabled in the testing server")
+	warn("[src/server/data/leaderboards.server.ts:8]", "Leaderboards are not enabled in the testing server")
 else
 	local Events = {
 		UpdateLeaderboard = ReplicatedStorage:FindFirstChild("UpdateLeaderboard"),
@@ -38,12 +38,12 @@ else
 								_condition = totalTime
 							end
 							local newValue = _fn.min(totalTime, _condition)
-							print("[src/server/leaderboards.server.ts:39]", `Updated global leaderboard value of {userId} | Previous Value: {prevValue} | New Value: {newValue}`)
+							print("[src/server/data/leaderboards.server.ts:37]", `Updated global leaderboard value of {userId} | Previous Value: {prevValue} | New Value: {newValue}`)
 							return newValue
 						end)
 						return TS.TRY_BREAK
 					end, function(err)
-						warn("[src/server/leaderboards.server.ts:44]", err)
+						warn("[src/server/data/leaderboards.server.ts:42]", err)
 					end)
 					if _exitType then
 						break
@@ -61,12 +61,12 @@ else
 								_condition = totalTime
 							end
 							local newValue = _fn.min(totalTime, _condition)
-							print("[src/server/leaderboards.server.ts:56]", `Updated modded leaderboard value of {userId} | Previous Value: {prevValue} | New Value: {newValue}`)
+							print("[src/server/data/leaderboards.server.ts:54]", `Updated modded leaderboard value of {userId} | Previous Value: {prevValue} | New Value: {newValue}`)
 							return newValue
 						end)
 						return TS.TRY_BREAK
 					end, function(err)
-						warn("[src/server/leaderboards.server.ts:61]", err)
+						warn("[src/server/data/leaderboards.server.ts:59]", err)
 					end)
 					if _exitType then
 						break
@@ -85,14 +85,14 @@ else
 				processLeaderboardData(ModdedLeaderboard:GetSortedAsync(true, 100, 1):GetCurrentPage(), "ModdedLeaderboard")
 				return TS.TRY_BREAK
 			end, function(err)
-				warn("[src/server/leaderboards.server.ts:77]", err)
+				warn("[src/server/data/leaderboards.server.ts:87]", err)
 			end)
 			if _exitType then
 				break
 			end
 		end
 		Events.UpdateLeaderboard:FireAllClients(HttpService:JSONEncode(dataCache))
-		print("[src/server/leaderboards.server.ts:83]", "Updated all leaderboard info")
+		print("[src/server/data/leaderboards.server.ts:93]", "Updated all leaderboard info")
 	end
 	function processLeaderboardData(page, leaderboardName)
 		for number, value in pairs(page) do
@@ -130,7 +130,7 @@ else
 		TS.try(function()
 			updateLeaderboardsCache()
 		end, function(err)
-			warn("[src/server/leaderboards.server.ts:118]", err)
+			warn("[src/server/data/leaderboards.server.ts:128]", err)
 		end)
 		task.wait(60)
 	end

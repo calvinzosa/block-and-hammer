@@ -16,7 +16,7 @@ local Accessories = _utils.Accessories
 local playSound = _utils.playSound
 local getTime = _utils.getTime
 local player = Players.LocalPlayer
-local camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera")
+local camera = Workspace.CurrentCamera or (Workspace:WaitForChild("Camera"))
 local GUI = player:WaitForChild("PlayerGui")
 local canMove = GUI:WaitForChild("Values"):WaitForChild("can_move")
 local menuGui = GUI:WaitForChild("MainMenuGui")
@@ -54,7 +54,7 @@ while true do
 end
 repeat
 	do
-		shadowText.Text = "retrieving player data" .. string.rep(".", math.round(getTime() * 5 % 3))
+		shadowText.Text = "retrieving player data" .. string.rep(".", math.round((getTime() * 5) % 3))
 		task.wait()
 	end
 	local _value_1 = player:GetAttribute(PlayerAttributes.HasDataLoaded)

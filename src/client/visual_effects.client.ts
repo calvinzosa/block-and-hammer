@@ -467,15 +467,19 @@ function newPart(part: Instance) {
 		if (debounce || !otherPart || !otherPart.CanCollide || otherPart.GetAttribute('notCollidable') || (cube.GetAttribute('ragdollTime') ?? 0) !== 0) return;
 
 		RunService.Stepped.Wait();
-
+		
+		const cubeScale = (cube.GetAttribute('scale') as number | undefined) ?? 1;
+		
 		const hammerTexture = getHammerTexture();
 		const otherVelocity = otherPart.AssemblyLinearVelocity;
-
+		
 		if (otherPart.IsDescendantOf(mapFolder)) {
 			let newVelocity = currentVelocity.sub(otherVelocity).sub(cube.AssemblyLinearVelocity.div(4)).Magnitude;
 			if (player.GetAttribute(PlayerAttributes.InErrorLand)) newVelocity *= 2;
 			if (hammerTexture === Accessories.HammerTexture.SteelHammer && getSetting(GameSetting.Modifiers)) newVelocity *= 1.5;
-
+			
+			newVelocity /= cubeScale;
+			
 			if (newVelocity > 165) {
 				if (otherPart.Material !== Enum.Material.DiamondPlate) {
 					Events.DestroyedPart.FireServer(otherPart);
@@ -644,10 +648,10 @@ function newPart(part: Instance) {
 					}
 				} else {
 					const headVelocity = head.AssemblyLinearVelocity;
-
+					
 					const point = otherPart.GetClosestPointOnSurface(head.Position);
 					const normal = otherPart.Position.sub(head.Position).Unit;
-
+					
 					if (getSetting(GameSetting.Effects)) {
 						const sparkTemplate = ReplicatedStorage.FindFirstChild('Particles')?.FindFirstChild('spark') as BasePart | undefined;
 						if (sparkTemplate) {
@@ -661,18 +665,18 @@ function newPart(part: Instance) {
 							circle.TopSurface = Enum.SurfaceType.Smooth;
 							circle.BottomSurface = Enum.SurfaceType.Smooth;
 							circle.Parent = effectsFolder;
-
+							
 							const spark = sparkTemplate.Clone();
 							spark.CFrame = CFrame.lookAlong(point, headVelocity.Unit.mul(-1));
 							spark.Parent = effectsFolder;
-
+							
 							const particleEmitter = spark.FindFirstChild('ParticleEmitter') as ParticleEmitter;
 							task.delay(0.15, () => (particleEmitter.Enabled = false));
-
+							
 							Debris.AddItem(spark, 5);
 						}
 					}
-
+					
 					const dataString = string.format(
 						'spark,%d,%d,,,%d,%d,,',
 						math.round(point.X * 1000),
@@ -680,41 +684,31 @@ function newPart(part: Instance) {
 						math.round(headVelocity.X * 1000),
 						math.round(headVelocity.Y * 1000),
 					);
-
+					
 					Events.MakeReplayEvent.Fire(dataString);
-
-					playSound(
-						'hit1',
-						{
-							PlaybackSpeed: randomFloat(0.7, 0.8),
-							Volume: headVelocity.Magnitude / 15,
-						},
-						true,
-					);
+					
+					playSound('hit1', { PlaybackSpeed: randomFloat(0.7, 0.8), Volume: headVelocity.Magnitude / 15 }, true);
 				}
 
 				shakeIntensity.Value = math.clamp(head.AssemblyLinearVelocity.Magnitude / 45, 0.5, 1);
 				if (hammerTexture === Accessories.HammerTexture.ExplosiveHammer) {
 					const direction = cube.Position.sub(head.Position);
 					if (direction.Magnitude === 0) return;
-
+					
 					if (getSetting(GameSetting.Modifiers)) {
 						const cubeScale = (cube.GetAttribute('scale') as number | undefined) ?? 1;
 						cube.AssemblyLinearVelocity = cube.AssemblyLinearVelocity.add(direction.Unit.mul(250 * cubeScale));
 					}
-
+					
 					if (getSetting(GameSetting.Effects)) {
 						const velocity = head.AssemblyLinearVelocity.mul(10);
 						if (velocity.Magnitude === 0) return;
-
+						
 						head.Color = Color3.fromRGB(128, 128, 0);
 						task.delay(0.01, () => {
-							if (head)
-								TweenService.Create(head, tweenTypes.linear.short, {
-									Color: Color3.fromRGB(255, 0, 0),
-								}).Play();
+							if (head) TweenService.Create(head, tweenTypes.linear.short, { Color: Color3.fromRGB(255, 0, 0) }).Play();
 						});
-
+						
 						createDebris(velocity, head.Position, otherPart, 2.5);
 
 						const explosion = new Instance('Explosion');
@@ -722,7 +716,7 @@ function newPart(part: Instance) {
 						explosion.BlastRadius = 0;
 						explosion.BlastPressure = 0;
 						explosion.Parent = effectsFolder;
-
+						
 						const dataString = string.format(
 							'explosion,%d,%d,%d',
 							math.round(head.Position.X * 1000),
@@ -730,26 +724,19 @@ function newPart(part: Instance) {
 							math.round(head.Position.Z * 1000),
 							math.round((head.AssemblyLinearVelocity.Magnitude / 5) * 1000),
 						);
-
+						
 						Events.MakeReplayEvent.Fire(dataString);
 					}
-
-					playSound(
-						'explosion',
-						{
-							PlaybackSpeed: randomFloat(0.9, 1),
-							Volume: head.AssemblyLinearVelocity.Magnitude / 5,
-						},
-						true,
-					);
+					
+					playSound('explosion', { PlaybackSpeed: randomFloat(0.9, 1), Volume: head.AssemblyLinearVelocity.Magnitude / 5 }, true);
 					shakeIntensity.Value = 2;
 				}
 			} else if (newVelocity > 50) {
 				const point = otherPart.GetClosestPointOnSurface(head.Position);
-
+				
 				const headVelocity = head.AssemblyLinearVelocity;
 				const unitVelocity = headVelocity.Unit;
-
+				
 				if (getSetting(GameSetting.Effects)) {
 					const sparkTemplate = ReplicatedStorage.FindFirstChild('Particles')?.FindFirstChild('spark') as BasePart | undefined;
 					if (sparkTemplate) {
@@ -770,9 +757,9 @@ function newPart(part: Instance) {
 					math.round(headVelocity.X * 1000),
 					math.round(headVelocity.Y * 1000),
 				);
-
+				
 				Events.MakeReplayEvent.Fire(dataString);
-
+				
 				playSound(
 					'hit1',
 					{
@@ -782,7 +769,7 @@ function newPart(part: Instance) {
 					true,
 				);
 			}
-
+			
 			debounce = true;
 			task.delay(0.25, () => (debounce = false));
 		} else if (otherPart.IsDescendantOf(nonBreakable)) {
@@ -817,20 +804,20 @@ Workspace.ChildAdded.Connect(newPart);
 
 RunService.Stepped.Connect((_, dt) => {
 	if (!head || !cube) return;
-
+	
 	let targetCube = cube;
 	if (isSpectating.Value) {
 		const otherPlayer = Players.FindFirstChild(spectatePlayer.Value) as Player | undefined;
 		if (otherPlayer) targetCube = (Workspace.FindFirstChild(`cube${otherPlayer.UserId}`) as BasePart | undefined) ?? targetCube;
 	}
-
+	
 	targetCube = (Workspace.FindFirstChild('REPLAY_VIEW') as BasePart | undefined) ?? targetCube;
-
+	
 	if (!player.GetAttribute(PlayerAttributes.InErrorLand)) {
 		Workspace.SetAttribute('default_gravity', 196.2);
-
+		
 		let targetTime = 14.5;
-
+		
 		const [altitude] = convertStudsToMeters(targetCube.Position.Y - 1.9);
 		if (altitude < 100) targetTime = 14.5;
 		else if (altitude < 200) targetTime = 6.4;
@@ -840,28 +827,30 @@ RunService.Stepped.Connect((_, dt) => {
 		else {
 			const percent = math.clamp((altitude - 700) / 100, -1, 1);
 			targetTime += (9.5 * (percent + 1)) / 2;
-
+			
 			Workspace.SetAttribute('default_gravity', 88.1 * (1 - percent) + 20);
 		}
-
+		
 		Lighting.ClockTime = numLerp(Lighting.ClockTime, targetTime, dt * 2);
 	}
-
-	const velocity = targetCube.AssemblyLinearVelocity;
+	
+	const cubeScale = (cube.GetAttribute('scale') as number | undefined) ?? 1;
+	
+	const velocity = targetCube.AssemblyLinearVelocity.div(cubeScale);
 	if (!player.GetAttribute(PlayerAttributes.Client.InMainMenu) && screenGui.Enabled) {
 		if (getSetting(GameSetting.OrthographicView)) camera.FieldOfView = 1;
 		else camera.FieldOfView = 70 + math.max(velocity.Magnitude - 100, 0) / 5;
-
+		
 		const percent = getSetting(GameSetting.Sounds) ? math.max((velocity.Magnitude - 100) / 300, 0) : 0;
 		wind.Volume = percent * 3;
 	}
-
+	
 	lastVelocity = currentVelocity;
 	currentVelocity = head.AssemblyLinearVelocity;
-
+	
 	const previousVelocity = cube.GetAttribute('lastVelocity');
 	if (typeIs(previousVelocity, 'Vector3')) {
-		const relativeVelocity = cube.AssemblyLinearVelocity.sub(previousVelocity);
+		const relativeVelocity = cube.AssemblyLinearVelocity.sub(previousVelocity).div(cubeScale);
 
 		if (relativeVelocity.Magnitude > 300) {
 			Events.GroundImpact.FireServer(relativeVelocity, cube.Position);
@@ -996,7 +985,9 @@ while (task.wait(0.05)) {
 	targetCube = (Workspace.FindFirstChild('REPLAY_VIEW') as BasePart) ?? targetCube;
 
 	if (targetCube) {
-		const fieldOfView = 70 + math.max(targetCube.AssemblyLinearVelocity.Magnitude - 100, 0) / 5;
+		const cubeScale = (targetCube.GetAttribute('scale') as number | undefined) ?? 1;
+	
+		const fieldOfView = 70 + math.max(targetCube.AssemblyLinearVelocity.div(cubeScale).Magnitude - 100, 0) / 5;
 		const size = math.clamp((110 - fieldOfView) / 10, 1, 6);
 		speedLines.Size = UDim2.fromScale(size, size);
 		speedLines.Visible = true;

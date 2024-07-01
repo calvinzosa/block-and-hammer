@@ -37,7 +37,7 @@ local Events = {
 }
 local StrokeScale = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("StrokeScale"))
 local player = Players.LocalPlayer
-local camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera")
+local camera = Workspace.CurrentCamera or (Workspace:WaitForChild("Camera"))
 local GUI = player:WaitForChild("PlayerGui")
 local screenGui = GUI:WaitForChild("ScreenGui")
 local valueInstances = GUI:WaitForChild("Values")
@@ -462,12 +462,12 @@ local function newPart(part)
 		return nil
 	end
 	part:SetAttribute("processed", true)
-	print("[src/client/visual_effects.client.ts:412]", `Cube added: {part.Name} (Client: cube{player.UserId})`)
+	print("[src/client/visual_effects.client.ts:453]", `Cube added: {part.Name} (Client: cube{player.UserId})`)
 	StrokeScale:ScaleBillboardGui(part:WaitForChild("OverheadGUI"), 950)
 	if not isClientCube(part) then
 		return nil
 	end
-	print("[src/client/visual_effects.client.ts:418]", "> Client cube respawned")
+	print("[src/client/visual_effects.client.ts:459]", "> Client cube respawned")
 	cube = part
 	head = cube:WaitForChild("Head")
 	head.Touched:Connect(function(otherPart)
@@ -489,6 +489,11 @@ local function newPart(part)
 			return nil
 		end
 		RunService.Stepped:Wait()
+		local _condition_2 = (cube:GetAttribute("scale"))
+		if _condition_2 == nil then
+			_condition_2 = 1
+		end
+		local cubeScale = _condition_2
 		local hammerTexture = getHammerTexture()
 		local otherVelocity = otherPart.AssemblyLinearVelocity
 		if otherPart:IsDescendantOf(mapFolder) then
@@ -502,6 +507,7 @@ local function newPart(part)
 			if hammerTexture == Accessories.HammerTexture.SteelHammer and getSetting(GameSetting.Modifiers) then
 				newVelocity *= 1.5
 			end
+			newVelocity /= cubeScale
 			if newVelocity > 165 then
 				if otherPart.Material ~= Enum.Material.DiamondPlate then
 					Events.DestroyedPart:FireServer(otherPart)
@@ -510,19 +516,19 @@ local function newPart(part)
 					local removeBreaks = hammerTexture == Accessories.HammerTexture.SteelHammer and getSetting(GameSetting.Modifiers)
 					local canBreak = otherPart:GetAttribute("CAN_BREAK")
 					local canShatter = otherPart:GetAttribute("CAN_SHATTER")
-					local _condition_2 = canBreak
-					if _condition_2 ~= 0 and _condition_2 == _condition_2 and _condition_2 ~= "" and _condition_2 then
-						_condition_2 = not removeBreaks
+					local _condition_3 = canBreak
+					if _condition_3 ~= 0 and _condition_3 == _condition_3 and _condition_3 ~= "" and _condition_3 then
+						_condition_3 = not removeBreaks
 					end
-					if _condition_2 ~= 0 and _condition_2 == _condition_2 and _condition_2 ~= "" and _condition_2 then
+					if _condition_3 ~= 0 and _condition_3 == _condition_3 and _condition_3 ~= "" and _condition_3 then
 						task.spawn(breakPart, otherPart, head)
 						dataString = string.format("break,%s", partId)
 					else
-						local _condition_3 = canShatter
-						if _condition_3 ~= 0 and _condition_3 == _condition_3 and _condition_3 ~= "" and _condition_3 then
-							_condition_3 = not removeBreaks
+						local _condition_4 = canShatter
+						if _condition_4 ~= 0 and _condition_4 == _condition_4 and _condition_4 ~= "" and _condition_4 then
+							_condition_4 = not removeBreaks
 						end
-						if _condition_3 ~= 0 and _condition_3 == _condition_3 and _condition_3 ~= "" and _condition_3 then
+						if _condition_4 ~= 0 and _condition_4 == _condition_4 and _condition_4 ~= "" and _condition_4 then
 							task.spawn(shatterPart, otherPart, head)
 							dataString = string.format("shatter,%s", partId)
 						else
@@ -656,11 +662,11 @@ local function newPart(part)
 							if _result ~= nil then
 								_result = _result.Parent
 							end
-							local _condition_3 = not _result
-							if not _condition_3 then
-								_condition_3 = not head or not arm or not trail
+							local _condition_4 = not _result
+							if not _condition_4 then
+								_condition_4 = not head or not arm or not trail
 							end
-							if _condition_3 then
+							if _condition_4 then
 								return nil
 							end
 							if getHammerTexture() == Accessories.HammerTexture.IcyHammer then
@@ -726,11 +732,11 @@ local function newPart(part)
 						return nil
 					end
 					if getSetting(GameSetting.Modifiers) then
-						local _condition_2 = cube:GetAttribute("scale")
-						if _condition_2 == nil then
-							_condition_2 = 1
+						local _condition_3 = (cube:GetAttribute("scale"))
+						if _condition_3 == nil then
+							_condition_3 = 1
 						end
-						local cubeScale = _condition_2
+						local cubeScale = _condition_3
 						local _assemblyLinearVelocity = cube.AssemblyLinearVelocity
 						local _unit = direction.Unit
 						local _arg0_1 = 250 * cubeScale
@@ -837,10 +843,10 @@ RunService.Stepped:Connect(function(_, dt)
 	if isSpectating.Value then
 		local otherPlayer = Players:FindFirstChild(spectatePlayer.Value)
 		if otherPlayer then
-			targetCube = Workspace:FindFirstChild(`cube{otherPlayer.UserId}`) or targetCube
+			targetCube = (Workspace:FindFirstChild(`cube{otherPlayer.UserId}`)) or targetCube
 		end
 	end
-	targetCube = Workspace:FindFirstChild("REPLAY_VIEW") or targetCube
+	targetCube = (Workspace:FindFirstChild("REPLAY_VIEW")) or targetCube
 	local _value = player:GetAttribute(PlayerAttributes.InErrorLand)
 	if not (_value ~= 0 and _value == _value and _value ~= "" and _value) then
 		Workspace:SetAttribute("default_gravity", 196.2)
@@ -859,18 +865,23 @@ RunService.Stepped:Connect(function(_, dt)
 			targetTime = 3
 		else
 			local percent = math.clamp((altitude - 700) / 100, -1, 1)
-			targetTime += 9.5 * (percent + 1) / 2
+			targetTime += (9.5 * (percent + 1)) / 2
 			Workspace:SetAttribute("default_gravity", 88.1 * (1 - percent) + 20)
 		end
 		Lighting.ClockTime = numLerp(Lighting.ClockTime, targetTime, dt * 2)
 	end
-	local velocity = targetCube.AssemblyLinearVelocity
-	local _value_1 = player:GetAttribute(PlayerAttributes.Client.InMainMenu)
-	local _condition = not (_value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1)
-	if _condition then
-		_condition = screenGui.Enabled
+	local _condition = (cube:GetAttribute("scale"))
+	if _condition == nil then
+		_condition = 1
 	end
-	if _condition then
+	local cubeScale = _condition
+	local velocity = targetCube.AssemblyLinearVelocity / cubeScale
+	local _value_1 = player:GetAttribute(PlayerAttributes.Client.InMainMenu)
+	local _condition_1 = not (_value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1)
+	if _condition_1 then
+		_condition_1 = screenGui.Enabled
+	end
+	if _condition_1 then
 		if getSetting(GameSetting.OrthographicView) then
 			camera.FieldOfView = 1
 		else
@@ -883,7 +894,7 @@ RunService.Stepped:Connect(function(_, dt)
 	currentVelocity = head.AssemblyLinearVelocity
 	local previousVelocity = cube:GetAttribute("lastVelocity")
 	if typeof(previousVelocity) == "Vector3" then
-		local relativeVelocity = cube.AssemblyLinearVelocity - previousVelocity
+		local relativeVelocity = (cube.AssemblyLinearVelocity - previousVelocity) / cubeScale
 		if relativeVelocity.Magnitude > 300 then
 			Events.GroundImpact:FireServer(relativeVelocity, cube.Position)
 			if getSetting(GameSetting.Effects) then
@@ -976,7 +987,7 @@ RunService.Stepped:Connect(function(_, dt)
 	prevCubePosition = cube.Position
 	cube:SetAttribute("lastVelocity", cube.AssemblyLinearVelocity)
 end)
-print("[src/client/visual_effects.client.ts:916]", "Started running visual_effects.client.ts")
+print("[src/client/visual_effects.client.ts:971]", "Started running visual_effects.client.ts")
 while true do
 	local _value = task.wait(0.05)
 	if not (_value ~= 0 and _value == _value and _value) then
@@ -991,12 +1002,17 @@ while true do
 	if isSpectating.Value then
 		local otherPlayer = Players:FindFirstChild(spectatePlayer.Value)
 		if otherPlayer then
-			targetCube = Workspace:FindFirstChild(`cube\{otherPlayer.UserId\}`) or targetCube
+			targetCube = (Workspace:FindFirstChild(`cube\{otherPlayer.UserId\}`)) or targetCube
 		end
 	end
-	targetCube = Workspace:FindFirstChild("REPLAY_VIEW") or targetCube
+	targetCube = (Workspace:FindFirstChild("REPLAY_VIEW")) or targetCube
 	if targetCube then
-		local fieldOfView = 70 + math.max(targetCube.AssemblyLinearVelocity.Magnitude - 100, 0) / 5
+		local _condition = (targetCube:GetAttribute("scale"))
+		if _condition == nil then
+			_condition = 1
+		end
+		local cubeScale = _condition
+		local fieldOfView = 70 + math.max((targetCube.AssemblyLinearVelocity / cubeScale).Magnitude - 100, 0) / 5
 		local size = math.clamp((110 - fieldOfView) / 10, 1, 6)
 		speedLines.Size = UDim2.fromScale(size, size)
 		speedLines.Visible = true

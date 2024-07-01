@@ -3,9 +3,12 @@ local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_incl
 local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
 local ReplicatedStorage = _services.ReplicatedStorage
 local GeometryService = _services.GeometryService
-local Workspace = _services.Workspace
+local HttpService = _services.HttpService
 local RunService = _services.RunService
+local Workspace = _services.Workspace
+local startsWith = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "string-utils").startsWith
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
+local Badge = _utils.Badge
 local giveBadge = _utils.giveBadge
 local randomDirection = _utils.randomDirection
 local Events = {
@@ -15,6 +18,42 @@ local mapFolder = Workspace:FindFirstChild("Map")
 local serverTimeLabel = ((mapFolder:FindFirstChild("ServerAgeSign")):FindFirstChild("SurfaceGui")):FindFirstChild("TextLabel")
 local interactablesFolder = Workspace:FindFirstChild("Interactables")
 local duck = interactablesFolder:FindFirstChild("Duck")
+local untaggedParts = {}
+for _, part in mapFolder:GetDescendants() do
+	if not part:IsA("BasePart") then
+		continue
+	end
+	local _exp = part:GetTags()
+	-- ▼ ReadonlyArray.find ▼
+	local _callback = function(tag)
+		return startsWith(tag, "mapPart-")
+	end
+	local _result
+	for _i, _v in _exp do
+		if _callback(_v, _i - 1, _exp) == true then
+			_result = _v
+			break
+		end
+	end
+	-- ▲ ReadonlyArray.find ▲
+	if not (_result ~= "" and _result) then
+		part:AddTag(`mapPart-{HttpService:GenerateGUID()}`)
+		table.insert(untaggedParts, part)
+	end
+end
+--[[
+	
+	local b,c=true,0;for _,p in workspace.Map:GetDescendants() do if p:IsA('BasePart') then b=true for _, t in p:GetTags() do if t:find('mapPart-')==1 then b=false break end end
+	if b then p:AddTag('mapPart-'..game.HttpService:GenerateGUID(false)) c+=1 end end end
+	print(c)
+	
+]]
+if #untaggedParts > 0 then
+	warn("[src/server/map.server.ts:45]", `Found {#untaggedParts} untagged part(s):`)
+	for _, part in untaggedParts do
+		warn("[src/server/map.server.ts:46]", part, part:GetFullName())
+	end
+end
 for i = 1, 300 do
 	task.spawn(function()
 		local vectorA = randomDirection()
@@ -51,7 +90,7 @@ end
 		return nil
 	end
 	Events.PlaySound:FireClient(player, "quack")
-	giveBadge(player, 2146289079)
+	giveBadge(player, Badge.TheDuck)
 end)
 RunService.Stepped:Connect(function(currentTime)
 	local seconds = math.floor(currentTime % 60)

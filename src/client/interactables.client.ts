@@ -2,7 +2,7 @@ import { ReplicatedStorage, UserInputService, TweenService, Workspace, Players }
 
 import { PlayerAttributes, playSound } from 'shared/utils';
 
-import { $dbg } from 'rbxts-transform-debug';
+import { $dbg, $print } from 'rbxts-transform-debug';
 
 const player = Players.LocalPlayer;
 const camera = Workspace.CurrentCamera ?? (Workspace.WaitForChild('Camera') as Camera);
@@ -52,14 +52,14 @@ UserInputService.InputChanged.Connect((input, processed) => {
 
 UserInputService.InputEnded.Connect((input, processed) => {
 	if (processed) return;
-
+	
 	if (input.UserInputType === Enum.UserInputType.MouseButton1 || input.UserInputType === Enum.UserInputType.Touch) {
 		const interactable = getMouseInteractable();
 		let part = interactable?.Instance;
 		if (!part || !part.IsDescendantOf(interactablesFolder)) return;
-
+		
 		while (part.Parent !== interactablesFolder) part = part?.Parent as BasePart;
-
+		
 		const interactedEvent = part?.FindFirstChild('Interacted');
 		if (interactedEvent?.IsA('RemoteEvent')) interactedEvent.FireServer();
 	}
@@ -68,21 +68,21 @@ UserInputService.InputEnded.Connect((input, processed) => {
 player.AttributeChanged.Connect((attr) => {
 	if (attr === PlayerAttributes.HasSteelHammer) {
 		const hasSteelHammer = player.GetAttribute(attr) as boolean;
-
+		
 		const steelHammer = interactablesFolder.FindFirstChild('SteelHammer');
 		const arm = steelHammer?.FindFirstChild('Arm');
 		const head = steelHammer?.FindFirstChild('Head');
 		if (!arm?.IsA('BasePart') || !head?.IsA('BasePart')) return;
-
+		
 		const transparency = hasSteelHammer ? 1 : 0;
 		arm.Transparency = transparency;
 		head.Transparency = transparency;
 	} else if (attr === PlayerAttributes.GlowPhase) {
 		const phase = player.GetAttribute(attr) as number;
-
+		
 		const glowPart = interactablesFolder.FindFirstChild('Glow');
 		if (!glowPart?.IsA('BasePart')) return;
-
+		
 		playSound('magic', { Volume: 2 });
 
 		let targetPosition = new Vector3(1598, 5, 5);

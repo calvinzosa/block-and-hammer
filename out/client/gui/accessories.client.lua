@@ -70,7 +70,7 @@ local function updateGui()
 				outline.Enabled = true
 			end
 			if accessory.copy_cube_color then
-				accessoryButton.ImageColor3 = player:GetAttribute("CUBE_COLOR") or computeNameColor(player.Name)
+				accessoryButton.ImageColor3 = (player:GetAttribute("CUBE_COLOR")) or computeNameColor(player.Name)
 			end
 			local canEquipIt = false
 			accessoryButton.Visible = true
@@ -262,21 +262,21 @@ RunService.RenderStepped:Connect(function()
 			local loopDelay = data.spritesheet_data.loopDelay
 			local fps = data.spritesheet_data.fps
 			local currentTime = time()
-			local _condition_1 = button:GetAttribute("lastChange")
+			local _condition_1 = (button:GetAttribute("lastChange"))
 			if _condition_1 == nil then
-				_condition_1 = (currentTime - 1)
+				_condition_1 = currentTime - 1
 			end
 			local lastChange = _condition_1
-			if (currentTime - lastChange) < (1 / fps) then
+			if currentTime - lastChange < 1 / fps then
 				continue
 			end
 			button:SetAttribute("lastChange", currentTime)
-			local _condition_2 = button:GetAttribute("spritesheetX")
+			local _condition_2 = (button:GetAttribute("spritesheetX"))
 			if _condition_2 == nil then
 				_condition_2 = -tileWidth
 			end
 			local x = _condition_2
-			local _condition_3 = button:GetAttribute("spritesheetY")
+			local _condition_3 = (button:GetAttribute("spritesheetY"))
 			if _condition_3 == nil then
 				_condition_3 = 0
 			end

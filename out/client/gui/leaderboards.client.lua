@@ -21,7 +21,7 @@ local data = {
 }
 Events.UpdateLeaderboard.OnClientEvent:Connect(function(encodedData)
 	data = HttpService:JSONDecode(encodedData)
-	print("[src/client/gui/leaderboards.client.ts:31]", "Recieved new leaderboard info")
+	print("[src/client/gui/leaderboards.client.ts:28]", "Recieved new leaderboard info")
 end)
 leaderboardGui:GetPropertyChangedSignal("Visible"):Connect(function()
 	for name, values in pairs(data) do
@@ -39,7 +39,7 @@ leaderboardGui:GetPropertyChangedSignal("Visible"):Connect(function()
 			TS.try(function()
 				name = Players:GetNameFromUserIdAsync(userId)
 			end, function(err)
-				warn("[src/client/gui/leaderboards.client.ts:51]", err)
+				warn("[src/client/gui/leaderboards.client.ts:48]", err)
 			end)
 			local _, minutes, seconds, milliseconds = getTimeUnits(totalTimeMilliseconds)
 			local item = playerTemplate:Clone()

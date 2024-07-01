@@ -51,10 +51,10 @@ const hammer = menuAssets.WaitForChild('Hammer') as Model;
 
 UserInputService.InputBegan.Once(() => {
 	const currentHammer = getHammerTexture();
-
+	
 	const arm = hammer.WaitForChild('Arm') as BasePart;
 	const head = hammer.WaitForChild('Head') as BasePart;
-
+	
 	if (currentHammer === Accessories.HammerTexture.Hammer404) {
 		for (const part of [head, arm]) {
 			for (const face of Enum.NormalId.GetEnumItems()) {
@@ -68,24 +68,24 @@ UserInputService.InputBegan.Once(() => {
 	} else if (currentHammer === Accessories.HammerTexture.ExplosiveHammer) {
 		arm.BrickColor = new BrickColor('Medium stone grey');
 		arm.Material = Enum.Material.DiamondPlate;
-
+		
 		head.BrickColor = new BrickColor('Really red');
 		head.Material = Enum.Material.Neon;
 	}
-
+	
 	const start = hammer.GetPivot();
 	const goal = (menuAssets.WaitForChild('EndAnim') as BasePart).CFrame;
 	for (const i of $range(0, 1, 0.1)) {
 		hammer.PivotTo(start.Lerp(goal, i));
 		task.wait();
 	}
-
+	
 	hammer.PivotTo(goal);
-
+	
 	playButton.Visible = true;
 	// menuGui.Edit.Visible = true
 	titleLabel.Visible = true;
-
+	
 	const Info = new TweenInfo(0.4, Enum.EasingStyle.Linear);
 	TweenService.Create(hintLabel, Info, {
 		TextTransparency: 1,

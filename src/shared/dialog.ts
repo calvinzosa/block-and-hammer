@@ -12,24 +12,24 @@ const Events = {
 	'ClientStartQuest': ReplicatedStorage.WaitForChild('ClientStartQuest') as BindableEvent,
 };
 
-export type DialogRoot = {
+export type GameDialogRoot = {
 	icon: string;
 	talkSound: string;
 	talkDelay: number[];
 	
-	dialog: DialogChoices;
+	dialog: GameDialogChoices;
 };
 
-export type DialogChoices = {
-	default: DialogChoice;
-	special: SpecialDialogChoice[];
+export type GameDialogChoices = {
+	default: GameDialogChoice;
+	special: GameSpecialDialogChoice[];
 };
 
-export type DialogChoice = {
+export type GameDialogChoice = {
 	message: string;
 	faceTo: '_player' | '_default' | Vector3;
 	goodbyeEnabled: boolean;
-	choices: Record<string, DialogChoice>;
+	choices: Record<string, GameDialogChoice>;
 	
 	questName?: string;
 	
@@ -37,15 +37,15 @@ export type DialogChoice = {
 	condition?: (player: Player, npc: BasePart) => boolean;
 };
 
-export type SpecialDialogChoice = {
+export type GameSpecialDialogChoice = {
 	condition: (player: Player, npc: BasePart) => boolean;
-} & DialogChoice;
+} & GameDialogChoice;
 
 export default {
 	TestDialog: {
 		icon: '',
 		talkSound: '',
-		talkDelay: [ 0.1 ],
+		talkDelay: [ 0.1, 0.1 ],
 		dialog: {
 			default: {
 				message: 'This is a test dialog.\n2nd line.',
@@ -143,4 +143,4 @@ export default {
 			],
 		},
 	},
-} as Record<string, DialogRoot>;
+} as Record<string, GameDialogRoot>;

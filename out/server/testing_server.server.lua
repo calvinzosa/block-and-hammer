@@ -28,7 +28,7 @@ else
 	ownerId.Value = game.PrivateServerOwnerId
 end
 if isMainServer() then
-	print("[src/server/testing_server.server.ts:25]", "Server Type: Main")
+	print("[src/server/testing_server.server.ts:15]", "Server Type: Main")
 	if ownerId.Value == GameData.CreatorId then
 		while true do
 			local _value = task.wait(3)
@@ -41,7 +41,7 @@ if isMainServer() then
 					savedServerId = TestingServerStore:GetAsync("ServerId")
 					return TS.TRY_BREAK
 				end, function(err)
-					warn("[src/server/testing_server.server.ts:35]", err)
+					warn("[src/server/testing_server.server.ts:25]", err)
 				end)
 				if _exitType then
 					break
@@ -59,7 +59,7 @@ if isMainServer() then
 					TS.try(function()
 						TestingServerStore:SetAsync("ServerId", serverId)
 					end, function(err)
-						warn("[src/server/testing_server.server.ts:47]", err)
+						warn("[src/server/testing_server.server.ts:37]", err)
 					end)
 				end
 			end
@@ -67,14 +67,14 @@ if isMainServer() then
 		end
 	end
 elseif isTestingServer() then
-	print("[src/server/testing_server.server.ts:56]", "Server Type: Testing")
+	print("[src/server/testing_server.server.ts:46]", "Server Type: Testing")
 	game:BindToClose(function()
 		while true do
 			local _exitType, _returns = TS.try(function()
 				TestingServerStore:SetAsync("ServerId", "none")
 				return TS.TRY_BREAK
 			end, function(err)
-				warn("[src/server/testing_server.server.ts:64]", err)
+				warn("[src/server/testing_server.server.ts:54]", err)
 			end)
 			if _exitType then
 				break

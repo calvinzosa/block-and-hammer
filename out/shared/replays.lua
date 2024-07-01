@@ -7,7 +7,7 @@ local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "ut
 local getCubeTime = _utils.getCubeTime
 local getTime = _utils.getTime
 local player = Players.LocalPlayer
-local camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera")
+local camera = Workspace.CurrentCamera or (Workspace:WaitForChild("Camera"))
 local mouseVisual = Workspace:WaitForChild("MouseVisual")
 local _class
 do
@@ -39,19 +39,19 @@ do
 		self.isRecording = true
 		self.startTime = nil
 		self.cubeStartTime = math.round(cubeTime * 1000)
-		local _condition = player:GetAttribute("cube_Hat")
+		local _condition = (player:GetAttribute("cube_Hat"))
 		if _condition == nil then
 			_condition = ""
 		end
-		local _condition_1 = player:GetAttribute("cube_Face")
+		local _condition_1 = (player:GetAttribute("cube_Face"))
 		if _condition_1 == nil then
 			_condition_1 = ""
 		end
-		local _condition_2 = player:GetAttribute("cube_Aura")
+		local _condition_2 = (player:GetAttribute("cube_Aura"))
 		if _condition_2 == nil then
 			_condition_2 = ""
 		end
-		local _condition_3 = player:GetAttribute("hammer_Texture")
+		local _condition_3 = (player:GetAttribute("hammer_Texture"))
 		if _condition_3 == nil then
 			_condition_3 = ""
 		end
@@ -131,7 +131,7 @@ do
 		local headDistance = (_position - _position_1).Magnitude
 		local multiplier = 1000
 		local dataString = string.format("1,%d,%d,%d,%d,%d,%d,%d,%d,%d,", currentTime, math.round(position.X * multiplier), math.round(position.Y * multiplier), math.round(headAngle * multiplier), math.round(headDistance * multiplier), math.round(mouseVisual.Position.X * multiplier), math.round(mouseVisual.Position.Y * multiplier), math.round(velocity.X * multiplier), math.round(velocity.Y * multiplier))
-		local _condition_1 = cube:GetAttribute("ragdollTime")
+		local _condition_1 = (cube:GetAttribute("ragdollTime"))
 		if _condition_1 == nil then
 			_condition_1 = 0
 		end

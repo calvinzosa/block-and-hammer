@@ -1,6 +1,23 @@
-import { ReplicatedStorage, BadgeService, RunService, Workspace, Players, Chat } from '@rbxts/services';
+import {
+	ReplicatedStorage,
+	BadgeService,
+	RunService,
+	Workspace,
+	Players,
+	Chat,
+} from '@rbxts/services';
 
-import { convertStudsToMeters, PlayerAttributes, computeNameColor, Accessories, giveBadge, getTime, getTimeUnits, getHammerTexture } from 'shared/utils';
+import {
+	convertStudsToMeters,
+	computeNameColor,
+	getHammerTexture,
+	PlayerAttributes,
+	getTimeUnits,
+	Accessories,
+	giveBadge,
+	getTime,
+	Badge,
+} from 'shared/utils';
 
 import { reloadAccessories } from 'shared/accessory_loader';
 import { startsWith } from '@rbxts/string-utils';
@@ -17,6 +34,7 @@ const Events = {
 	CompleteGame: ReplicatedStorage.FindFirstChild('CompleteGame') as RemoteEvent,
 	GroundImpact: ReplicatedStorage.FindFirstChild('GroundImpact') as RemoteEvent,
 	FlipGravity: ReplicatedStorage.FindFirstChild('FlipGravity') as RemoteEvent,
+	SetColor: ReplicatedStorage.FindFirstChild('SetColor') as RemoteEvent,
 	Reset: ReplicatedStorage.FindFirstChild('Reset') as RemoteEvent,
 
 	LoadPlayerAccessories: ReplicatedStorage.FindFirstChild('LoadPlayerAccessories') as BindableEvent,
@@ -72,7 +90,7 @@ function createCube(player: Player, firstTime: boolean) {
 	});
 	
 	cube.Touched.Connect((otherPart) => {
-		if (otherPart === trappedArea) giveBadge(player, 2146259996);
+		if (otherPart === trappedArea) giveBadge(player, Badge.Trapped);
 	});
 	
 	if (!firstTime) player.SetAttribute(PlayerAttributes.CompletedGame, false);
@@ -98,12 +116,13 @@ function characterAdded(character: Model) {
 
 function playerAdded(player: Player) {
 	task.spawn(() => {
-		if (!BadgeService.UserHasBadgeAsync(player.UserId, 1967915839777317)) {
-			giveBadge(player, 1967915839777317);
+		if (!BadgeService.UserHasBadgeAsync(player.UserId, Badge.Welcome)) {
+			giveBadge(player, Badge.Welcome);
 			player.SetAttribute(PlayerAttributes.IsNew, true);
 		}
-
-		giveBadge(player, 4410861265533965);
+		
+		giveBadge(player, Badge.Visits35k);
+		giveBadge(player, Badge.Visits1k);
 	});
 
 	createCube(player, true);
@@ -114,24 +133,24 @@ function playerAdded(player: Player) {
 
 function resetPlayer(player: Player, fullReset: any) {
 	if (!player || !typeIs(fullReset, 'boolean')) return;
-
+	
 	let cube = Workspace.FindFirstChild(`cube${player.UserId}`);
 	if (fullReset && cube) {
 		cube.Destroy();
 		cube = undefined;
 	}
-
+	
 	if (cube?.IsA('BasePart')) {
 		cube.SetAttribute('extra_time', undefined);
 		cube.SetAttribute('finishTotalTime', undefined);
 		cube.SetAttribute('destroyed_counter', 0);
-
+		
 		player.SetAttribute(PlayerAttributes.CompletedGame, undefined);
 		if (!player.GetAttribute(PlayerAttributes.HasModifiers)) cube.SetAttribute('used_modifiers', undefined);
-
+		
 		cube.SetAttribute('start_time', getTime());
 	} else createCube(player, false);
-
+	
 	player.SetAttribute(PlayerAttributes.TotalRestarts, ((player.GetAttribute(PlayerAttributes.TotalRestarts) as number) ?? 0) + 1);
 }
 
@@ -171,26 +190,30 @@ Events.AddRagdollCount.OnServerEvent.Connect((player) => {
 
 Events.GroundImpact.OnServerEvent.Connect((player, velocity, position) => {
 	if (!typeIs(velocity, 'Vector3') || !typeIs(position, 'Vector3')) return;
-
+	
 	const newImpacts = ((player.GetAttribute(PlayerAttributes.Impacts) as number | undefined) ?? 0) + 1;
 	player.SetAttribute(PlayerAttributes.Impacts, newImpacts);
-
+	
 	if (newImpacts >= 15 && !player.GetAttribute(PlayerAttributes.HasExplosiveBadge)) {
 		player.SetAttribute(PlayerAttributes.HasExplosiveBadge, true);
-		giveBadge(player, 2146508969);
+		task.delay(30, () => {
+			if (player.Parent === Players) player.SetAttribute(PlayerAttributes.HasExplosiveBadge, undefined);
+		});
+		
+		giveBadge(player, Badge.Explosive);
 	}
-
-	if (velocity.Y > 892.857) giveBadge(player, 4279006041653694);
+	
+	if (velocity.Y > 892.857) giveBadge(player, Badge.METEOR);
 	else if (velocity.Y > 357.142) {
-		if (player.GetAttribute('didShatter')) giveBadge(player, 2512066188170235);
+		if (player.GetAttribute('didShatter')) giveBadge(player, Badge.FreezingMisfortune);
 		else {
 			const params = new OverlapParams();
-			params.FilterDescendantsInstances = [targetCenter];
+			params.FilterDescendantsInstances = [ targetCenter ];
 			params.FilterType = Enum.RaycastFilterType.Include;
 
-			if (Workspace.GetPartBoundsInBox(new CFrame(position), new Vector3(4, 4, 4), params).size() > 0) giveBadge(player, 2479031288528448);
+			if (Workspace.GetPartBoundsInBox(new CFrame(position), new Vector3(4, 4, 4), params).size() > 0) giveBadge(player, Badge.LongShot);
 		}
-	} else giveBadge(player, 2146180612);
+	} else giveBadge(player, Badge.CrashLanding);
 });
 
 Events.CompleteGame.OnServerEvent.Connect((player, givenTime) => {
@@ -202,7 +225,7 @@ Events.CompleteGame.OnServerEvent.Connect((player, givenTime) => {
 	cube.SetAttribute('finishTotalTime', totalTime);
 	player.SetAttribute('finished', true);
 
-	const [hours, minutes, seconds, milliseconds] = getTimeUnits(totalTime * 1000);
+	const [ , minutes, seconds, milliseconds ] = getTimeUnits(totalTime * 1000);
 	const formattedTime = string.format('%02d:%02d.%03d', minutes, seconds, milliseconds);
 
 	if (cube.GetAttribute('used_modifiers')) {
@@ -216,17 +239,17 @@ Events.CompleteGame.OnServerEvent.Connect((player, givenTime) => {
 
 		player.SetAttribute(PlayerAttributes.TotalWins, ((player.GetAttribute(PlayerAttributes.TotalWins) as number | undefined) ?? 0) + 1);
 	}
-
-	giveBadge(player, 2146411244);
+	
+	giveBadge(player, Badge.ProfessionalClimber);
 
 	if (cube.GetAttribute('destroyed_counter') === 0) {
 		Events.SaySystemMessage.FireClient(player, `nice! you completed a pacifist run in: ${formattedTime}`);
-		giveBadge(player, 2146295992);
+		giveBadge(player, Badge.Pacifist);
 	} else Events.SaySystemMessage.FireClient(player, `nice! you completed a normal run in: ${formattedTime}`);
-
+	
 	cube.SetAttribute('start_time', getTime() - totalTime);
-
-	if (totalTime < 210) giveBadge(player, 2146538368);
+	
+	if (totalTime < 210) giveBadge(player, Badge.Speedrunner);
 });
 
 Events.DestroyedPart.OnServerEvent.Connect((player, otherPart) => {
@@ -244,6 +267,15 @@ Events.DestroyedPart.OnServerEvent.Connect((player, otherPart) => {
 	cube.SetAttribute('destroyed_counter', count);
 
 	if (otherPart.Name === `part${player.UserId}` && getHammerTexture(player) === Accessories.HammerTexture.BuilderHammer) otherPart.SetAttribute('timer', 0);
+});
+
+Events.SetColor.OnServerEvent.Connect((player, color) => {
+	if (!typeIs(color, 'Color3')) return;
+	
+	player.SetAttribute(PlayerAttributes.CubeColor, color);
+	
+	const cube = Workspace.FindFirstChild(`cube${player.UserId}`);
+	if (cube?.IsA('BasePart')) cube.Color = color;
 });
 
 Events.SayMessageRequest.OnServerEvent.Connect((player, message, channel) => {
@@ -288,20 +320,20 @@ RunService.Stepped.Connect(() => {
 	for (const player of Players.GetPlayers()) {
 		const cube = Workspace.FindFirstChild(`cube${player.UserId}`) as BasePart | undefined;
 		if (cube) {
-			const [altitude] = convertStudsToMeters(cube.Position.Y - 1.9);
+			const [ altitude ] = convertStudsToMeters(cube.Position.Y - 1.9);
 			if (altitude > 800) {
 				if (player.GetAttribute(PlayerAttributes.HasGravityBadge) === undefined) {
 					player.SetAttribute(PlayerAttributes.HasGravityBadge, true);
-					giveBadge(player, 1719451122385638);
+					giveBadge(player, Badge.FreeFloater);
 					continue;
 				}
 			} else if (player.GetAttribute(PlayerAttributes.HasGravityBadge) !== undefined) player.SetAttribute(PlayerAttributes.HasGravityBadge, undefined);
-
-			const [speed] = convertStudsToMeters(math.abs(cube.AssemblyLinearVelocity.X));
+			
+			const [ speed ] = convertStudsToMeters(math.abs(cube.AssemblyLinearVelocity.X));
 			if (speed > 70) {
 				if (player.GetAttribute(PlayerAttributes.HasSpeedBadge) === undefined) {
 					player.SetAttribute(PlayerAttributes.HasSpeedBadge, true);
-					giveBadge(player, 2146687990);
+					giveBadge(player, Badge.UltraSpeed);
 				}
 			} else if (player.GetAttribute(PlayerAttributes.HasSpeedBadge)) player.SetAttribute(PlayerAttributes.HasSpeedBadge, undefined);
 		}
