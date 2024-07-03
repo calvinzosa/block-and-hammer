@@ -53,18 +53,6 @@ ReplicatedFirst.RemoveDefaultLoadingScreen();
 
 $print('Created loading screen');
 
-task.spawn(() => {
-	while (true) {
-		const [success] = pcall(() => {
-			StarterGui.SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false);
-			StarterGui.SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false);
-		});
-
-		if (success) break;
-		else task.wait(0.1);
-	}
-});
-
 for (const audioId of AssetIds.Audios) {
 	shadowLoading.Text = `attempting to preload asset ${audioId}`;
 	ContentProvider.PreloadAsync([audioId], (_, status: Enum.AssetFetchStatus) => {

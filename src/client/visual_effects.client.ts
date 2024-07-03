@@ -811,7 +811,7 @@ RunService.Stepped.Connect((_, dt) => {
 		
 		let targetTime = 14.5;
 		
-		const [altitude] = convertStudsToMeters(targetCube.Position.Y - 1.9);
+		const [ altitude ] = convertStudsToMeters(targetCube.Position.Y, true);
 		if (altitude < 100) targetTime = 14.5;
 		else if (altitude < 200) targetTime = 6.4;
 		else if (altitude < 300) targetTime = 12;

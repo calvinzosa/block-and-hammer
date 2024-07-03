@@ -21,6 +21,7 @@ if _result ~= nil then
 	_result = _result:WaitForChild("PlayerGui")
 end
 local GUI = _result
+local areasFolder = Workspace:WaitForChild("Areas")
 local forceTestingServer = ReplicatedStorage:WaitForChild("ForceTestingServer")
 local placeId = game.PlaceId
 local RNG = Random.new()
@@ -403,6 +404,21 @@ local function fixSettings()
 		Settings[name] = _condition
 	end
 end
+local function getCurrentArea(cube)
+	local params = OverlapParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { areasFolder }
+	local _areaPart = Workspace:GetPartBoundsInBox(CFrame.new(cube.Position.X, cube.Position.Y, 0), Vector3.new(4, 4, 4), params)[1]
+	if _areaPart ~= nil then
+		_areaPart = _areaPart:FindFirstAncestorOfClass("Model")
+	end
+	local areaPart = _areaPart
+	if areaPart then
+		return areaPart.Name
+	else
+		return "None"
+	end
+end
 local function getHammerTexture(player)
 	if player == nil then
 		player = nil
@@ -595,7 +611,13 @@ local function computeNameColor(playerName)
 	end
 	return nameColors[value % #nameColors + 1]
 end
-local function convertStudsToMeters(studs)
+local function convertStudsToMeters(studs, isCube)
+	if isCube == nil then
+		isCube = false
+	end
+	if isCube then
+		studs -= 1.9
+	end
 	local meters = studs * 0.28
 	local kilometers = meters / 1000
 	local megameters = kilometers / 1000
@@ -727,7 +749,7 @@ local function giveBadge(player, badgeId)
 		return nil
 	end
 	if isTestingServer() then
-		warn("[src/shared/utils.ts:536]", `Badges are disabled in the Testing Server | Attempted to give badge {badgeId} to {player.Name}`)
+		warn("[src/shared/utils.ts:550]", `Badges are disabled in the Testing Server | Attempted to give badge {badgeId} to {player.Name}`)
 		return nil
 	end
 	local userId = player.UserId
@@ -744,11 +766,11 @@ local function giveBadge(player, badgeId)
 			local _exitType, _returns = TS.try(function()
 				if not BadgeService:UserHasBadgeAsync(userId, badgeId) then
 					BadgeService:AwardBadge(userId, badgeId)
-					print("[src/shared/utils.ts:549]", `Successfully badge {badgeId} to {player.Name}`)
+					print("[src/shared/utils.ts:563]", `Successfully badge {badgeId} to {player.Name}`)
 				end
 				return TS.TRY_BREAK
 			end, function(err)
-				warn("[src/shared/utils.ts:554]", err)
+				warn("[src/shared/utils.ts:568]", err)
 			end)
 			if _exitType then
 				break
@@ -786,6 +808,7 @@ return {
 	getSettingAlias = getSettingAlias,
 	getSettingOrder = getSettingOrder,
 	fixSettings = fixSettings,
+	getCurrentArea = getCurrentArea,
 	getHammerTexture = getHammerTexture,
 	getCubeFace = getCubeFace,
 	getCubeHat = getCubeHat,

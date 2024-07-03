@@ -453,7 +453,7 @@ RunService.Stepped:Connect(function()
 	for _, player in Players:GetPlayers() do
 		local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
 		if cube then
-			local _binding = convertStudsToMeters(cube.Position.Y - 1.9)
+			local _binding = convertStudsToMeters(cube.Position.Y, true)
 			local altitude = _binding[1]
 			if altitude > 800 then
 				if player:GetAttribute(PlayerAttributes.HasGravityBadge) == nil then

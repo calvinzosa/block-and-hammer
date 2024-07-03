@@ -320,7 +320,7 @@ RunService.Stepped.Connect(() => {
 	for (const player of Players.GetPlayers()) {
 		const cube = Workspace.FindFirstChild(`cube${player.UserId}`) as BasePart | undefined;
 		if (cube) {
-			const [ altitude ] = convertStudsToMeters(cube.Position.Y - 1.9);
+			const [ altitude ] = convertStudsToMeters(cube.Position.Y, true);
 			if (altitude > 800) {
 				if (player.GetAttribute(PlayerAttributes.HasGravityBadge) === undefined) {
 					player.SetAttribute(PlayerAttributes.HasGravityBadge, true);

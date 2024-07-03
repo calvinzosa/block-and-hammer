@@ -851,7 +851,7 @@ RunService.Stepped:Connect(function(_, dt)
 	if not (_value ~= 0 and _value == _value and _value ~= "" and _value) then
 		Workspace:SetAttribute("default_gravity", 196.2)
 		local targetTime = 14.5
-		local _binding = convertStudsToMeters(targetCube.Position.Y - 1.9)
+		local _binding = convertStudsToMeters(targetCube.Position.Y, true)
 		local altitude = _binding[1]
 		if altitude < 100 then
 			targetTime = 14.5

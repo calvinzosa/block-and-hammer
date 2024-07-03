@@ -9,6 +9,7 @@ import {
 	Workspace,
 	Players,
 	GuiService,
+	Debris,
 } from '@rbxts/services';
 
 import { $print, $warn } from 'rbxts-transform-debug';
@@ -32,6 +33,7 @@ import {
 	Settings,
 	numLerp,
 	getTime,
+	randomDirection,
 } from 'shared/utils';
 
 import { createMobileButton, getMobileButtonsByCategory } from 'shared/mobile_buttons';
@@ -61,7 +63,6 @@ const shakeIntensity = valueInstances.WaitForChild('shake_intensity') as NumberV
 const isSpectating = valueInstances.WaitForChild('is_spectating') as BoolValue;
 const spectatePlayer = isSpectating.WaitForChild('player') as StringValue;
 const canMove = valueInstances.WaitForChild('can_move') as BoolValue;
-const isButtonHovered = valueInstances.WaitForChild('is_button_hovered') as BoolValue;
 const screenGui = GUI.WaitForChild('ScreenGui') as ScreenGui;
 const mobileButtons = GUI.WaitForChild('MobileButtons') as ScreenGui;
 const replayGui = GUI.WaitForChild('ReplayGui') as ScreenGui;
@@ -72,6 +73,7 @@ const speedometerLabel = screenGui.WaitForChild('Speedometer') as TextLabel;
 const altitudeLabel = screenGui.WaitForChild('Altitude') as TextLabel;
 const nonBreakable = Workspace.WaitForChild('NonBreakable') as Folder;
 const mapFolder = Workspace.WaitForChild('Map') as Folder;
+const electricalParts = mapFolder.WaitForChild('Electrical') as Folder;
 const platformsFolder = mapFolder.WaitForChild('Platforms') as Folder;
 const propellersFolder = mapFolder.WaitForChild('Propellers') as Folder;
 const mudParts = mapFolder.WaitForChild('MudParts');
@@ -118,6 +120,8 @@ const cachedParticles: ParticleEmitter[] = [];
 let cube: BasePart | undefined = undefined;
 let wasModifiersEnabled = false;
 let previousModifiersCheck = true;
+let stunDebounce = false;
+let isAnimating = false;
 let ragdollTime = 0;
 let intensity = 0;
 
@@ -240,6 +244,54 @@ function updateMud(cube: BasePart, head: BasePart, dt: number) {
 	}
 }
 
+function newElectricalPart(part: Instance) {
+	if (!part.IsA('BasePart')) return;
+	
+	const zapParticles = part.WaitForChild('Zap') as ParticleEmitter;
+	
+	part.Touched.Connect((otherPart) => {
+		const head = cube?.FindFirstChild('Head');
+		if (!cube || !head?.IsA('BasePart')) return;
+		
+		if (otherPart === cube || otherPart === cube.FindFirstChild('Head')) {
+			if (ragdollTime > 0 || stunDebounce) return;
+			
+			stunDebounce = true;
+			task.delay(4, () => stunDebounce = false);
+			
+			ragdollTime = 3;
+			
+			const stunParticles = ReplicatedStorage.WaitForChild('Particles').WaitForChild('Stunned') as ParticleEmitter;
+			
+			const cubeParticles = stunParticles.Clone();
+			cubeParticles.Parent = cube;
+			
+			const headParticles = stunParticles.Clone();
+			headParticles.Parent = cube;
+			
+			Debris.AddItem(cubeParticles, 3);
+			Debris.AddItem(headParticles, 3);
+			
+			const cubeVelocity = cube.Position.sub(part.GetClosestPointOnSurface(cube.Position));
+			const headVelocity = head.Position.sub(part.GetClosestPointOnSurface(head.Position));
+			
+			if (cubeVelocity.Magnitude > 0 && headVelocity.Magnitude > 0) {
+				cube.AssemblyLinearVelocity = cubeVelocity.Unit.mul(otherPart === cube ? 100 : 45);
+				head.AssemblyLinearVelocity = headVelocity.Unit.mul(otherPart === head ? 100 : 45);
+			}
+			
+			playSound('zap', { PlaybackSpeed: randomFloat(0.9, 1.1), Volume: 1.5 });
+			
+			task.delay(2.5, () => {
+				cubeParticles.Enabled = false;
+				headParticles.Enabled = false;
+			});
+			
+			zapParticles.Emit(50);
+		}
+	});
+}
+
 function saySystemMessage(message: unknown, color: unknown, font: unknown, size: unknown) {
 	if (!typeIs(message, 'string')) return;
 	
@@ -255,8 +307,62 @@ function saySystemMessage(message: unknown, color: unknown, font: unknown, size:
 	});
 }
 
+function doTeleportAnimation(towards: Vector3, finish: Vector3) {
+	if (!cube) return;
+	
+	isAnimating = true;
+	canMove.Value = false;
+	
+	task.delay(1.5, () => {
+		isAnimating = false;
+		canMove.Value = true;
+		
+		if (cube) {
+			cube.Anchored = false;
+			camera.CFrame = CFrame.lookAt(cube.Position.sub(new Vector3(0, 0, 1)), cube.Position);
+		}
+	});
+	
+	const effect = cube.Clone();
+	effect.Anchored = true;
+	effect.Name = 'TeleportTransition';
+	effect.Parent = effectsFolder;
+	
+	cube.Anchored = true;
+	cube.AssemblyAngularVelocity = Vector3.zero;
+	cube.PivotTo(new CFrame(finish));
+	
+	for (const part of effect.GetDescendants()) {
+		if (part.IsA('BasePart')) part.Anchored = true;
+	}
+	
+	const Info = new TweenInfo(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut);
+	
+	TweenService.Create(camera, Info, { CFrame: CFrame.lookAt(towards.sub(new Vector3(0, 0, 37.5)), towards) }).Play();
+	TweenService.Create(effect, Info, { CFrame: CFrame.lookAlong(towards, randomDirection()), Size: Vector3.zero, LocalTransparencyModifier: 1 }).Play();
+	
+	for (const part of effect.GetDescendants()) {
+		if (part.IsA('BasePart')) {
+			part.Anchored = true;
+			
+			TweenService.Create(part, new TweenInfo(randomFloat(0.5, 1), Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {
+				CFrame: CFrame.lookAlong(towards, randomDirection()),
+				Size: Vector3.zero,
+				LocalTransparencyModifier: 1
+			}).Play();
+		} else if (part.IsA('ParticleEmitter') || part.IsA('BillboardGui')) {
+			part.Enabled = false;
+		}
+	}
+	
+	task.wait(1);
+	
+	effect.Destroy();
+	TweenService.Create(camera, new TweenInfo(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { CFrame: CFrame.lookAt(towards.sub(new Vector3(0, 0, 1)), towards) }).Play();
+}
+
 function formatDebugWorldNumber(num: number) {
-	const [integer, decimal] = math.modf(math.abs(num));
+	const [ integer, decimal ] = math.modf(math.abs(num));
 	return string.format('%s%05d%s', integer >= 0 ? '+' : '-', integer, string.format('%.3f', decimal).sub(2));
 }
 
@@ -630,21 +736,21 @@ RunService.Heartbeat.Connect((dt) => {
 		const timeValue = leaderstats?.FindFirstChild('Time');
 		if (altitudeValue?.IsA('StringValue') && timeValue?.IsA('StringValue')) {
 			const otherCube = Workspace.FindFirstChild(`cube${otherPlayer.UserId}`);
-
+			
 			let newAltitudeValue = '--';
 			let newTimeValue = '--';
-
+			
 			if (otherCube?.IsA('BasePart')) {
-				const [, altitudeString] = convertStudsToMeters(otherCube.Position.Y - 1.9);
+				const [ , altitudeString ] = convertStudsToMeters(otherCube.Position.Y, true);
 				newAltitudeValue = altitudeString;
-
-				const [cubeTime] = getCubeTime(otherCube);
-				const [, minutes, seconds, milliseconds] = getTimeUnits(cubeTime * 1000);
+				
+				const [ cubeTime ] = getCubeTime(otherCube);
+				const [ , minutes, seconds, milliseconds ] = getTimeUnits(cubeTime * 1000);
 				newTimeValue = string.format('%02d:%02d.%d', minutes, seconds, math.floor(milliseconds / 100));
 			}
-
+			
 			if (player.GetAttribute(PlayerAttributes.InErrorLand) || otherPlayer.GetAttribute(PlayerAttributes.InErrorLand)) newAltitudeValue = '--';
-
+			
 			timeValue.Value = newTimeValue;
 			altitudeValue.Value = newAltitudeValue;
 		}
@@ -680,11 +786,11 @@ RunService.Heartbeat.Connect((dt) => {
 		const targetPlayer = otherPlayer ?? player;
 		const targetCube = spectatingCube ?? cube;
 
-		const [altitude, altitudeString] = convertStudsToMeters(targetCube.Position.Y - 1.9);
-		const [speed, speedString] = convertStudsToMeters(targetCube.AssemblyLinearVelocity.Magnitude);
-		const [cubeTime] = getCubeTime(targetCube);
+		const [ , altitudeString ] = convertStudsToMeters(targetCube.Position.Y, true);
+		const [ , speedString ] = convertStudsToMeters(targetCube.AssemblyLinearVelocity.Magnitude);
+		const [ cubeTime ] = getCubeTime(targetCube);
 
-		const [hours, minutes, seconds, milliseconds] = getTimeUnits(math.round(cubeTime * 1000));
+		const [ , minutes, seconds, milliseconds ] = getTimeUnits(math.round(cubeTime * 1000));
 
 		timerLabel.Text = string.format('%02d:%02d.%d', minutes, seconds, math.floor(milliseconds / 100));
 		altitudeLabel.Text = altitudeString;
@@ -716,27 +822,27 @@ RunService.Heartbeat.Connect((dt) => {
 		const startTime = cube.GetAttribute('start_time');
 		const armCFrame = cube.FindFirstChild('ArmCFrame');
 		const armRotation = cube.FindFirstChild('ArmRotation');
-
+		
 		if (!head?.IsA('BasePart') || !arm?.IsA('BasePart') || !centerAttachment?.IsA('Attachment')) return;
 		if (!alignOrientation?.IsA('AlignOrientation') || !armAlignPosition?.IsA('AlignPosition') || !armAlignOrientation?.IsA('AlignOrientation')) return;
 		if (!armCFrame?.IsA('Attachment') || !armRotation?.IsA('Attachment')) return;
 		if (!typeIs(startTime, 'number')) return;
-
+		
 		const cubeScale = (cube.GetAttribute('scale') as number | undefined) ?? 1;
-
-		const [altitude] = convertStudsToMeters(cube.Position.Y - 1.9);
-
+		
+		const [ altitude ] = convertStudsToMeters(cube.Position.Y, true);
+		
 		const range = cube.FindFirstChild('Range');
 		if (range?.IsA('BasePart')) range.Transparency = getSetting(GameSetting.ShowRange) ? 0.75 : 1;
-
+		
 		const windForce = cube.FindFirstChild('WindForce');
 		if (windForce?.IsA('VectorForce')) {
 			if (altitude > 400 && altitude < 500) windForce.Force = new Vector3(750, 0, 0);
 			else windForce.Force = Vector3.zero;
 		}
-
+		
 		if (getTime() - startTime < 0.1) ragdollTime = 0;
-
+		
 		head.CustomPhysicalProperties = new PhysicalProperties(0.7, 0.6, 0, 100, 1);
 		if (getSetting(GameSetting.Modifiers)) {
 			if (currentHammer === Accessories.HammerTexture.IcyHammer) head.CustomPhysicalProperties = new PhysicalProperties(0.7, 0, 0, 100, 1);
@@ -897,12 +1003,12 @@ RunService.Heartbeat.Connect((dt) => {
 				}).Play();
 			}
 		}
-
-		if (!replayGui.Enabled) {
+		
+		if (!replayGui.Enabled && !isAnimating) {
 			if (camera.CFrame.Position.sub(cameraCFrame.Position).Magnitude > 50) camera.CFrame = camera.CFrame.Lerp(cameraCFrame, 0.5);
 			else camera.CFrame = camera.CFrame.Lerp(cameraCFrame, math.clamp(dt * 15, 0, 1));
 		}
-
+		
 		if (camera.CameraType !== Enum.CameraType.Scriptable) camera.CameraType = Enum.CameraType.Scriptable;
 		if (isSpectating.Value) return;
 
@@ -1149,7 +1255,7 @@ winArea.Touched.Connect((otherPart) => {
 	if (otherPart.GetAttribute('isCube') && isClientCube(otherPart) && !player.GetAttribute(PlayerAttributes.CompletedGame)) {
 		player.SetAttribute(PlayerAttributes.CompletedGame, true);
 
-		const [totalTime] = getCubeTime(otherPart);
+		const [ totalTime ] = getCubeTime(otherPart);
 		$print(`Completed game in ${totalTime} seconds`);
 
 		Events.CompleteGame.FireServer(totalTime);
@@ -1192,6 +1298,19 @@ for (const descendant of Workspace.GetDescendants()) {
 
 Workspace.DescendantAdded.Connect((descendant) => {
 	if (descendant.IsA('ParticleEmitter')) cachedParticles.push(descendant);
+});
+
+electricalParts.GetChildren().map((part) => newElectricalPart(part))
+
+electricalParts.ChildAdded.Connect(newElectricalPart);
+
+const level2Teleport = mapFolder.WaitForChild('Level2Teleport') as BasePart;
+level2Teleport.Touched.Connect((otherPart) => {
+	if (!cube) return;
+	
+	if (otherPart === cube || otherPart === cube.FindFirstChild('Head') || otherPart === cube.FindFirstChild('Arm')) {
+		doTeleportAnimation(level2Teleport.Position, new Vector3(0, 1500, 0));
+	}
 });
 
 Events.SaySystemMessage.OnClientEvent.Connect(saySystemMessage);

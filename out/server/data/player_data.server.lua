@@ -203,7 +203,7 @@ local function playerRemoved(player)
 	end
 	local playerId = tostring(player.UserId)
 	local cube = Workspace:FindFirstChild(`cube{playerId}`)
-	local _value_1 = not cube or player.UserId <= 0 or player:GetAttribute("in_tutorial")
+	local _value_1 = not cube or player.UserId <= 0 or player:GetAttribute(PlayerAttributes.InTutorial)
 	if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 		return nil
 	end
@@ -252,7 +252,7 @@ local function playerRemoved(player)
 	cube:Destroy()
 	local encodedData = HttpService:JSONEncode(dataToSave)
 	for retryAttempt = 1, 5 do
-		local success, errorMessage = pcall(function()
+		local _exitType, _returns = TS.try(function()
 			local _arg1 = #encodedData
 			local currentData = string.sub(encodedData, 1, _arg1)
 			local iteration = 0
@@ -266,12 +266,14 @@ local function playerRemoved(player)
 				currentData = string.sub(_currentData, _arg0)
 				iteration += 1
 			end
+			print("[src/server/data/player_data.server.ts:242]", `Saved data for player {player.Name} ({player.UserId}) succesfully.`)
+			return TS.TRY_BREAK
+		end, function(err)
+			warn("[src/server/data/player_data.server.ts:245]", `Could not save data for player {player.Name} ({player.UserId})! | Retrying {5 - retryAttempt} more time(s) | Error: {err}`)
+			task.wait(0.5)
 		end)
-		if success then
-			print("[src/server/data/player_data.server.ts:243]", `Saved data for player {player.Name} ({player.UserId}) succesfully.`)
+		if _exitType then
 			break
-		else
-			warn("[src/server/data/player_data.server.ts:245]", `Could not save data for player {player.Name} ({player.UserId})! | Retrying {5 - retryAttempt} more time(s) | Error: {errorMessage}`)
 		end
 	end
 end
@@ -309,9 +311,9 @@ Events.SaveSettingsJSON.OnServerEvent:Connect(function(player, settingsJSON)
 	end)
 	if success then
 		player:SetAttribute("settings_json", encodedData)
-		print("[src/server/data/player_data.server.ts:281]", `Updated setting data for player {player.Name}`)
+		print("[src/server/data/player_data.server.ts:283]", `Updated setting data for player {player.Name}`)
 	else
-		warn("[src/server/data/player_data.server.ts:282]", `Unable to convert setting data for player {player.Name} into JSON`)
+		warn("[src/server/data/player_data.server.ts:284]", `Unable to convert setting data for player {player.Name} into JSON`)
 	end
 end)
 Events.ForceEquip.Event:Connect(function(player, name)

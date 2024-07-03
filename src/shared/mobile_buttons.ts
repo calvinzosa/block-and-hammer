@@ -10,8 +10,6 @@ const player = Players.LocalPlayer;
 const camera = Workspace.CurrentCamera ?? Workspace.WaitForChild('Camera') as Camera;
 
 const GUI = player.WaitForChild('PlayerGui') as PlayerGui;
-const valueInstances = GUI.WaitForChild('Values') as ScreenGui;
-const isButtonHovered = valueInstances.WaitForChild('is_button_hovered') as BoolValue;
 const mobileButtons = GUI.WaitForChild('MobileButtons') as ScreenGui;
 const deviceSafeInsets = GUI.WaitForChild('DeviceSafeInsets') as ScreenGui;
 const guiTemplates = ReplicatedStorage.WaitForChild('GUI') as Folder;
@@ -55,9 +53,6 @@ export function createMobileButton(title: string, category: string, position: Ve
 		titleLabel.TextColor3 = Color3.fromRGB(0, 0, 0);
 		titleLabel.TextTransparency = 0.5;
 	});
-	
-	button.MouseEnter.Connect(() => isButtonHovered.Value = true);
-	button.MouseLeave.Connect(() => isButtonHovered.Value = false);
 	
 	callbacks.push([ button, callback ]);
 	

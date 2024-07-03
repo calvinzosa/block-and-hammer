@@ -11,8 +11,6 @@ local getSetting = _utils.getSetting
 local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera")
 local GUI = player:WaitForChild("PlayerGui")
-local valueInstances = GUI:WaitForChild("Values")
-local isButtonHovered = valueInstances:WaitForChild("is_button_hovered")
 local mobileButtons = GUI:WaitForChild("MobileButtons")
 local deviceSafeInsets = GUI:WaitForChild("DeviceSafeInsets")
 local guiTemplates = ReplicatedStorage:WaitForChild("GUI")
@@ -60,14 +58,6 @@ local function createMobileButton(title, category, position, scale, action, call
 		button.Image = "rbxassetid://15904289666"
 		titleLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
 		titleLabel.TextTransparency = 0.5
-	end)
-	button.MouseEnter:Connect(function()
-		isButtonHovered.Value = true
-		return isButtonHovered.Value
-	end)
-	button.MouseLeave:Connect(function()
-		isButtonHovered.Value = false
-		return isButtonHovered.Value
 	end)
 	local _arg0 = { button, callback }
 	table.insert(callbacks, _arg0)

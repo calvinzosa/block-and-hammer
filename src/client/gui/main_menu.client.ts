@@ -36,6 +36,19 @@ player.AttributeChanged.Connect((attr) => {
 menuGui.Enabled = true;
 screenGui.Enabled = false;
 
+task.spawn(() => {
+	while (true) {
+		try {
+			StarterGui.SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false);
+			StarterGui.SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false);
+			
+			break;
+		} catch (err) {
+			task.wait(0.1);
+		}
+	}
+});
+
 while (!menuGui.GetAttribute('done')) menuGui.AttributeChanged.Wait();
 
 do {

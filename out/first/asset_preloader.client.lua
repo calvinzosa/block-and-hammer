@@ -16,19 +16,6 @@ mainMenuGui.Parent = GUI
 player:SetAttribute("inMainMenu", true)
 ReplicatedFirst:RemoveDefaultLoadingScreen()
 print("[src/first/asset_preloader.client.ts:54]", "Created loading screen")
-task.spawn(function()
-	while true do
-		local success = pcall(function()
-			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
-			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
-		end)
-		if success then
-			break
-		else
-			task.wait(0.1)
-		end
-	end
-end)
 for _, audioId in AssetIds.Audios do
 	shadowLoading.Text = `attempting to preload asset {audioId}`
 	ContentProvider:PreloadAsync({ audioId }, function(_, status)
@@ -39,5 +26,5 @@ for _, audioId in AssetIds.Audios do
 		end
 	end)
 end
-print("[src/first/asset_preloader.client.ts:76]", "Finished preloading assets")
+print("[src/first/asset_preloader.client.ts:64]", "Finished preloading assets")
 mainMenuGui:SetAttribute("done", true)

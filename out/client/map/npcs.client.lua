@@ -243,7 +243,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
 						TS.try(function()
 							messageData.func(player, npc)
 						end, function(err)
-							warn("[src/client/npcs.client.ts:248]", err)
+							warn("[src/client/map/npcs.client.ts:248]", err)
 						end)
 					end
 					if targetChoice == "_goodbye" then

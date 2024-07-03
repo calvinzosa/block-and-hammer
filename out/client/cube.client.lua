@@ -11,6 +11,7 @@ local StarterGui = _services.StarterGui
 local Workspace = _services.Workspace
 local Players = _services.Players
 local GuiService = _services.GuiService
+local Debris = _services.Debris
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
 local roundDecimalPlaces = _utils.roundDecimalPlaces
 local getHammerTexture = _utils.getHammerTexture
@@ -30,6 +31,7 @@ local waitUntil = _utils.waitUntil
 local Settings = _utils.Settings
 local numLerp = _utils.numLerp
 local getTime = _utils.getTime
+local randomDirection = _utils.randomDirection
 local _mobile_buttons = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "mobile_buttons")
 local createMobileButton = _mobile_buttons.createMobileButton
 local getMobileButtonsByCategory = _mobile_buttons.getMobileButtonsByCategory
@@ -55,7 +57,6 @@ local shakeIntensity = valueInstances:WaitForChild("shake_intensity")
 local isSpectating = valueInstances:WaitForChild("is_spectating")
 local spectatePlayer = isSpectating:WaitForChild("player")
 local canMove = valueInstances:WaitForChild("can_move")
-local isButtonHovered = valueInstances:WaitForChild("is_button_hovered")
 local screenGui = GUI:WaitForChild("ScreenGui")
 local mobileButtons = GUI:WaitForChild("MobileButtons")
 local replayGui = GUI:WaitForChild("ReplayGui")
@@ -66,6 +67,7 @@ local speedometerLabel = screenGui:WaitForChild("Speedometer")
 local altitudeLabel = screenGui:WaitForChild("Altitude")
 local nonBreakable = Workspace:WaitForChild("NonBreakable")
 local mapFolder = Workspace:WaitForChild("Map")
+local electricalParts = mapFolder:WaitForChild("Electrical")
 local platformsFolder = mapFolder:WaitForChild("Platforms")
 local propellersFolder = mapFolder:WaitForChild("Propellers")
 local mudParts = mapFolder:WaitForChild("MudParts")
@@ -114,6 +116,8 @@ local cachedParticles = {}
 local cube = nil
 local wasModifiersEnabled = false
 local previousModifiersCheck = true
+local stunDebounce = false
+local isAnimating = false
 local ragdollTime = 0
 local intensity = 0
 local function newPropeller(propeller)
@@ -127,7 +131,7 @@ local function newPropeller(propeller)
 		_condition = not (type(_arg0) == "number")
 	end
 	if _condition then
-		warn("[src/client/cube.client.ts:129]", "An invalid propeller was created.")
+		warn("[src/client/cube.client.ts:133]", "An invalid propeller was created.")
 		return nil
 	end
 	local _propeller = propeller
@@ -141,7 +145,7 @@ local function updatePropellers(cube, head, dt)
 			_result = _result:IsA("BasePart")
 		end
 		if not _result then
-			warn("[src/client/cube.client.ts:140]", "A propeller has broke!")
+			warn("[src/client/cube.client.ts:144]", "A propeller has broke!")
 			table.remove(cachedPropellers, i + 1)
 			break
 		end
@@ -284,6 +288,71 @@ local function updateMud(cube, head, dt)
 		end
 	end
 end
+local function newElectricalPart(part)
+	if not part:IsA("BasePart") then
+		return nil
+	end
+	local zapParticles = part:WaitForChild("Zap")
+	part.Touched:Connect(function(otherPart)
+		local _head = cube
+		if _head ~= nil then
+			_head = _head:FindFirstChild("Head")
+		end
+		local head = _head
+		local _condition = not cube
+		if not _condition then
+			local _result = head
+			if _result ~= nil then
+				_result = _result:IsA("BasePart")
+			end
+			_condition = not _result
+		end
+		if _condition then
+			return nil
+		end
+		if otherPart == cube or otherPart == cube:FindFirstChild("Head") then
+			if ragdollTime > 0 or stunDebounce then
+				return nil
+			end
+			stunDebounce = true
+			task.delay(4, function()
+				stunDebounce = false
+				return stunDebounce
+			end)
+			ragdollTime = 3
+			local stunParticles = ReplicatedStorage:WaitForChild("Particles"):WaitForChild("Stunned")
+			local cubeParticles = stunParticles:Clone()
+			cubeParticles.Parent = cube
+			local headParticles = stunParticles:Clone()
+			headParticles.Parent = cube
+			Debris:AddItem(cubeParticles, 3)
+			Debris:AddItem(headParticles, 3)
+			local _position = cube.Position
+			local _arg0 = part:GetClosestPointOnSurface(cube.Position)
+			local cubeVelocity = _position - _arg0
+			local _position_1 = head.Position
+			local _arg0_1 = part:GetClosestPointOnSurface(head.Position)
+			local headVelocity = _position_1 - _arg0_1
+			if cubeVelocity.Magnitude > 0 and headVelocity.Magnitude > 0 then
+				local _unit = cubeVelocity.Unit
+				local _arg0_2 = if otherPart == cube then 100 else 45
+				cube.AssemblyLinearVelocity = _unit * _arg0_2
+				local _unit_1 = headVelocity.Unit
+				local _arg0_3 = if otherPart == head then 100 else 45
+				head.AssemblyLinearVelocity = _unit_1 * _arg0_3
+			end
+			playSound("zap", {
+				PlaybackSpeed = randomFloat(0.9, 1.1),
+				Volume = 1.5,
+			})
+			task.delay(2.5, function()
+				cubeParticles.Enabled = false
+				headParticles.Enabled = false
+			end)
+			zapParticles:Emit(50)
+		end
+	end)
+end
 local function saySystemMessage(message, color, font, size)
 	local _message = message
 	if not (type(_message) == "string") then
@@ -311,6 +380,73 @@ local function saySystemMessage(message, color, font, size)
 		Font = font,
 		TextSize = size,
 	})
+end
+local function doTeleportAnimation(towards, finish)
+	if not cube then
+		return nil
+	end
+	isAnimating = true
+	canMove.Value = false
+	task.delay(1.5, function()
+		isAnimating = false
+		canMove.Value = true
+		if cube then
+			cube.Anchored = false
+			local _fn = CFrame
+			local _position = cube.Position
+			local _vector3 = Vector3.new(0, 0, 1)
+			camera.CFrame = _fn.lookAt(_position - _vector3, cube.Position)
+		end
+	end)
+	local effect = cube:Clone()
+	effect.Anchored = true
+	effect.Name = "TeleportTransition"
+	effect.Parent = effectsFolder
+	cube.Anchored = true
+	cube.AssemblyAngularVelocity = Vector3.zero
+	cube:PivotTo(CFrame.new(finish))
+	for _, part in effect:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.Anchored = true
+		end
+	end
+	local Info = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
+	local _fn = TweenService
+	local _object = {}
+	local _left = "CFrame"
+	local _fn_1 = CFrame
+	local _towards = towards
+	local _vector3 = Vector3.new(0, 0, 37.5)
+	_object[_left] = _fn_1.lookAt(_towards - _vector3, towards)
+	_fn:Create(camera, Info, _object):Play()
+	TweenService:Create(effect, Info, {
+		CFrame = CFrame.lookAlong(towards, randomDirection()),
+		Size = Vector3.zero,
+		LocalTransparencyModifier = 1,
+	}):Play()
+	for _, part in effect:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.Anchored = true
+			TweenService:Create(part, TweenInfo.new(randomFloat(0.5, 1), Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {
+				CFrame = CFrame.lookAlong(towards, randomDirection()),
+				Size = Vector3.zero,
+				LocalTransparencyModifier = 1,
+			}):Play()
+		elseif part:IsA("ParticleEmitter") or part:IsA("BillboardGui") then
+			part.Enabled = false
+		end
+	end
+	task.wait(1)
+	effect:Destroy()
+	local _fn_2 = TweenService
+	local _exp = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	local _object_1 = {}
+	local _left_1 = "CFrame"
+	local _fn_3 = CFrame
+	local _towards_1 = towards
+	local _vector3_1 = Vector3.new(0, 0, 1)
+	_object_1[_left_1] = _fn_3.lookAt(_towards_1 - _vector3_1, towards)
+	_fn_2:Create(camera, _exp, _object_1):Play()
 end
 local function formatDebugWorldNumber(num)
 	local integer, decimal = math.modf(math.abs(num))
@@ -873,7 +1009,7 @@ RunService.Heartbeat:Connect(function(dt)
 				_result_1 = _result_1:IsA("BasePart")
 			end
 			if _result_1 then
-				local _binding = convertStudsToMeters(otherCube.Position.Y - 1.9)
+				local _binding = convertStudsToMeters(otherCube.Position.Y, true)
 				local altitudeString = _binding[2]
 				newAltitudeValue = altitudeString
 				local cubeTime = getCubeTime(otherCube)
@@ -942,14 +1078,12 @@ RunService.Heartbeat:Connect(function(dt)
 	if spectatingCube or cube then
 		local targetPlayer = otherPlayer or player
 		local targetCube = spectatingCube or cube
-		local _binding = convertStudsToMeters(targetCube.Position.Y - 1.9)
-		local altitude = _binding[1]
+		local _binding = convertStudsToMeters(targetCube.Position.Y, true)
 		local altitudeString = _binding[2]
 		local _binding_1 = convertStudsToMeters(targetCube.AssemblyLinearVelocity.Magnitude)
-		local speed = _binding_1[1]
 		local speedString = _binding_1[2]
 		local cubeTime = getCubeTime(targetCube)
-		local hours, minutes, seconds, milliseconds = getTimeUnits(math.round(cubeTime * 1000))
+		local _, minutes, seconds, milliseconds = getTimeUnits(math.round(cubeTime * 1000))
 		timerLabel.Text = string.format("%02d:%02d.%d", minutes, seconds, math.floor(milliseconds / 100))
 		altitudeLabel.Text = altitudeString
 		speedometerLabel.Text = `{speedString}/s`
@@ -1074,7 +1208,7 @@ RunService.Heartbeat:Connect(function(dt)
 			_condition_5 = 1
 		end
 		local cubeScale = _condition_5
-		local _binding = convertStudsToMeters(cube.Position.Y - 1.9)
+		local _binding = convertStudsToMeters(cube.Position.Y, true)
 		local altitude = _binding[1]
 		local range = cube:FindFirstChild("Range")
 		local _result_3 = range
@@ -1132,7 +1266,7 @@ RunService.Heartbeat:Connect(function(dt)
 			armAlignOrientation.Enabled = true
 		end
 		if ragdollTime == 0 and previousRagdollTime > 0 then
-			print("[src/client/cube.client.ts:774]", "Pivot hammer back to cube")
+			print("[src/client/cube.client.ts:880]", "Pivot hammer back to cube")
 			local _cFrame = CFrame.new(cube.Position)
 			local _arg0 = CFrame.fromOrientation(0, 0, math.pi / 2)
 			arm.CFrame = _cFrame * _arg0
@@ -1285,7 +1419,7 @@ RunService.Heartbeat:Connect(function(dt)
 				}):Play()
 			end
 		end
-		if not replayGui.Enabled then
+		if not replayGui.Enabled and not isAnimating then
 			local _position = camera.CFrame.Position
 			local _position_1 = cameraCFrame.Position
 			if (_position - _position_1).Magnitude > 50 then
@@ -1529,7 +1663,7 @@ winArea.Touched:Connect(function(otherPart)
 	if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
 		player:SetAttribute(PlayerAttributes.CompletedGame, true)
 		local totalTime = getCubeTime(otherPart)
-		print("[src/client/cube.client.ts:1153]", `Completed game in {totalTime} seconds`)
+		print("[src/client/cube.client.ts:1259]", `Completed game in {totalTime} seconds`)
 		Events.CompleteGame:FireServer(totalTime)
 		Events.MakeReplayEvent:Fire(string.format("win,%d", totalTime * 1000))
 	end
@@ -1576,6 +1710,26 @@ Workspace.DescendantAdded:Connect(function(descendant)
 	if descendant:IsA("ParticleEmitter") then
 		local _descendant = descendant
 		table.insert(cachedParticles, _descendant)
+	end
+end)
+local _exp = electricalParts:GetChildren()
+-- ▼ ReadonlyArray.map ▼
+local _newValue = table.create(#_exp)
+local _callback = function(part)
+	return newElectricalPart(part)
+end
+for _k, _v in _exp do
+	_newValue[_k] = _callback(_v, _k - 1, _exp)
+end
+-- ▲ ReadonlyArray.map ▲
+electricalParts.ChildAdded:Connect(newElectricalPart)
+local level2Teleport = mapFolder:WaitForChild("Level2Teleport")
+level2Teleport.Touched:Connect(function(otherPart)
+	if not cube then
+		return nil
+	end
+	if otherPart == cube or otherPart == cube:FindFirstChild("Head") or otherPart == cube:FindFirstChild("Arm") then
+		doTeleportAnimation(level2Teleport.Position, Vector3.new(0, 1500, 0))
 	end
 end)
 Events.SaySystemMessage.OnClientEvent:Connect(saySystemMessage)

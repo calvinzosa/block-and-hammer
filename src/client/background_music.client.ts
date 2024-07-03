@@ -1,17 +1,21 @@
-import { ReplicatedStorage, RunService, Workspace, Players } from '@rbxts/services';
+import {
+	ReplicatedStorage,
+	RunService,
+	Workspace,
+	Players,
+} from '@rbxts/services';
+import { $print } from 'rbxts-transform-debug';
 
-import { convertStudsToMeters, getHammerTexture, GameSetting, Accessories, getSetting, numLerp, PlayerAttributes } from 'shared/utils';
-
-enum Music {
-	Jamming = 'Jamming',
-	StartingOff = 'StartingOff',
-	SolitaryIsle = 'SolitaryIsle',
-	CrystalCave = 'CrystalCave',
-	Mountain = 'Mountain',
-	Garden = 'Garden',
-	TheLake = 'TheLake',
-	HauntedField = 'HauntedField',
-}
+import {
+	convertStudsToMeters,
+	getHammerTexture,
+	PlayerAttributes,
+	getCurrentArea,
+	GameSetting,
+	Accessories,
+	getSetting,
+	numLerp,
+} from 'shared/utils';
 
 const player = Players.LocalPlayer;
 const GUI = player.WaitForChild('PlayerGui') as PlayerGui;
@@ -21,7 +25,7 @@ const isSpectating = valueInstances.WaitForChild('is_spectating') as BoolValue;
 const spectatePlayer = isSpectating.WaitForChild('player') as StringValue;
 const musicFolder = ReplicatedStorage.WaitForChild('Music') as Folder;
 
-const sounds: Record<Music, Sound> = {
+const Music = {
 	Jamming: musicFolder.WaitForChild('Jamming').Clone() as Sound,
 	StartingOff: musicFolder.WaitForChild('Starting Off').Clone() as Sound,
 	SolitaryIsle: musicFolder.WaitForChild('Solitary Isle').Clone() as Sound,
@@ -30,13 +34,14 @@ const sounds: Record<Music, Sound> = {
 	Garden: musicFolder.WaitForChild('Garden').Clone() as Sound,
 	TheLake: musicFolder.WaitForChild('The Lake').Clone() as Sound,
 	HauntedField: musicFolder.WaitForChild('Haunted Field').Clone() as Sound,
+	TempleRuins: musicFolder.WaitForChild('Temple Ruins').Clone() as Sound,
 };
 
-for (const [_, sound] of pairs(sounds)) {
+for (const [ , sound ] of pairs(Music)) {
 	sound.SetAttribute('originalVolume', sound.Volume);
 	sound.Volume = 0;
 	sound.Parent = Workspace;
-
+	
 	sound.Play();
 }
 
@@ -46,32 +51,42 @@ RunService.RenderStepped.Connect((dt) => {
 		const otherPlayer = Players.FindFirstChild(spectatePlayer.Name);
 		if (otherPlayer?.IsA('Player')) targetPlayer = otherPlayer;
 	}
-
+	
 	let targetCube = Workspace.FindFirstChild(`cube${targetPlayer.UserId}`);
-
+	
 	const replayView = Workspace.FindFirstChild('REPLAY_VIEW');
 	if (replayView?.IsA('BasePart')) targetCube = replayView;
-
+	
 	const currentHammer = getHammerTexture(targetPlayer);
-
-	let activeMusic = undefined as Music | undefined;
-	if (player.GetAttribute(PlayerAttributes.Client.InMainMenu)) activeMusic = Music.Jamming;
-	else if (player.GetAttribute(PlayerAttributes.InTutorial)) activeMusic = Music.CrystalCave;
-	else if (targetCube?.IsA('BasePart')) {
-		const [altitude] = convertStudsToMeters(targetCube.Position.Y - 1.9);
-		if (altitude < 100) activeMusic = Music.StartingOff;
-		else if (altitude < 200) activeMusic = Music.SolitaryIsle;
-		else if (altitude < 300) activeMusic = Music.TheLake;
-		else if (altitude < 400) activeMusic = Music.Mountain;
-		else if (altitude < 500) activeMusic = Music.HauntedField;
-		else if (altitude < 700) activeMusic = Music.Mountain;
-		else activeMusic = Music.Garden;
+	
+	let activeMusic = undefined as (Sound | undefined);
+	
+	if (getSetting(GameSetting.Music) && !targetPlayer.GetAttribute(PlayerAttributes.InErrorLand)) {
+		if (player.GetAttribute(PlayerAttributes.Client.InMainMenu)) activeMusic = Music.Jamming;
+		else if (player.GetAttribute(PlayerAttributes.InTutorial)) activeMusic = Music.CrystalCave;
+		else if (targetCube?.IsA('BasePart')) {
+			const area = getCurrentArea(targetCube);
+			
+			const [ altitude ] = convertStudsToMeters(targetCube.Position.Y, true);
+			if (area === 'Level 1') {
+				if (altitude < 100) activeMusic = Music.StartingOff;
+				else if (altitude < 200) activeMusic = Music.SolitaryIsle;
+				else if (altitude < 300) activeMusic = Music.TheLake;
+				else if (altitude < 400) activeMusic = Music.Mountain;
+				else if (altitude < 500) activeMusic = Music.HauntedField;
+				else if (altitude < 700) activeMusic = Music.Mountain;
+				else activeMusic = Music.Garden;
+			} else if (area === 'Level 2: Entrance') {
+				activeMusic = Music.TempleRuins;
+			} else if (area === 'Level 2') {
+				
+			}
+		}
 	}
-
-	const isMusicEnabled = getSetting(GameSetting.Music) && !targetPlayer.GetAttribute(PlayerAttributes.InErrorLand);
-	for (const [name, sound] of pairs(sounds)) {
-		let targetVolume = name === activeMusic && isMusicEnabled ? (sound.GetAttribute('originalVolume') as number) : 0;
-
+	
+	for (const [ , sound ] of pairs(Music)) {
+		let targetVolume = sound === activeMusic ? (sound.GetAttribute('originalVolume') as number) : 0;
+		
 		sound.Volume = numLerp(sound.Volume, targetVolume, dt * 5);
 		sound.PlaybackSpeed = currentHammer === Accessories.HammerTexture.Hammer404 && targetPlayer.GetAttribute(PlayerAttributes.HasModifiers) ? 0.5 : 1;
 	}

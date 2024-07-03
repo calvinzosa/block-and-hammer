@@ -12,7 +12,9 @@ const Events = {
 };
 
 const player = Players.LocalPlayer;
+
 const GUI = player?.WaitForChild('PlayerGui') as PlayerGui | undefined;
+const areasFolder = Workspace.WaitForChild('Areas') as Folder;
 
 const forceTestingServer = ReplicatedStorage.WaitForChild('ForceTestingServer') as BoolValue;
 const placeId = game.PlaceId;
@@ -314,6 +316,16 @@ export function fixSettings(): void {
 	for (const [name, value] of pairs(DefaultSettings)) Settings[name] = Settings[name] ?? value;
 }
 
+export function getCurrentArea(cube: BasePart) {
+	const params = new OverlapParams();
+	params.FilterType = Enum.RaycastFilterType.Include;
+	params.FilterDescendantsInstances = [ areasFolder ];
+	
+	const areaPart = Workspace.GetPartBoundsInBox(new CFrame(cube.Position.X, cube.Position.Y, 0), new Vector3(4, 4, 4), params)[0]?.FindFirstAncestorOfClass('Model');
+	if (areaPart) return areaPart.Name;
+	else return 'None';
+}
+
 export function getHammerTexture(player: Player | undefined = undefined): Accessories.HammerTexture {
 	if (player === undefined) player = Players.LocalPlayer;
 
@@ -451,7 +463,9 @@ export function computeNameColor(playerName: string): Color3 {
 	return nameColors[value % nameColors.size()];
 }
 
-export function convertStudsToMeters(studs: number): [number, string] {
+export function convertStudsToMeters(studs: number, isCube: boolean = false): [number, string] {
+	if (isCube) studs -= 1.9;
+	
 	const meters = studs * 0.28;
 	const kilometers = meters / 1000;
 	const megameters = kilometers / 1000;

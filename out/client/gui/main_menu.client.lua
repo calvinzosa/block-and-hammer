@@ -45,6 +45,20 @@ player.AttributeChanged:Connect(function(attr)
 end)
 menuGui.Enabled = true
 screenGui.Enabled = false
+task.spawn(function()
+	while true do
+		local _exitType, _returns = TS.try(function()
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
+			return TS.TRY_BREAK
+		end, function(err)
+			task.wait(0.1)
+		end)
+		if _exitType then
+			break
+		end
+	end
+end)
 while true do
 	local _value_1 = menuGui:GetAttribute("done")
 	if not not (_value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1) then

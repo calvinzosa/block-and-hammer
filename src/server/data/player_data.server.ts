@@ -183,16 +183,17 @@ function playerRemoved(player: Player) {
 	
 	const playerId = tostring(player.UserId);
 	
-	const cube = Workspace.FindFirstChild(`cube${playerId}`) as BasePart | undefined;
-	if (!cube || player.UserId <= 0 || player.GetAttribute('in_tutorial')) return;
+	const cube = Workspace.FindFirstChild(`cube${playerId}`) as (BasePart | undefined);
+	if (!cube || player.UserId <= 0 || player.GetAttribute(PlayerAttributes.InTutorial)) return;
 	
 	const currentTime = getTime();
-	const serverJoinTime = (player.GetAttribute('serverJoinTime') as number) ?? currentTime;
-	const cubeColor = player.GetAttribute('CUBE_COLOR') as Color3 | undefined;
-	const destroyedCounter = cube.GetAttribute('destroyed_counter') as number | undefined;
-	const [extraTime] = getCubeTime(cube);
-	const settingsJSON = player.GetAttribute('settings_json') as string | undefined;
-	const activeQuest = player.GetAttribute('activeQuest') as string | undefined;
+	const serverJoinTime = (player.GetAttribute('serverJoinTime') as (number | undefined)) ?? currentTime;
+	const cubeColor = player.GetAttribute('CUBE_COLOR') as (Color3 | undefined);
+	const destroyedCounter = cube.GetAttribute('destroyed_counter') as (number | undefined);
+	const [ extraTime ] = getCubeTime(cube);
+	
+	const settingsJSON = player.GetAttribute('settings_json') as (string | undefined);
+	const activeQuest = player.GetAttribute('activeQuest') as (string | undefined);
 	
 	const dataToSave = encodeObjectToJSON({
 		position: cube.Position,
@@ -210,11 +211,11 @@ function playerRemoved(player: Player) {
 		active_quest: activeQuest,
 		stats: {
 			total_time_played: currentTime - serverJoinTime,
-			total_restarts: player.GetAttribute('totalRestarts') as number | undefined,
-			total_ragdolls: player.GetAttribute('totalRagdolls') as number | undefined,
-			times_joined: player.GetAttribute('times_joined') as number | undefined,
-			total_wins: player.GetAttribute('totalWins') as number | undefined,
-			total_modded_wins: player.GetAttribute('totalModdedWins') as number | undefined,
+			total_restarts: player.GetAttribute('totalRestarts') as (number | undefined),
+			total_ragdolls: player.GetAttribute('totalRagdolls') as (number | undefined),
+			times_joined: player.GetAttribute('times_joined') as (number | undefined),
+			total_wins: player.GetAttribute('totalWins') as (number | undefined),
+			total_modded_wins: player.GetAttribute('totalModdedWins') as (number | undefined),
 		},
 	} as PlayerData);
 	
@@ -223,7 +224,7 @@ function playerRemoved(player: Player) {
 	const encodedData = HttpService.JSONEncode(dataToSave);
 	
 	for (const retryAttempt of $range(1, 5)) {
-		const [success, errorMessage] = pcall(() => {
+		try {
 			let currentData = encodedData.sub(1, encodedData.size());
 			
 			let iteration = 0;
@@ -237,12 +238,13 @@ function playerRemoved(player: Player) {
 				
 				iteration++;
 			}
-		});
-		
-		if (success) {
+			
 			$print(`Saved data for player ${player.Name} (${player.UserId}) succesfully.`);
 			break;
-		} else $warn(`Could not save data for player ${player.Name} (${player.UserId})! | Retrying ${5 - retryAttempt} more time(s) | Error: ${errorMessage}`);
+		} catch (err) {
+			$warn(`Could not save data for player ${player.Name} (${player.UserId})! | Retrying ${5 - retryAttempt} more time(s) | Error: ${err}`);
+			task.wait(0.5)
+		}
 	}
 }
 
