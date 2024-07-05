@@ -44,6 +44,7 @@ local Events = {
 	FlipGravity = ReplicatedStorage:WaitForChild("FlipGravity"),
 	StartClientTutorial = ReplicatedStorage:WaitForChild("StartClientTutorial"),
 	ClientCreateDebris = ReplicatedStorage:WaitForChild("ClientCreateDebris"),
+	ClientForceReset = ReplicatedStorage:WaitForChild("ClientForceReset"),
 	MakeReplayEvent = ReplicatedStorage:WaitForChild("MakeReplayEvent"),
 	ClientMessage = ReplicatedStorage:WaitForChild("ClientMessage"),
 	ClientRagdoll = ReplicatedStorage:WaitForChild("ClientRagdoll"),
@@ -66,6 +67,7 @@ local timerLabel = screenGui:WaitForChild("Timer")
 local speedometerLabel = screenGui:WaitForChild("Speedometer")
 local altitudeLabel = screenGui:WaitForChild("Altitude")
 local nonBreakable = Workspace:WaitForChild("NonBreakable")
+local resetParts = Workspace:WaitForChild("ResetParts")
 local mapFolder = Workspace:WaitForChild("Map")
 local electricalParts = mapFolder:WaitForChild("Electrical")
 local platformsFolder = mapFolder:WaitForChild("Platforms")
@@ -131,7 +133,7 @@ local function newPropeller(propeller)
 		_condition = not (type(_arg0) == "number")
 	end
 	if _condition then
-		warn("[src/client/cube.client.ts:133]", "An invalid propeller was created.")
+		warn("[src/client/cube.client.ts:135]", "An invalid propeller was created.")
 		return nil
 	end
 	local _propeller = propeller
@@ -145,7 +147,7 @@ local function updatePropellers(cube, head, dt)
 			_result = _result:IsA("BasePart")
 		end
 		if not _result then
-			warn("[src/client/cube.client.ts:144]", "A propeller has broke!")
+			warn("[src/client/cube.client.ts:146]", "A propeller has broke!")
 			table.remove(cachedPropellers, i + 1)
 			break
 		end
@@ -350,6 +352,17 @@ local function newElectricalPart(part)
 				headParticles.Enabled = false
 			end)
 			zapParticles:Emit(50)
+		end
+	end)
+end
+local function newResetPart(part)
+	if not part:IsA("BasePart") then
+		return nil
+	end
+	part.LocalTransparencyModifier = 1
+	part.Touched:Connect(function(otherPart)
+		if otherPart == cube then
+			Events.ClientForceReset:Fire(true)
 		end
 	end)
 end
@@ -954,10 +967,6 @@ local function updateModifiers()
 	end
 end
 task.spawn(updateModifiers)
-for _, propeller in propellersFolder:GetChildren() do
-	task.spawn(newPropeller, propeller)
-end
-propellersFolder.ChildAdded:Connect(newPropeller)
 player.AttributeChanged:Connect(function(attr)
 	if attr == PlayerAttributes.HammerTexture or attr == PlayerAttributes.Client.SettingsJSON then
 		updateModifiers()
@@ -1266,7 +1275,7 @@ RunService.Heartbeat:Connect(function(dt)
 			armAlignOrientation.Enabled = true
 		end
 		if ragdollTime == 0 and previousRagdollTime > 0 then
-			print("[src/client/cube.client.ts:880]", "Pivot hammer back to cube")
+			print("[src/client/cube.client.ts:884]", "Pivot hammer back to cube")
 			local _cFrame = CFrame.new(cube.Position)
 			local _arg0 = CFrame.fromOrientation(0, 0, math.pi / 2)
 			arm.CFrame = _cFrame * _arg0
@@ -1663,7 +1672,7 @@ winArea.Touched:Connect(function(otherPart)
 	if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
 		player:SetAttribute(PlayerAttributes.CompletedGame, true)
 		local totalTime = getCubeTime(otherPart)
-		print("[src/client/cube.client.ts:1259]", `Completed game in {totalTime} seconds`)
+		print("[src/client/cube.client.ts:1263]", `Completed game in {totalTime} seconds`)
 		Events.CompleteGame:FireServer(totalTime)
 		Events.MakeReplayEvent:Fire(string.format("win,%d", totalTime * 1000))
 	end
@@ -1674,6 +1683,7 @@ Events.ClientReset.Event:Connect(function(fullReset)
 		AbilityCooldowns[key] = false
 	end
 	flippedGravity.Value = false
+	shakeIntensity.Value = 0
 	ragdollTime = 0
 	if not fullReset and getSetting(GameSetting.Modifiers) then
 		updateModifiers()
@@ -1712,6 +1722,10 @@ Workspace.DescendantAdded:Connect(function(descendant)
 		table.insert(cachedParticles, _descendant)
 	end
 end)
+for _, propeller in propellersFolder:GetChildren() do
+	task.spawn(newPropeller, propeller)
+end
+propellersFolder.ChildAdded:Connect(newPropeller)
 local _exp = electricalParts:GetChildren()
 -- ▼ ReadonlyArray.map ▼
 local _newValue = table.create(#_exp)
@@ -1723,6 +1737,17 @@ for _k, _v in _exp do
 end
 -- ▲ ReadonlyArray.map ▲
 electricalParts.ChildAdded:Connect(newElectricalPart)
+local _exp_1 = resetParts:GetChildren()
+-- ▼ ReadonlyArray.map ▼
+local _newValue_1 = table.create(#_exp_1)
+local _callback_1 = function(part)
+	return newResetPart(part)
+end
+for _k, _v in _exp_1 do
+	_newValue_1[_k] = _callback_1(_v, _k - 1, _exp_1)
+end
+-- ▲ ReadonlyArray.map ▲
+resetParts.ChildAdded:Connect(newResetPart)
 local level2Teleport = mapFolder:WaitForChild("Level2Teleport")
 level2Teleport.Touched:Connect(function(otherPart)
 	if not cube then

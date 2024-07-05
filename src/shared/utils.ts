@@ -40,7 +40,6 @@ export namespace PlayerAttributes {
 	
 	export const HammerTexture = 'hammer_Texture';
 	export const CompletedGame = 'completedGame';
-	export const InTutorial = 'inTutorial';
 	export const CubeColor = 'cubeColor';
 	export const CubeFace = 'cube_Face';
 	export const CubeAura = 'cube_Aura';
@@ -273,14 +272,14 @@ export function waitUntil(callback: () => boolean | undefined, maxTime: number =
 export function canUseSetting(name: string): boolean {
 	if (name === 'modifiers') {
 		const cube = Workspace.FindFirstChild(`cube${player.UserId}`) as BasePart | undefined;
-
+		
 		const params = new OverlapParams();
 		params.FilterType = Enum.RaycastFilterType.Include;
-
+		
 		const modifierDisablers = Workspace.FindFirstChild('ForceDisableModifiers') as Instance | undefined;
 		if (modifierDisablers !== undefined) params.FilterDescendantsInstances = [modifierDisablers];
-
-		const areaCondition = player.GetAttribute(PlayerAttributes.InErrorLand) || player.GetAttribute(PlayerAttributes.InTutorial);
+		
+		const areaCondition = player.GetAttribute(PlayerAttributes.InErrorLand) || (cube !== undefined && getCurrentArea(cube) === 'Tutorial');
 		if (areaCondition || (player && cube && Workspace.GetPartsInPart(cube, params).size() > 0)) return false;
 	}
 
@@ -328,29 +327,49 @@ export function getCurrentArea(cube: BasePart) {
 
 export function getHammerTexture(player: Player | undefined = undefined): Accessories.HammerTexture {
 	if (player === undefined) player = Players.LocalPlayer;
-
-	if (player.GetAttribute(PlayerAttributes.InTutorial)) return Accessories.HammerTexture.NoHammerTexture;
+	
+	const cube = Workspace.FindFirstChild(`cube${player.UserId}`);
+	if (cube?.IsA('BasePart')) {
+		const area = getCurrentArea(cube);
+		if (area === 'Tutorial') return Accessories.HammerTexture.NoHammerTexture;
+	}
+	
 	return (player.GetAttribute(PlayerAttributes.HammerTexture) as Accessories.HammerTexture) ?? Accessories.HammerTexture.NoHammerTexture;
 }
 
 export function getCubeFace(player: Player | undefined = undefined): Accessories.CubeFace {
 	if (player === undefined) player = Players.LocalPlayer;
-
-	if (player.GetAttribute(PlayerAttributes.InTutorial)) return Accessories.CubeFace.DefaultFace;
+	
+	const cube = Workspace.FindFirstChild(`cube${player.UserId}`);
+	if (cube?.IsA('BasePart')) {
+		const area = getCurrentArea(cube);
+		if (area === 'Tutorial') return Accessories.CubeFace.DefaultFace;
+	}
+	
 	return (player.GetAttribute(PlayerAttributes.CubeFace) as Accessories.CubeFace) ?? Accessories.CubeFace.DefaultFace;
 }
 
 export function getCubeHat(player: Player | undefined = undefined): Accessories.CubeHat {
 	if (player === undefined) player = Players.LocalPlayer;
-
-	if (player.GetAttribute(PlayerAttributes.InTutorial)) return Accessories.CubeHat.NoHat;
+	
+	const cube = Workspace.FindFirstChild(`cube${player.UserId}`);
+	if (cube?.IsA('BasePart')) {
+		const area = getCurrentArea(cube);
+		if (area === 'Tutorial') return Accessories.CubeHat.NoHat;
+	}
+	
 	return (player.GetAttribute(PlayerAttributes.CubeHat) as Accessories.CubeHat) ?? Accessories.CubeHat.NoHat;
 }
 
 export function getCubeAura(player: Player | undefined): Accessories.CubeAura {
 	if (player === undefined) player = Players.LocalPlayer;
-
-	if (player.GetAttribute(PlayerAttributes.InTutorial)) return Accessories.CubeAura.NoAura;
+	
+	const cube = Workspace.FindFirstChild(`cube${player.UserId}`);
+	if (cube?.IsA('BasePart')) {
+		const area = getCurrentArea(cube);
+		if (area === 'Tutorial') return Accessories.CubeAura.NoAura;
+	}
+	
 	return (player.GetAttribute(PlayerAttributes.CubeAura) as Accessories.CubeAura) ?? Accessories.CubeAura.NoAura;
 }
 

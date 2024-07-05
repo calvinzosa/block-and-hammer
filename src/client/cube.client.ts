@@ -48,6 +48,7 @@ const Events = {
 	
 	StartClientTutorial: ReplicatedStorage.WaitForChild('StartClientTutorial') as BindableEvent,
 	ClientCreateDebris: ReplicatedStorage.WaitForChild('ClientCreateDebris') as BindableEvent,
+	ClientForceReset: ReplicatedStorage.WaitForChild('ClientForceReset') as BindableEvent,
 	MakeReplayEvent: ReplicatedStorage.WaitForChild('MakeReplayEvent') as BindableEvent,
 	ClientMessage: ReplicatedStorage.WaitForChild('ClientMessage') as BindableEvent,
 	ClientRagdoll: ReplicatedStorage.WaitForChild('ClientRagdoll') as BindableEvent,
@@ -72,6 +73,7 @@ const timerLabel = screenGui.WaitForChild('Timer') as TextLabel;
 const speedometerLabel = screenGui.WaitForChild('Speedometer') as TextLabel;
 const altitudeLabel = screenGui.WaitForChild('Altitude') as TextLabel;
 const nonBreakable = Workspace.WaitForChild('NonBreakable') as Folder;
+const resetParts = Workspace.WaitForChild('ResetParts') as Folder;
 const mapFolder = Workspace.WaitForChild('Map') as Folder;
 const electricalParts = mapFolder.WaitForChild('Electrical') as Folder;
 const platformsFolder = mapFolder.WaitForChild('Platforms') as Folder;
@@ -292,6 +294,16 @@ function newElectricalPart(part: Instance) {
 	});
 }
 
+function newResetPart(part: Instance) {
+	if (!part.IsA('BasePart')) return;
+	
+	part.LocalTransparencyModifier = 1;
+	
+	part.Touched.Connect((otherPart) => {
+		if (otherPart === cube) Events.ClientForceReset.Fire(true);
+	});
+}
+
 function saySystemMessage(message: unknown, color: unknown, font: unknown, size: unknown) {
 	if (!typeIs(message, 'string')) return;
 	
@@ -299,12 +311,7 @@ function saySystemMessage(message: unknown, color: unknown, font: unknown, size:
 	if (!typeIs(font, 'EnumItem') || !font.IsA('Font')) font = Enum.Font.BuilderSans;
 	if (!typeIs(size, 'number')) size = undefined;
 	
-	StarterGui.SetCore('ChatMakeSystemMessage', {
-		Text: message,
-		Color: color as Color3,
-		Font: font as Enum.Font,
-		TextSize: size as number,
-	});
+	StarterGui.SetCore('ChatMakeSystemMessage', { Text: message, Color: color as Color3, Font: font as Enum.Font, TextSize: size as number });
 }
 
 function doTeleportAnimation(towards: Vector3, finish: Vector3) {
@@ -711,9 +718,6 @@ function updateModifiers() {
 }
 
 task.spawn(updateModifiers);
-
-for (const propeller of propellersFolder.GetChildren()) task.spawn(newPropeller, propeller);
-propellersFolder.ChildAdded.Connect(newPropeller);
 
 player.AttributeChanged.Connect((attr) => {
 	if (attr === PlayerAttributes.HammerTexture || attr === PlayerAttributes.Client.SettingsJSON) updateModifiers();
@@ -1266,10 +1270,12 @@ winArea.Touched.Connect((otherPart) => {
 Events.ClientReset.Event.Connect((fullReset: boolean) => {
 	player.SetAttribute(PlayerAttributes.CompletedGame, undefined);
 	for (const [key] of pairs(AbilityCooldowns)) AbilityCooldowns[key] = false;
-
+	
 	flippedGravity.Value = false;
+	shakeIntensity.Value = 0;
+	
 	ragdollTime = 0;
-
+	
 	if (!fullReset && getSetting(GameSetting.Modifiers)) updateModifiers();
 });
 
@@ -1300,9 +1306,14 @@ Workspace.DescendantAdded.Connect((descendant) => {
 	if (descendant.IsA('ParticleEmitter')) cachedParticles.push(descendant);
 });
 
-electricalParts.GetChildren().map((part) => newElectricalPart(part))
+for (const propeller of propellersFolder.GetChildren()) task.spawn(newPropeller, propeller);
+propellersFolder.ChildAdded.Connect(newPropeller);
 
+electricalParts.GetChildren().map((part) => newElectricalPart(part));
 electricalParts.ChildAdded.Connect(newElectricalPart);
+
+resetParts.GetChildren().map((part) => newResetPart(part));
+resetParts.ChildAdded.Connect(newResetPart);
 
 const level2Teleport = mapFolder.WaitForChild('Level2Teleport') as BasePart;
 level2Teleport.Touched.Connect((otherPart) => {

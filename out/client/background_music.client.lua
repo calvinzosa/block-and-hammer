@@ -70,38 +70,35 @@ RunService.RenderStepped:Connect(function(dt)
 		if _value ~= 0 and _value == _value and _value ~= "" and _value then
 			activeMusic = Music.Jamming
 		else
-			local _value_1 = player:GetAttribute(PlayerAttributes.InTutorial)
-			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
-				activeMusic = Music.CrystalCave
-			else
-				local _result_1 = targetCube
-				if _result_1 ~= nil then
-					_result_1 = _result_1:IsA("BasePart")
-				end
-				if _result_1 then
-					local area = getCurrentArea(targetCube)
-					local _binding = convertStudsToMeters(targetCube.Position.Y, true)
-					local altitude = _binding[1]
-					if area == "Level 1" then
-						if altitude < 100 then
-							activeMusic = Music.StartingOff
-						elseif altitude < 200 then
-							activeMusic = Music.SolitaryIsle
-						elseif altitude < 300 then
-							activeMusic = Music.TheLake
-						elseif altitude < 400 then
-							activeMusic = Music.Mountain
-						elseif altitude < 500 then
-							activeMusic = Music.HauntedField
-						elseif altitude < 700 then
-							activeMusic = Music.Mountain
-						else
-							activeMusic = Music.Garden
-						end
-					elseif area == "Level 2: Entrance" then
-						activeMusic = Music.TempleRuins
-					elseif area == "Level 2" then
+			local _result_1 = targetCube
+			if _result_1 ~= nil then
+				_result_1 = _result_1:IsA("BasePart")
+			end
+			if _result_1 then
+				local area = getCurrentArea(targetCube)
+				local _binding = convertStudsToMeters(targetCube.Position.Y, true)
+				local altitude = _binding[1]
+				if area == "Tutorial" then
+					activeMusic = Music.CrystalCave
+				elseif area == "Level 1" then
+					if altitude < 100 then
+						activeMusic = Music.StartingOff
+					elseif altitude < 200 then
+						activeMusic = Music.SolitaryIsle
+					elseif altitude < 300 then
+						activeMusic = Music.TheLake
+					elseif altitude < 400 then
+						activeMusic = Music.Mountain
+					elseif altitude < 500 then
+						activeMusic = Music.HauntedField
+					elseif altitude < 700 then
+						activeMusic = Music.Mountain
+					else
+						activeMusic = Music.Garden
 					end
+				elseif area == "Level 2: Entrance" then
+					activeMusic = Music.TempleRuins
+				elseif area == "Level 2" then
 				end
 			end
 		end

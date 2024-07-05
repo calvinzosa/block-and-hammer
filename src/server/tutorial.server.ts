@@ -16,15 +16,23 @@ const Events = {
 	ForceReset: ReplicatedStorage.WaitForChild('ForceReset') as BindableEvent,
 };
 
-Events.PlayTutorial.OnServerEvent.Connect((player) => {
-	player.SetAttribute(PlayerAttributes.InTutorial, true);
+const mapFolder = Workspace.FindFirstChild('Map') as Folder;
+const tutorialFolder = mapFolder.FindFirstChild('Tutorial') as Folder;
+const tutorialSpawn = tutorialFolder.FindFirstChild('SpawnLocation') as SpawnLocation;
 
-	Workspace.FindFirstChild(`cube${player.UserId}`)?.Destroy();
+Events.PlayTutorial.OnServerEvent.Connect((player) => {
+	const cube = Workspace.FindFirstChild(`cube${player.UserId}`);
+	if (cube?.IsA('BasePart')) {
+		cube.Destroy();
+		
+		Events.ForceReset.Fire(player, true);
+		
+		const newCube = Workspace.WaitForChild(`cube${player.UserId}`);
+		if (newCube.IsA('BasePart')) newCube.PivotTo(tutorialSpawn.CFrame.mul(new CFrame(0, 10, 0)));
+	}
 });
 
 Events.EndTutorial.OnServerEvent.Connect((player, reachedEnd) => {
-	player.SetAttribute(PlayerAttributes.InTutorial, undefined);
-
 	Events.ForceReset.Fire(player, true);
 	if (reachedEnd) giveBadge(player, Badge.Learner);
 });

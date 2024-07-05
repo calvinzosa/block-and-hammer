@@ -4,7 +4,6 @@ local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts
 local ReplicatedStorage = _services.ReplicatedStorage
 local Workspace = _services.Workspace
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
-local PlayerAttributes = _utils.PlayerAttributes
 local giveBadge = _utils.giveBadge
 local Badge = _utils.Badge
 local Events = {
@@ -12,15 +11,28 @@ local Events = {
 	EndTutorial = ReplicatedStorage:WaitForChild("EndTutorial"),
 	ForceReset = ReplicatedStorage:WaitForChild("ForceReset"),
 }
+local mapFolder = Workspace:FindFirstChild("Map")
+local tutorialFolder = mapFolder:FindFirstChild("Tutorial")
+local tutorialSpawn = tutorialFolder:FindFirstChild("SpawnLocation")
 Events.PlayTutorial.OnServerEvent:Connect(function(player)
-	player:SetAttribute(PlayerAttributes.InTutorial, true)
-	local _result = Workspace:FindFirstChild(`cube{player.UserId}`)
+	local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
+	local _result = cube
 	if _result ~= nil then
-		_result:Destroy()
+		_result = _result:IsA("BasePart")
+	end
+	if _result then
+		cube:Destroy()
+		Events.ForceReset:Fire(player, true)
+		local newCube = Workspace:WaitForChild(`cube{player.UserId}`)
+		if newCube:IsA("BasePart") then
+			local _fn = newCube
+			local _cFrame = tutorialSpawn.CFrame
+			local _cFrame_1 = CFrame.new(0, 10, 0)
+			_fn:PivotTo(_cFrame * _cFrame_1)
+		end
 	end
 end)
 Events.EndTutorial.OnServerEvent:Connect(function(player, reachedEnd)
-	player:SetAttribute(PlayerAttributes.InTutorial, nil)
 	Events.ForceReset:Fire(player, true)
 	if reachedEnd ~= 0 and reachedEnd == reachedEnd and reachedEnd ~= "" and reachedEnd then
 		giveBadge(player, Badge.Learner)

@@ -2,14 +2,12 @@
 local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
 local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
 local ReplicatedStorage = _services.ReplicatedStorage
-local Players = _services.Players
 local TweenService = _services.TweenService
 local Workspace = _services.Workspace
+local Players = _services.Players
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
-local computeNameColor = _utils.computeNameColor
-local getTime = _utils.getTime
+local getCurrentArea = _utils.getCurrentArea
 local isClientCube = _utils.isClientCube
-local PlayerAttributes = _utils.PlayerAttributes
 local tweenTypes = _utils.tweenTypes
 local Events = {
 	PlayTutorial = ReplicatedStorage:WaitForChild("PlayTutorial"),
@@ -31,8 +29,16 @@ local shadow = screenGui:WaitForChild("Shadow")
 local function start()
 	tutorialGui.Visible = false
 	canMove.Value = true
-	local _value = player:GetAttribute(PlayerAttributes.InTutorial)
-	if not (_value ~= 0 and _value == _value and _value ~= "" and _value) then
+	local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
+	local _result = cube
+	if _result ~= nil then
+		_result = _result:IsA("BasePart")
+	end
+	if not _result then
+		return nil
+	end
+	local area = getCurrentArea(cube)
+	if area ~= "Tutorial" then
 		flippedGravity.Value = false
 		Events.PlayTutorial:FireServer()
 		player:SetAttribute("finished", nil)
@@ -40,17 +46,6 @@ local function start()
 		TweenService:Create(shadow, TweenInfo.new(0.5, Enum.EasingStyle.Linear), {
 			BackgroundTransparency = 1,
 		}):Play()
-		local cube = cubeTemplate:Clone()
-		cube:PivotTo(CFrame.new(2532, 10, 0))
-		cube.Name = `cube{player.UserId}`
-		cube.Color = computeNameColor(player.Name)
-		cube:SetAttribute("start_time", getTime())
-		local overheadGui = cube:WaitForChild("OverheadGUI")
-		local usernameLabel = overheadGui:WaitForChild("Username")
-		local icons = overheadGui:WaitForChild("Icons")
-		usernameLabel.Text = `{player.DisplayName} (@{player.Name})`
-		icons.Visible = false
-		cube.Parent = Workspace
 	end
 end
 Events.StartClientTutorial.Event:Connect(start);

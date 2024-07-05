@@ -6,17 +6,18 @@ local DataStoreService = _services.DataStoreService
 local BadgeService = _services.BadgeService
 local HttpService = _services.HttpService
 local RunService = _services.RunService
-local Players = _services.Players
 local Workspace = _services.Workspace
+local Players = _services.Players
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
+local encodeObjectToJSON = _utils.encodeObjectToJSON
 local PlayerAttributes = _utils.PlayerAttributes
 local decodeJSONObject = _utils.decodeJSONObject
-local encodeObjectToJSON = _utils.encodeObjectToJSON
+local isTestingServer = _utils.isTestingServer
+local getCurrentArea = _utils.getCurrentArea
 local getCubeTime = _utils.getCubeTime
 local getTime = _utils.getTime
-local isTestingServer = _utils.isTestingServer
-local quests = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "quests").default
 local accessoryList = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "accessory_loader").accessoryList
+local quests = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "quests").default
 local Events = {
 	LoadSettingsJSON = ReplicatedStorage:FindFirstChild("LoadSettingsJSON"),
 	SaveSettingsJSON = ReplicatedStorage:FindFirstChild("SaveSettingsJSON"),
@@ -66,7 +67,7 @@ local function playerAdded(player)
 			success = true
 			return TS.TRY_BREAK
 		end, function(err)
-			warn("[src/server/data/player_data.server.ts:91]", err)
+			warn("[src/server/data/player_data.server.ts:108]", err)
 			success = false
 			errorMessage = err
 		end)
@@ -80,7 +81,7 @@ local function playerAdded(player)
 			TS.try(function()
 				jsonData = HttpService:JSONDecode(data)
 			end, function(err)
-				warn("[src/server/data/player_data.server.ts:103]", err)
+				warn("[src/server/data/player_data.server.ts:120]", err)
 			end)
 			if not jsonData then
 				player:Kick("Your data is most likely corrupted! Please go to the discord server and tell the developer of this message and your username or try rejoining")
@@ -181,12 +182,12 @@ local function playerAdded(player)
 					return cube.Anchored
 				end)
 			end
-			print("[src/server/data/player_data.server.ts:170]", `Loaded data for player {player.Name} ({player.UserId}) | Total Data Chunks: {totalDataChunks}`)
+			print("[src/server/data/player_data.server.ts:187]", `Loaded data for player {player.Name} ({player.UserId}) | Total Data Chunks: {totalDataChunks}`)
 		else
-			print("[src/server/data/player_data.server.ts:171]", `No data was found for player {player.Name} ({player.UserId})`)
+			print("[src/server/data/player_data.server.ts:188]", `No data was found for player {player.Name} ({player.UserId})`)
 		end
 	else
-		warn("[src/server/data/player_data.server.ts:173]", `Unable to load data for player {player.Name}`)
+		warn("[src/server/data/player_data.server.ts:190]", `Unable to load data for player {player.Name}`)
 		player:Kick(`Unable to load data, please try again later | Error Message: {errorMessage}`)
 		return nil
 	end
@@ -203,8 +204,7 @@ local function playerRemoved(player)
 	end
 	local playerId = tostring(player.UserId)
 	local cube = Workspace:FindFirstChild(`cube{playerId}`)
-	local _value_1 = not cube or player.UserId <= 0 or player:GetAttribute(PlayerAttributes.InTutorial)
-	if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
+	if not cube or player.UserId <= 0 or getCurrentArea(cube) == "Tutorial" then
 		return nil
 	end
 	local currentTime = getTime()
@@ -266,10 +266,10 @@ local function playerRemoved(player)
 				currentData = string.sub(_currentData, _arg0)
 				iteration += 1
 			end
-			print("[src/server/data/player_data.server.ts:242]", `Saved data for player {player.Name} ({player.UserId}) succesfully.`)
+			print("[src/server/data/player_data.server.ts:259]", `Saved data for player {player.Name} ({player.UserId}) succesfully.`)
 			return TS.TRY_BREAK
 		end, function(err)
-			warn("[src/server/data/player_data.server.ts:245]", `Could not save data for player {player.Name} ({player.UserId})! | Retrying {5 - retryAttempt} more time(s) | Error: {err}`)
+			warn("[src/server/data/player_data.server.ts:262]", `Could not save data for player {player.Name} ({player.UserId})! | Retrying {5 - retryAttempt} more time(s) | Error: {err}`)
 			task.wait(0.5)
 		end)
 		if _exitType then
@@ -311,9 +311,9 @@ Events.SaveSettingsJSON.OnServerEvent:Connect(function(player, settingsJSON)
 	end)
 	if success then
 		player:SetAttribute("settings_json", encodedData)
-		print("[src/server/data/player_data.server.ts:283]", `Updated setting data for player {player.Name}`)
+		print("[src/server/data/player_data.server.ts:300]", `Updated setting data for player {player.Name}`)
 	else
-		warn("[src/server/data/player_data.server.ts:284]", `Unable to convert setting data for player {player.Name} into JSON`)
+		warn("[src/server/data/player_data.server.ts:301]", `Unable to convert setting data for player {player.Name} into JSON`)
 	end
 end)
 Events.ForceEquip.Event:Connect(function(player, name)

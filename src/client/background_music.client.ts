@@ -63,12 +63,13 @@ RunService.RenderStepped.Connect((dt) => {
 	
 	if (getSetting(GameSetting.Music) && !targetPlayer.GetAttribute(PlayerAttributes.InErrorLand)) {
 		if (player.GetAttribute(PlayerAttributes.Client.InMainMenu)) activeMusic = Music.Jamming;
-		else if (player.GetAttribute(PlayerAttributes.InTutorial)) activeMusic = Music.CrystalCave;
 		else if (targetCube?.IsA('BasePart')) {
 			const area = getCurrentArea(targetCube);
 			
 			const [ altitude ] = convertStudsToMeters(targetCube.Position.Y, true);
-			if (area === 'Level 1') {
+			if (area === 'Tutorial') {
+				activeMusic = Music.CrystalCave;
+			} else if (area === 'Level 1') {
 				if (altitude < 100) activeMusic = Music.StartingOff;
 				else if (altitude < 200) activeMusic = Music.SolitaryIsle;
 				else if (altitude < 300) activeMusic = Music.TheLake;

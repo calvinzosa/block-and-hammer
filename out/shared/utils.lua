@@ -52,8 +52,6 @@ do
 	_container.HammerTexture = HammerTexture
 	local CompletedGame = "completedGame"
 	_container.CompletedGame = CompletedGame
-	local InTutorial = "inTutorial"
-	_container.InTutorial = InTutorial
 	local CubeColor = "cubeColor"
 	_container.CubeColor = CubeColor
 	local CubeFace = "cube_Face"
@@ -322,6 +320,7 @@ local function waitUntil(callback, maxTime)
 		task.wait()
 	end
 end
+local getCurrentArea
 local function canUseSetting(name)
 	if name == "modifiers" then
 		local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
@@ -333,7 +332,7 @@ local function canUseSetting(name)
 		end
 		local _condition = player:GetAttribute(PlayerAttributes.InErrorLand)
 		if not (_condition ~= 0 and _condition == _condition and _condition ~= "" and _condition) then
-			_condition = player:GetAttribute(PlayerAttributes.InTutorial)
+			_condition = (cube ~= nil and getCurrentArea(cube) == "Tutorial")
 		end
 		local areaCondition = _condition
 		local _condition_1 = areaCondition
@@ -404,7 +403,7 @@ local function fixSettings()
 		Settings[name] = _condition
 	end
 end
-local function getCurrentArea(cube)
+function getCurrentArea(cube)
 	local params = OverlapParams.new()
 	params.FilterType = Enum.RaycastFilterType.Include
 	params.FilterDescendantsInstances = { areasFolder }
@@ -426,9 +425,16 @@ local function getHammerTexture(player)
 	if player == nil then
 		player = Players.LocalPlayer
 	end
-	local _value = player:GetAttribute(PlayerAttributes.InTutorial)
-	if _value ~= 0 and _value == _value and _value ~= "" and _value then
-		return Accessories.HammerTexture.NoHammerTexture
+	local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
+	local _result_1 = cube
+	if _result_1 ~= nil then
+		_result_1 = _result_1:IsA("BasePart")
+	end
+	if _result_1 then
+		local area = getCurrentArea(cube)
+		if area == "Tutorial" then
+			return Accessories.HammerTexture.NoHammerTexture
+		end
 	end
 	return (player:GetAttribute(PlayerAttributes.HammerTexture)) or Accessories.HammerTexture.NoHammerTexture
 end
@@ -439,9 +445,16 @@ local function getCubeFace(player)
 	if player == nil then
 		player = Players.LocalPlayer
 	end
-	local _value = player:GetAttribute(PlayerAttributes.InTutorial)
-	if _value ~= 0 and _value == _value and _value ~= "" and _value then
-		return Accessories.CubeFace.DefaultFace
+	local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
+	local _result_1 = cube
+	if _result_1 ~= nil then
+		_result_1 = _result_1:IsA("BasePart")
+	end
+	if _result_1 then
+		local area = getCurrentArea(cube)
+		if area == "Tutorial" then
+			return Accessories.CubeFace.DefaultFace
+		end
 	end
 	return (player:GetAttribute(PlayerAttributes.CubeFace)) or Accessories.CubeFace.DefaultFace
 end
@@ -452,9 +465,16 @@ local function getCubeHat(player)
 	if player == nil then
 		player = Players.LocalPlayer
 	end
-	local _value = player:GetAttribute(PlayerAttributes.InTutorial)
-	if _value ~= 0 and _value == _value and _value ~= "" and _value then
-		return Accessories.CubeHat.NoHat
+	local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
+	local _result_1 = cube
+	if _result_1 ~= nil then
+		_result_1 = _result_1:IsA("BasePart")
+	end
+	if _result_1 then
+		local area = getCurrentArea(cube)
+		if area == "Tutorial" then
+			return Accessories.CubeHat.NoHat
+		end
 	end
 	return (player:GetAttribute(PlayerAttributes.CubeHat)) or Accessories.CubeHat.NoHat
 end
@@ -462,9 +482,16 @@ local function getCubeAura(player)
 	if player == nil then
 		player = Players.LocalPlayer
 	end
-	local _value = player:GetAttribute(PlayerAttributes.InTutorial)
-	if _value ~= 0 and _value == _value and _value ~= "" and _value then
-		return Accessories.CubeAura.NoAura
+	local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
+	local _result_1 = cube
+	if _result_1 ~= nil then
+		_result_1 = _result_1:IsA("BasePart")
+	end
+	if _result_1 then
+		local area = getCurrentArea(cube)
+		if area == "Tutorial" then
+			return Accessories.CubeAura.NoAura
+		end
 	end
 	return (player:GetAttribute(PlayerAttributes.CubeAura)) or Accessories.CubeAura.NoAura
 end
@@ -749,7 +776,7 @@ local function giveBadge(player, badgeId)
 		return nil
 	end
 	if isTestingServer() then
-		warn("[src/shared/utils.ts:550]", `Badges are disabled in the Testing Server | Attempted to give badge {badgeId} to {player.Name}`)
+		warn("[src/shared/utils.ts:569]", `Badges are disabled in the Testing Server | Attempted to give badge {badgeId} to {player.Name}`)
 		return nil
 	end
 	local userId = player.UserId
@@ -766,11 +793,11 @@ local function giveBadge(player, badgeId)
 			local _exitType, _returns = TS.try(function()
 				if not BadgeService:UserHasBadgeAsync(userId, badgeId) then
 					BadgeService:AwardBadge(userId, badgeId)
-					print("[src/shared/utils.ts:563]", `Successfully badge {badgeId} to {player.Name}`)
+					print("[src/shared/utils.ts:582]", `Successfully badge {badgeId} to {player.Name}`)
 				end
 				return TS.TRY_BREAK
 			end, function(err)
-				warn("[src/shared/utils.ts:568]", err)
+				warn("[src/shared/utils.ts:587]", err)
 			end)
 			if _exitType then
 				break

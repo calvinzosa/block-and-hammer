@@ -1,10 +1,27 @@
-import { ReplicatedStorage, DataStoreService, BadgeService, HttpService, RunService, Players, Workspace } from '@rbxts/services';
+import {
+	ReplicatedStorage,
+	DataStoreService,
+	BadgeService,
+	HttpService,
+	RunService,
+	Workspace,
+	Players,
+} from '@rbxts/services';
 
 import { $print, $warn } from 'rbxts-transform-debug';
 
-import { PlayerAttributes, decodeJSONObject, encodeObjectToJSON, getCubeTime, getTime, isTestingServer } from 'shared/utils';
-import quests from 'shared/quests';
+import {
+	encodeObjectToJSON,
+	PlayerAttributes,
+	decodeJSONObject,
+	isTestingServer,
+	getCurrentArea,
+	getCubeTime,
+	getTime,
+} from 'shared/utils';
+
 import { accessoryList } from 'shared/accessory_loader';
+import quests from 'shared/quests';
 
 const Events = {
 	LoadSettingsJSON: ReplicatedStorage.FindFirstChild('LoadSettingsJSON') as RemoteEvent,
@@ -184,7 +201,7 @@ function playerRemoved(player: Player) {
 	const playerId = tostring(player.UserId);
 	
 	const cube = Workspace.FindFirstChild(`cube${playerId}`) as (BasePart | undefined);
-	if (!cube || player.UserId <= 0 || player.GetAttribute(PlayerAttributes.InTutorial)) return;
+	if (!cube || player.UserId <= 0 || getCurrentArea(cube) === 'Tutorial') return;
 	
 	const currentTime = getTime();
 	const serverJoinTime = (player.GetAttribute('serverJoinTime') as (number | undefined)) ?? currentTime;

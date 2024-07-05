@@ -12,6 +12,7 @@ local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "ut
 local PlayerAttributes = _utils.PlayerAttributes
 local getSettingAlias = _utils.getSettingAlias
 local getSettingOrder = _utils.getSettingOrder
+local getCurrentArea = _utils.getCurrentArea
 local canUseSetting = _utils.canUseSetting
 local fixSettings = _utils.fixSettings
 local GameSetting = _utils.GameSetting
@@ -27,6 +28,7 @@ local Events = {
 	EndTutorial = ReplicatedStorage:WaitForChild("EndTutorial"),
 	Reset = ReplicatedStorage:WaitForChild("Reset"),
 	StartClientTutorial = ReplicatedStorage:WaitForChild("StartClientTutorial"),
+	ClientForceReset = ReplicatedStorage:WaitForChild("ClientForceReset"),
 	SettingChanged = ReplicatedStorage:WaitForChild("SettingChanged"),
 	ClientReset = ReplicatedStorage:WaitForChild("ClientReset"),
 }
@@ -77,24 +79,32 @@ local function resetCharacter(fullReset)
 	local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
 	local _value = player:GetAttribute(PlayerAttributes.InErrorLand)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
-		if cube then
+		local _result = cube
+		if _result ~= nil then
+			_result = _result:IsA("BasePart")
+		end
+		if _result then
 			cube:PivotTo(CFrame.new(0, 14, 0))
 		end
 		return nil
-	end
-	local _value_1 = player:GetAttribute(PlayerAttributes.InTutorial)
-	if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
-		if cube then
-			cube:Destroy()
-			cube = nil
-		end
-		Events.EndTutorial:FireServer()
 	end
 	local _result = cube
 	if _result ~= nil then
 		_result = _result:IsA("BasePart")
 	end
-	local _condition = not _result
+	if _result then
+		local area = getCurrentArea(cube)
+		if area == "Tutorial" then
+			cube:Destroy()
+			cube = nil
+			Events.EndTutorial:FireServer()
+		end
+	end
+	local _result_1 = cube
+	if _result_1 ~= nil then
+		_result_1 = _result_1:IsA("BasePart")
+	end
+	local _condition = not _result_1
 	if not _condition then
 		_condition = fullReset
 	end
@@ -118,11 +128,11 @@ local function resetCharacter(fullReset)
 			end
 		end
 		local arm = cube:FindFirstChild("Arm")
-		local _result_1 = arm
-		if _result_1 ~= nil then
-			_result_1 = _result_1:IsA("BasePart")
+		local _result_2 = arm
+		if _result_2 ~= nil then
+			_result_2 = _result_2:IsA("BasePart")
 		end
-		if _result_1 then
+		if _result_2 then
 			local _cFrame = CFrame.new(cube.Position)
 			local _arg0 = CFrame.fromOrientation(0, 0, math.pi / 2)
 			arm.CFrame = _cFrame * _arg0
@@ -234,6 +244,7 @@ UserInputService.InputEnded:Connect(function(input, processed)
 		resetCharacter(UserInputService:IsKeyDown(Enum.KeyCode.LeftShift))
 	end
 end)
+Events.ClientForceReset.Event:Connect(resetCharacter)
 menuToggle.toggled:Connect(function()
 	if menuToggle.locked then
 		return nil
@@ -329,7 +340,7 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 	end
 	if currentTime - lastChange > 5 and not areSettingsSaved and not settingsGui.Visible then
-		print("[src/client/gui/menu.client.ts:293]", `Saved settings: {HttpService:JSONEncode(Settings)}`)
+		print("[src/client/gui/menu.client.ts:296]", `Saved settings: {HttpService:JSONEncode(Settings)}`)
 		Events.SaveSettingsJSON:FireServer(Settings)
 		areSettingsSaved = true
 	end
@@ -340,7 +351,7 @@ Events.LoadSettingsJSON.OnClientEvent:Connect(function(settingsJSON)
 		local decodedSettings = HttpService:JSONDecode(settingsJSON)
 		newSettings = decodedSettings
 	end, function(err)
-		warn("[src/client/gui/menu.client.ts:305]", `Unable to decode settings JSON | Error: {err}`)
+		warn("[src/client/gui/menu.client.ts:308]", `Unable to decode settings JSON | Error: {err}`)
 		return TS.TRY_RETURN, {}
 	end)
 	if _exitType then
@@ -356,7 +367,7 @@ Events.LoadSettingsJSON.OnClientEvent:Connect(function(settingsJSON)
 		Events.SetModifiersSetting:FireServer(true)
 	end
 	updateSettingButtons()
-	print("[src/client/gui/menu.client.ts:319]", `Loaded settings data: {settingsJSON}`)
+	print("[src/client/gui/menu.client.ts:322]", `Loaded settings data: {settingsJSON}`)
 end);
 (menuButtons:WaitForChild("Reset")).MouseButton1Click:Connect(function()
 	if debounces.reset then
@@ -545,6 +556,36 @@ end)
 Events.SettingChanged.Event:Connect(updateSettingButtons)
 Events.StartClientTutorial.Event:Connect(function()
 	return menuToggle:lock():deselect():unlock()
+end)
+for _, otherPlayer in Players:GetPlayers() do
+	if otherPlayer ~= player then
+		local _name = otherPlayer.Name
+		table.insert(playerList, _name)
+	end
+end
+Players.PlayerAdded:Connect(function(otherPlayer)
+	if otherPlayer ~= player then
+		local _name = otherPlayer.Name
+		table.insert(playerList, _name)
+	end
+end)
+Players.PlayerRemoving:Connect(function(otherPlayer)
+	-- ▼ ReadonlyArray.findIndex ▼
+	local _callback = function(playerName)
+		return playerName == otherPlayer.Name
+	end
+	local _result = -1
+	for _i, _v in playerList do
+		if _callback(_v, _i - 1, playerList) == true then
+			_result = _i - 1
+			break
+		end
+	end
+	-- ▲ ReadonlyArray.findIndex ▲
+	local i = _result
+	if i ~= -1 then
+		table.remove(playerList, i + 1)
+	end
 end)
 local placeVersionValue = ReplicatedStorage:WaitForChild("PlaceVersion")
 if placeVersionValue.Value == 0 then

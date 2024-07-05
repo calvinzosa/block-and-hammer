@@ -14,13 +14,14 @@ import {
 	PlayerAttributes,
 	getSettingAlias,
 	getSettingOrder,
+	getCurrentArea,
 	canUseSetting,
 	fixSettings,
 	GameSetting,
 	getSetting,
 	setSetting,
 	Settings,
-	getTime
+	getTime,
 } from 'shared/utils';
 
 import { update } from 'shared/mobile_buttons';
@@ -31,15 +32,14 @@ const Events = {
 	SaveSettingsJSON: ReplicatedStorage.WaitForChild('SaveSettingsJSON') as RemoteEvent,
 	EndTutorial: ReplicatedStorage.WaitForChild('EndTutorial') as RemoteEvent,
 	Reset: ReplicatedStorage.WaitForChild('Reset') as RemoteEvent,
-
+	
 	StartClientTutorial: ReplicatedStorage.WaitForChild('StartClientTutorial') as BindableEvent,
+	ClientForceReset: ReplicatedStorage.WaitForChild('ClientForceReset') as BindableEvent,
 	SettingChanged: ReplicatedStorage.WaitForChild('SettingChanged') as BindableEvent,
 	ClientReset: ReplicatedStorage.WaitForChild('ClientReset') as BindableEvent,
 };
 
-const debounces = {
-	reset: false,
-};
+const debounces = { reset: false };
 
 const player = Players.LocalPlayer;
 const GUI = player.WaitForChild('PlayerGui') as PlayerGui;
@@ -70,7 +70,7 @@ const changelogsGui = screenGui.WaitForChild('Changelogs') as Frame;
 const replaysGui = screenGui.WaitForChild('ReplaysGUI') as Frame;
 const statsGui = screenGui.WaitForChild('StatsGUI') as Frame;
 
-const playerList: string[] = [];
+const playerList: string[] = [  ];
 const clickThreshold = 0.2;
 const menuToggle = new Icon().setLabel('Menu').lock();
 
@@ -98,20 +98,21 @@ let lastClickTime = 0;
 Icon.setDisplayOrder(999999999);
 
 function resetCharacter(fullReset: boolean = false) {
-	let cube = Workspace.FindFirstChild(`cube${player.UserId}`) as BasePart | undefined;
+	let cube = Workspace.FindFirstChild(`cube${player.UserId}`);
 	
 	if (player.GetAttribute(PlayerAttributes.InErrorLand)) {
-		if (cube) cube.PivotTo(new CFrame(0, 14, 0));
+		if (cube?.IsA('BasePart')) cube.PivotTo(new CFrame(0, 14, 0));
 		return;
 	}
 	
-	if (player.GetAttribute(PlayerAttributes.InTutorial)) {
-		if (cube) {
+	if (cube?.IsA('BasePart')) {
+		const area = getCurrentArea(cube);
+		if (area === 'Tutorial') {
 			cube.Destroy();
 			cube = undefined;
+			
+			Events.EndTutorial.FireServer();
 		}
-		
-		Events.EndTutorial.FireServer();
 	}
 	
 	if (!cube?.IsA('BasePart') || fullReset) {
@@ -133,7 +134,7 @@ function resetCharacter(fullReset: boolean = false) {
 		const arm = cube.FindFirstChild('Arm');
 		if (arm?.IsA('BasePart')) arm.CFrame = new CFrame(cube.Position).mul(CFrame.fromOrientation(0, 0, math.pi / 2));
 	}
-
+	
 	effectsFolder.ClearAllChildren();
 }
 
@@ -141,17 +142,17 @@ function updateSettingButtons() {
 	for (const button of settingButtons.GetChildren()) {
 		if (button.IsA('TextButton')) button.Destroy();
 	}
-
-	for (const [name, value] of pairs(Settings)) {
+	
+	for (const [ name, value ] of pairs(Settings)) {
 		const alias = getSettingAlias(name);
 		const isUsable = canUseSetting(name);
 		const order = getSettingOrder(name);
-
+		
 		const button = guiTemplates.FindFirstChild('SettingToggle')?.Clone() as TextButton;
 		button.LayoutOrder = order;
 		button.Name = alias;
 		button.Text = `${alias}: ${value ? '✅' : '❌'}`;
-
+		
 		if (isUsable) {
 			button.AutoButtonColor = true;
 			button.BackgroundTransparency = 0.7;
@@ -233,6 +234,8 @@ UserInputService.InputBegan.Connect((input, processed) => {
 UserInputService.InputEnded.Connect((input, processed) => {
 	if (input.KeyCode === Enum.KeyCode.R && UserInputService.IsKeyDown(Enum.KeyCode.LeftControl) && !processed) resetCharacter(UserInputService.IsKeyDown(Enum.KeyCode.LeftShift));
 });
+
+Events.ClientForceReset.Event.Connect(resetCharacter);
 
 menuToggle.toggled.Connect(() => {
 	if (menuToggle.locked) return;
@@ -504,6 +507,19 @@ Events.LoadSettingsJSON.OnClientEvent.Connect((settingsJSON: string) => {
 
 Events.SettingChanged.Event.Connect(updateSettingButtons);
 Events.StartClientTutorial.Event.Connect(() => menuToggle.lock().deselect().unlock());
+
+for (const otherPlayer of Players.GetPlayers()) {
+	if (otherPlayer !== player) playerList.push(otherPlayer.Name);
+}
+
+Players.PlayerAdded.Connect((otherPlayer) => {
+	if (otherPlayer !== player) playerList.push(otherPlayer.Name);
+});
+
+Players.PlayerRemoving.Connect((otherPlayer) => {
+	const i = playerList.findIndex((playerName) => playerName === otherPlayer.Name);
+	if (i !== -1) playerList.remove(i);
+});
 
 const placeVersionValue = ReplicatedStorage.WaitForChild('PlaceVersion') as IntValue;
 if (placeVersionValue.Value === 0) placeVersionValue.Changed.Wait();
