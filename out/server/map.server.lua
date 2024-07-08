@@ -41,17 +41,10 @@ for _, part in mapFolder:GetDescendants() do
 		table.insert(untaggedParts, part)
 	end
 end
---[[
-	
-	local b,c=true,0;for _,p in workspace.Map:GetDescendants() do if p:IsA('BasePart') then b=true for _, t in p:GetTags() do if t:find('mapPart-')==1 then b=false break end end
-	if b then p:AddTag('mapPart-'..game.HttpService:GenerateGUID(false)) c+=1 end end end
-	print(c)
-	
-]]
 if #untaggedParts > 0 then
-	warn("[src/server/map.server.ts:45]", `Found {#untaggedParts} untagged part(s):`)
+	warn("[src/server/map.server.ts:39]", `Found {#untaggedParts} untagged part(s):`)
 	for _, part in untaggedParts do
-		warn("[src/server/map.server.ts:46]", part, part:GetFullName())
+		warn("[src/server/map.server.ts:40]", part, part:GetFullName())
 	end
 end
 for i = 1, 300 do

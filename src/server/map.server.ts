@@ -35,12 +35,6 @@ for (const part of mapFolder.GetDescendants()) {
 	}
 }
 
-/*
-local b,c=true,0;for _,p in workspace.Map:GetDescendants() do if p:IsA('BasePart') then b=true for _, t in p:GetTags() do if t:find('mapPart-')==1 then b=false break end end
-if b then p:AddTag('mapPart-'..game.HttpService:GenerateGUID(false)) c+=1 end end end
-print(c)
-*/
-
 if (untaggedParts.size() > 0) {
 	$warn(`Found ${untaggedParts.size()} untagged part(s):`);
 	for (const part of untaggedParts) $warn(part, part.GetFullName());

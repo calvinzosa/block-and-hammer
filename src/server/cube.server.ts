@@ -12,6 +12,7 @@ import {
 	computeNameColor,
 	getHammerTexture,
 	PlayerAttributes,
+	getCurrentArea,
 	getTimeUnits,
 	Accessories,
 	giveBadge,
@@ -44,22 +45,29 @@ const Events = {
 
 const cubeTemplate = ReplicatedStorage.FindFirstChild('Cube') as BasePart;
 const targetCenter = Workspace.FindFirstChild('TargetCenter') as BasePart;
+const areasFolder = Workspace.FindFirstChild('Areas') as Folder;
 const mapFolder = Workspace.FindFirstChild('Map') as Folder;
 const trappedArea = mapFolder.FindFirstChild('trapped_area') as BasePart;
 const gravityFlipper = mapFolder.WaitForChild('gravity_flipper') as BasePart;
 
-function createCube(player: Player, firstTime: boolean) {
+function createCube(player: Player, firstTime: boolean, prevArea = 'None') {
 	Workspace.FindFirstChild(`cube${player.Name}`)?.Destroy();
 
 	if (player.UserId === -1) player.SetAttribute(PlayerAttributes.HammerTexture, Accessories.HammerTexture.GrapplingHammer);
-
+	
 	Events.FlipGravity.FireClient(player, false);
-
+	
 	const cube = cubeTemplate.Clone();
 	cube.Name = `cube${player.UserId}`;
 	cube.Color = computeNameColor(player.Name);
 	cube.Parent = Workspace;
-
+	
+	let position = new Vector3(0, 0, 0);
+	if (prevArea === 'Level 2' || prevArea === 'Level 2: Cave 1') position = new Vector3(-5912, 0, 0);
+	
+	cube.SetAttribute('previousVelocity', Vector3.zero);
+	cube.PivotTo(new CFrame(position.X, position.Y + 14, position.Z));
+	
 	const head = cube.FindFirstChild('Head') as BasePart;
 	const overheadGui = cube.FindFirstChild('OverheadGUI') as BillboardGui;
 	const icons = overheadGui.FindFirstChild('Icons') as Frame;
@@ -135,6 +143,9 @@ function resetPlayer(player: Player, fullReset: any) {
 	if (!player || !typeIs(fullReset, 'boolean')) return;
 	
 	let cube = Workspace.FindFirstChild(`cube${player.UserId}`);
+	
+	const prevArea = getCurrentArea(cube);
+	
 	if (fullReset && cube) {
 		cube.Destroy();
 		cube = undefined;
@@ -149,7 +160,7 @@ function resetPlayer(player: Player, fullReset: any) {
 		if (!player.GetAttribute(PlayerAttributes.HasModifiers)) cube.SetAttribute('used_modifiers', undefined);
 		
 		cube.SetAttribute('start_time', getTime());
-	} else createCube(player, false);
+	} else createCube(player, false, prevArea);
 	
 	player.SetAttribute(PlayerAttributes.TotalRestarts, ((player.GetAttribute(PlayerAttributes.TotalRestarts) as number) ?? 0) + 1);
 }
@@ -219,19 +230,28 @@ Events.GroundImpact.OnServerEvent.Connect((player, velocity, position) => {
 Events.CompleteGame.OnServerEvent.Connect((player, givenTime) => {
 	const cube = Workspace.FindFirstChild(`cube${player.UserId}`);
 	if (!cube?.IsA('BasePart') || !typeIs(givenTime, 'number')) return;
-
+	
 	const totalTime = math.min(givenTime, 3599.999);
-
+	
 	cube.SetAttribute('finishTotalTime', totalTime);
-	player.SetAttribute('finished', true);
-
+	player.SetAttribute(PlayerAttributes.CompletedGame, true);
+	
+	const currentArea = getCurrentArea(cube, true);
+	if (currentArea === 'Level 1') giveBadge(player, Badge.ProfessionalClimberI);
+	// else if (currentArea === 'Level 2') giveBadge(player, Badge.ProfessionalClimberII);
+	
+	if (currentArea === 'Level 2') {
+		Events.SaySystemMessage.FireClient(player, 'level 2 is unfinished so i cant give you any badges just yet');
+		return;
+	}
+	
 	const [ , minutes, seconds, milliseconds ] = getTimeUnits(totalTime * 1000);
 	const formattedTime = string.format('%02d:%02d.%03d', minutes, seconds, milliseconds);
-
+	
 	if (cube.GetAttribute('used_modifiers')) {
 		Events.SaySystemMessage.FireClient(player, `nice! you completed a modded run in: ${formattedTime}`);
 		Events.UpdatePlayerTime.Fire(player.UserId, totalTime, 1);
-
+		
 		player.SetAttribute(PlayerAttributes.TotalModdedWins, ((player.GetAttribute(PlayerAttributes.TotalModdedWins) as number | undefined) ?? 0) + 1);
 		return;
 	} else {
@@ -240,12 +260,10 @@ Events.CompleteGame.OnServerEvent.Connect((player, givenTime) => {
 		player.SetAttribute(PlayerAttributes.TotalWins, ((player.GetAttribute(PlayerAttributes.TotalWins) as number | undefined) ?? 0) + 1);
 	}
 	
-	giveBadge(player, Badge.ProfessionalClimber);
-
 	if (cube.GetAttribute('destroyed_counter') === 0) {
 		Events.SaySystemMessage.FireClient(player, `nice! you completed a pacifist run in: ${formattedTime}`);
 		giveBadge(player, Badge.Pacifist);
-	} else Events.SaySystemMessage.FireClient(player, `nice! you completed a normal run in: ${formattedTime}`);
+	} else Events.SaySystemMessage.FireClient(player, `nice! you completed '${currentArea}' in: ${formattedTime}`);
 	
 	cube.SetAttribute('start_time', getTime() - totalTime);
 	
@@ -255,14 +273,14 @@ Events.CompleteGame.OnServerEvent.Connect((player, givenTime) => {
 Events.DestroyedPart.OnServerEvent.Connect((player, otherPart) => {
 	const cube = Workspace.FindFirstChild(`cube${player.UserId}`);
 	if (!cube || !typeIs(otherPart, 'Instance') || !otherPart.IsA('BasePart')) return;
-
+	
 	if (otherPart.GetAttribute('CAN_SHATTER')) {
-		player.SetAttribute('didShatter', true);
+		player.SetAttribute(PlayerAttributes.DidShatterPart, true);
 		task.delay(10, () => {
-			if (player.Parent === Players) player.SetAttribute('didShatter', undefined);
+			if (player.Parent === Players) player.SetAttribute(PlayerAttributes.DidShatterPart, undefined);
 		});
 	}
-
+	
 	const count = ((cube.GetAttribute('destroyed_counter') as number | undefined) ?? 0) + 1;
 	cube.SetAttribute('destroyed_counter', count);
 
@@ -288,6 +306,16 @@ Events.SayMessageRequest.OnServerEvent.Connect((player, message, channel) => {
 	for (const otherPlayer of Players.GetPlayers()) {
 		const filteredMessage = Chat.FilterStringAsync(message, player, otherPlayer);
 		Events.ShowChatBubble.FireClient(otherPlayer, bubbleAttachment, filteredMessage);
+	}
+});
+
+((areasFolder.FindFirstChild('Level 2: Cave 1') as Model).FindFirstChild('Main') as BasePart).Touched.Connect((otherPart) => {
+	if (!otherPart.GetAttribute('isCube')) return;
+	
+	const userId = tonumber(otherPart.Name.sub(5)) ?? -1;
+	const player = Players.GetPlayerByUserId(userId);
+	if (player && !player.GetAttribute(PlayerAttributes.HasLevel2)) {
+		player.SetAttribute(PlayerAttributes.HasLevel2, true);
 	}
 });
 

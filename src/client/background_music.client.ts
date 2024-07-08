@@ -34,7 +34,8 @@ const Music = {
 	Garden: musicFolder.WaitForChild('Garden').Clone() as Sound,
 	TheLake: musicFolder.WaitForChild('The Lake').Clone() as Sound,
 	HauntedField: musicFolder.WaitForChild('Haunted Field').Clone() as Sound,
-	TempleRuins: musicFolder.WaitForChild('Temple Ruins').Clone() as Sound,
+	ForestOfFall: musicFolder.WaitForChild('Forest Of Fall').Clone() as Sound,
+	CrystallizedAbyss: musicFolder.WaitForChild('Crystallized Abyss').Clone() as Sound,
 };
 
 for (const [ , sound ] of pairs(Music)) {
@@ -61,27 +62,27 @@ RunService.RenderStepped.Connect((dt) => {
 	
 	let activeMusic = undefined as (Sound | undefined);
 	
-	if (getSetting(GameSetting.Music) && !targetPlayer.GetAttribute(PlayerAttributes.InErrorLand)) {
-		if (player.GetAttribute(PlayerAttributes.Client.InMainMenu)) activeMusic = Music.Jamming;
-		else if (targetCube?.IsA('BasePart')) {
-			const area = getCurrentArea(targetCube);
+	if (player.GetAttribute(PlayerAttributes.Client.InMainMenu)) activeMusic = Music.Jamming;
+	else if (targetCube?.IsA('BasePart')) {
+		const area = getCurrentArea(targetCube);
+		
+		const [ altitude ] = convertStudsToMeters(targetCube.Position.Y, true);
+		if (area === 'Tutorial') {
+			activeMusic = Music.CrystalCave;
+		} else if (area === 'Level 1') {
+			if (altitude < 100) activeMusic = Music.StartingOff;
+			else if (altitude < 200) activeMusic = Music.SolitaryIsle;
+			else if (altitude < 300) activeMusic = Music.TheLake;
+			else if (altitude < 400) activeMusic = Music.Mountain;
+			else if (altitude < 500) activeMusic = Music.HauntedField;
+			else if (altitude < 700) activeMusic = Music.Mountain;
+			else activeMusic = Music.Garden;
+		} else if (area === 'Level 2: Entrance') {
+			activeMusic = Music.ForestOfFall;
+		} else if (area === 'Level 2: Cave 1') {
+			activeMusic = Music.CrystallizedAbyss;
+		} else if (area === 'Level 2') {
 			
-			const [ altitude ] = convertStudsToMeters(targetCube.Position.Y, true);
-			if (area === 'Tutorial') {
-				activeMusic = Music.CrystalCave;
-			} else if (area === 'Level 1') {
-				if (altitude < 100) activeMusic = Music.StartingOff;
-				else if (altitude < 200) activeMusic = Music.SolitaryIsle;
-				else if (altitude < 300) activeMusic = Music.TheLake;
-				else if (altitude < 400) activeMusic = Music.Mountain;
-				else if (altitude < 500) activeMusic = Music.HauntedField;
-				else if (altitude < 700) activeMusic = Music.Mountain;
-				else activeMusic = Music.Garden;
-			} else if (area === 'Level 2: Entrance') {
-				activeMusic = Music.TempleRuins;
-			} else if (area === 'Level 2') {
-				
-			}
 		}
 	}
 	

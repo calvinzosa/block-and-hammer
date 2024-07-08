@@ -5,6 +5,7 @@ import {
 import {
 	giveBadge,
 	Badge,
+	PlayerAttributes,
 } from 'shared/utils';
 
 const interactablesFolder = Workspace.FindFirstChild('Interactables') as Folder;
@@ -15,23 +16,23 @@ const glowPart = interactablesFolder.FindFirstChild('Glow') as Model;
 	const cube = Workspace.FindFirstChild(`cube${player.UserId}`);
 	if (!cube?.IsA('BasePart')) return;
 	
-	if (player.GetAttribute('activeQuest') === 'LostSteelHammer') player.SetAttribute('hasSteelHammer', true);
+	if (player.GetAttribute('activeQuest') === 'LostSteelHammer') player.SetAttribute(PlayerAttributes.HasSteelHammer, true);
 });
 
 (glowPart.FindFirstChild('Interacted') as RemoteEvent).OnServerEvent.Connect((player) => {
 	const cube = Workspace.FindFirstChild(`cube${player.UserId}`);
 	if (!cube?.IsA('BasePart')) return;
-
-	if (player.GetAttribute('glowDebounce')) return;
-
-	player.SetAttribute('glowDebounce', true);
-	task.delay(20, () => player.SetAttribute('glowDebounce', undefined));
-
+	
+	if (player.GetAttribute(PlayerAttributes.GlowDebounce)) return;
+	
+	player.SetAttribute(PlayerAttributes.GlowDebounce, true);
+	task.delay(20, () => player.SetAttribute(PlayerAttributes.GlowDebounce, undefined));
+	
 	const currentPhase = ((player.GetAttribute('glowPhase') as number | undefined) ?? 0) + 1;
-	player.SetAttribute('glowPhase', currentPhase);
+	player.SetAttribute(PlayerAttributes.GlowDebounce, currentPhase);
 
 	if (currentPhase === 5) {
-		player.SetAttribute('glowPhase', undefined);
+		player.SetAttribute(PlayerAttributes.GlowDebounce, undefined);
 		giveBadge(player, Badge.Glowing);
 	}
 });

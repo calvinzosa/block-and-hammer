@@ -11,6 +11,7 @@ import {
 	isClientCube,
 	tweenTypes,
 	getTime,
+	PlayerAttributes,
 } from 'shared/utils';
 
 const Events = {
@@ -46,7 +47,7 @@ function start() {
 		flippedGravity.Value = false;
 		
 		Events.PlayTutorial.FireServer();
-		player.SetAttribute('finished', undefined);
+		player.SetAttribute(PlayerAttributes.CompletedGame, undefined);
 		
 		shadow.BackgroundTransparency = 0;
 		TweenService.Create(shadow, new TweenInfo(0.5, Enum.EasingStyle.Linear), { BackgroundTransparency: 1 }).Play();

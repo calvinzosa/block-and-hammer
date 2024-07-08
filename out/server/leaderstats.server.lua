@@ -4,6 +4,7 @@ local Players = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_i
 local defaultLeaderstats = {
 	Time = "StringValue",
 	Altitude = "StringValue",
+	Area = "StringValue",
 }
 local function playerAdded(player)
 	local folder = Instance.new("Folder")

@@ -9,6 +9,7 @@ local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "ut
 local getCurrentArea = _utils.getCurrentArea
 local isClientCube = _utils.isClientCube
 local tweenTypes = _utils.tweenTypes
+local PlayerAttributes = _utils.PlayerAttributes
 local Events = {
 	PlayTutorial = ReplicatedStorage:WaitForChild("PlayTutorial"),
 	EndTutorial = ReplicatedStorage:WaitForChild("EndTutorial"),
@@ -41,7 +42,7 @@ local function start()
 	if area ~= "Tutorial" then
 		flippedGravity.Value = false
 		Events.PlayTutorial:FireServer()
-		player:SetAttribute("finished", nil)
+		player:SetAttribute(PlayerAttributes.CompletedGame, nil)
 		shadow.BackgroundTransparency = 0
 		TweenService:Create(shadow, TweenInfo.new(0.5, Enum.EasingStyle.Linear), {
 			BackgroundTransparency = 1,

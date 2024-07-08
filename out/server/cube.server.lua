@@ -12,6 +12,7 @@ local convertStudsToMeters = _utils.convertStudsToMeters
 local computeNameColor = _utils.computeNameColor
 local getHammerTexture = _utils.getHammerTexture
 local PlayerAttributes = _utils.PlayerAttributes
+local getCurrentArea = _utils.getCurrentArea
 local getTimeUnits = _utils.getTimeUnits
 local Accessories = _utils.Accessories
 local giveBadge = _utils.giveBadge
@@ -39,10 +40,14 @@ local Events = {
 }
 local cubeTemplate = ReplicatedStorage:FindFirstChild("Cube")
 local targetCenter = Workspace:FindFirstChild("TargetCenter")
+local areasFolder = Workspace:FindFirstChild("Areas")
 local mapFolder = Workspace:FindFirstChild("Map")
 local trappedArea = mapFolder:FindFirstChild("trapped_area")
 local gravityFlipper = mapFolder:WaitForChild("gravity_flipper")
-local function createCube(player, firstTime)
+local function createCube(player, firstTime, prevArea)
+	if prevArea == nil then
+		prevArea = "None"
+	end
 	local _result = Workspace:FindFirstChild(`cube{player.Name}`)
 	if _result ~= nil then
 		_result:Destroy()
@@ -55,6 +60,12 @@ local function createCube(player, firstTime)
 	cube.Name = `cube{player.UserId}`
 	cube.Color = computeNameColor(player.Name)
 	cube.Parent = Workspace
+	local position = Vector3.new(0, 0, 0)
+	if prevArea == "Level 2" or prevArea == "Level 2: Cave 1" then
+		position = Vector3.new(-5912, 0, 0)
+	end
+	cube:SetAttribute("previousVelocity", Vector3.zero)
+	cube:PivotTo(CFrame.new(position.X, position.Y + 14, position.Z))
 	local head = cube:FindFirstChild("Head")
 	local overheadGui = cube:FindFirstChild("OverheadGUI")
 	local icons = overheadGui:FindFirstChild("Icons");
@@ -169,6 +180,7 @@ local function resetPlayer(player, fullReset)
 		return nil
 	end
 	local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
+	local prevArea = getCurrentArea(cube)
 	if fullReset and cube then
 		cube:Destroy()
 		cube = nil
@@ -188,7 +200,7 @@ local function resetPlayer(player, fullReset)
 		end
 		cube:SetAttribute("start_time", getTime())
 	else
-		createCube(player, false)
+		createCube(player, false, prevArea)
 	end
 	local _fn = player
 	local _exp = PlayerAttributes.TotalRestarts
@@ -305,7 +317,16 @@ Events.CompleteGame.OnServerEvent:Connect(function(player, givenTime)
 	end
 	local totalTime = math.min(givenTime, 3599.999)
 	cube:SetAttribute("finishTotalTime", totalTime)
-	player:SetAttribute("finished", true)
+	player:SetAttribute(PlayerAttributes.CompletedGame, true)
+	local currentArea = getCurrentArea(cube, true)
+	if currentArea == "Level 1" then
+		giveBadge(player, Badge.ProfessionalClimberI)
+	end
+	-- else if (currentArea === 'Level 2') giveBadge(player, Badge.ProfessionalClimberII);
+	if currentArea == "Level 2" then
+		Events.SaySystemMessage:FireClient(player, "level 2 is unfinished so i cant give you any badges just yet")
+		return nil
+	end
 	local _, minutes, seconds, milliseconds = getTimeUnits(totalTime * 1000)
 	local formattedTime = string.format("%02d:%02d.%03d", minutes, seconds, milliseconds)
 	local _value = cube:GetAttribute("used_modifiers")
@@ -330,12 +351,11 @@ Events.CompleteGame.OnServerEvent:Connect(function(player, givenTime)
 		end
 		_fn:SetAttribute(_exp, _condition_1 + 1)
 	end
-	giveBadge(player, Badge.ProfessionalClimber)
 	if cube:GetAttribute("destroyed_counter") == 0 then
 		Events.SaySystemMessage:FireClient(player, `nice! you completed a pacifist run in: {formattedTime}`)
 		giveBadge(player, Badge.Pacifist)
 	else
-		Events.SaySystemMessage:FireClient(player, `nice! you completed a normal run in: {formattedTime}`)
+		Events.SaySystemMessage:FireClient(player, `nice! you completed '{currentArea}' in: {formattedTime}`)
 	end
 	cube:SetAttribute("start_time", getTime() - totalTime)
 	if totalTime < 210 then
@@ -357,10 +377,10 @@ Events.DestroyedPart.OnServerEvent:Connect(function(player, otherPart)
 	end
 	local _value = otherPart:GetAttribute("CAN_SHATTER")
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
-		player:SetAttribute("didShatter", true)
+		player:SetAttribute(PlayerAttributes.DidShatterPart, true)
 		task.delay(10, function()
 			if player.Parent == Players then
-				player:SetAttribute("didShatter", nil)
+				player:SetAttribute(PlayerAttributes.DidShatterPart, nil)
 			end
 		end)
 	end
@@ -425,6 +445,26 @@ Events.SayMessageRequest.OnServerEvent:Connect(function(player, message, channel
 	for _, otherPlayer in Players:GetPlayers() do
 		local filteredMessage = Chat:FilterStringAsync(message, player, otherPlayer)
 		Events.ShowChatBubble:FireClient(otherPlayer, bubbleAttachment, filteredMessage)
+	end
+end);
+((areasFolder:FindFirstChild("Level 2: Cave 1")):FindFirstChild("Main")).Touched:Connect(function(otherPart)
+	local _value = otherPart:GetAttribute("isCube")
+	if not (_value ~= 0 and _value == _value and _value ~= "" and _value) then
+		return nil
+	end
+	local _condition = tonumber(string.sub(otherPart.Name, 5))
+	if _condition == nil then
+		_condition = -1
+	end
+	local userId = _condition
+	local player = Players:GetPlayerByUserId(userId)
+	local _condition_1 = player
+	if _condition_1 then
+		local _value_1 = player:GetAttribute(PlayerAttributes.HasLevel2)
+		_condition_1 = not (_value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1)
+	end
+	if _condition_1 then
+		player:SetAttribute(PlayerAttributes.HasLevel2, true)
 	end
 end)
 for _, player in Players:GetPlayers() do

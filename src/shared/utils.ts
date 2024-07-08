@@ -33,8 +33,8 @@ export namespace GameData {
 
 export namespace PlayerAttributes {
 	export const HasDataLoaded = 'DataLoaded';
-	export const InErrorLand = 'inErrorLand';
 	export const HasModifiers = 'modifiers';
+	export const HasLevel2 = 'hasLevel2';
 	export const Impacts = 'impacts';
 	export const IsNew = 'isNew';
 	
@@ -61,7 +61,10 @@ export namespace PlayerAttributes {
 	
 	export const ActiveQuest = 'activeQuest';
 	export const GlowPhase = 'glowPhase';
+	export const GlowDebounce = 'glowDebounce';
 	export const HasSteelHammer = 'hasSteelHammer';
+	
+	export const DidShatterPart = 'didShatterPart';
 	
 	export const Device = 'device';
 	
@@ -125,28 +128,29 @@ export namespace Accessories {
 }
 
 export enum Badge {
-	CrashLanding        = 2146180612,
-	Flipped             = 2146247056,
-	Trapped             = 2146259996,
-	TheDuck             = 2146289079,
-	Pacifist            = 2146295992,
-	_404                = 2146308286,
-	ErrorLand           = 2146357550,
-	ProfessionalClimber = 2146411244,
-	FreeAccessory       = 2146441455,
-	Explosive           = 2146508969,
-	Speedrunner         = 2146538368,
-	Visits1k            = 2146588764,
-	UltraSpeed          = 2146687990,
-	Learner             = 2146706248,
-	MadeOfSteel         = 4010328408057079,
-	Welcome             = 1967915839777317,
-	METEOR              = 4279006041653694,
-	FreeFloater         = 1719451122385638,
-	LongShot            = 2479031288528448,
-	FreezingMisfortune  = 2512066188170235,
-	Visits35k           = 4410861265533965,
-	Glowing             = 254003402602004,
+	CrashLanding          = 2146180612,
+	Flipped               = 2146247056,
+	Trapped               = 2146259996,
+	TheDuck               = 2146289079,
+	Pacifist              = 2146295992,
+	_404                  = 2146308286,
+	ErrorLand             = 2146357550,
+	ProfessionalClimberI  = 2146411244,
+	FreeAccessory         = 2146441455,
+	Explosive             = 2146508969,
+	Speedrunner           = 2146538368,
+	Visits1k              = 2146588764,
+	UltraSpeed            = 2146687990,
+	Learner               = 2146706248,
+	MadeOfSteel           = 4010328408057079,
+	Welcome               = 1967915839777317,
+	METEOR                = 4279006041653694,
+	FreeFloater           = 1719451122385638,
+	LongShot              = 2479031288528448,
+	FreezingMisfortune    = 2512066188170235,
+	Visits35k             = 4410861265533965,
+	Glowing               = 254003402602004,
+	ProfessionalClimberII = 1706467395869465,
 };
 
 export enum MouseImageIcon {
@@ -279,18 +283,19 @@ export function canUseSetting(name: string): boolean {
 		const modifierDisablers = Workspace.FindFirstChild('ForceDisableModifiers') as Instance | undefined;
 		if (modifierDisablers !== undefined) params.FilterDescendantsInstances = [modifierDisablers];
 		
-		const areaCondition = player.GetAttribute(PlayerAttributes.InErrorLand) || (cube !== undefined && getCurrentArea(cube) === 'Tutorial');
+		const currentArea = getCurrentArea(cube);
+		const areaCondition = currentArea === 'ErrorLand' || currentArea === 'Tutorial' || currentArea === 'Level 2: Entrance';
 		if (areaCondition || (player && cube && Workspace.GetPartsInPart(cube, params).size() > 0)) return false;
 	}
-
+	
 	if (name === 'hideothers' && GUI?.FindFirstChild('ReplayGui') && (GUI.FindFirstChild('ReplayGui') as ScreenGui | undefined)?.Enabled) return true;
-
+	
 	return true;
 }
 
 export function getSetting(name: GameSetting): boolean {
 	if (!canUseSetting(name)) return false;
-
+	
 	const value = Settings[name];
 	if (value === undefined) return DefaultSettings[name];
 	return value;
@@ -315,14 +320,18 @@ export function fixSettings(): void {
 	for (const [name, value] of pairs(DefaultSettings)) Settings[name] = Settings[name] ?? value;
 }
 
-export function getCurrentArea(cube: BasePart) {
+export function getCurrentArea(cube: BasePart | Instance | undefined, shortName = false) {
+	if (cube === undefined || !cube.IsA('BasePart')) return 'None';
+	
 	const params = new OverlapParams();
 	params.FilterType = Enum.RaycastFilterType.Include;
 	params.FilterDescendantsInstances = [ areasFolder ];
 	
 	const areaPart = Workspace.GetPartBoundsInBox(new CFrame(cube.Position.X, cube.Position.Y, 0), new Vector3(4, 4, 4), params)[0]?.FindFirstAncestorOfClass('Model');
-	if (areaPart) return areaPart.Name;
-	else return 'None';
+	if (areaPart) {
+		if (!shortName) return areaPart.Name;
+		else return areaPart.GetAttribute('shortName') as (string | undefined) ?? areaPart.Name;
+	} else return 'None';
 }
 
 export function getHammerTexture(player: Player | undefined = undefined): Accessories.HammerTexture {
@@ -396,7 +405,8 @@ export function playSound(name: string, properties: Record<string, DictValue> = 
 		}
 	}
 	
-	if (player.GetAttribute(PlayerAttributes.InErrorLand)) sound.PlaybackSpeed *= 0.5;
+	const cube = Workspace.FindFirstChild(`cube${player.UserId}`);
+	if (cube?.IsA('BasePart') && getCurrentArea(cube) === 'ErrorLand') sound.PlaybackSpeed *= 0.5;
 	sound.Volume = math.min(sound.Volume, 1.5);
 	sound.Parent = Workspace;
 	

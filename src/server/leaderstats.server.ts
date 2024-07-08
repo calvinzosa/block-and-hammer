@@ -3,6 +3,7 @@ import { Players } from '@rbxts/services';
 const defaultLeaderstats: Record<string, keyof CreatableInstances> = {
 	Time: 'StringValue',
 	Altitude: 'StringValue',
+	Area: 'StringValue',
 };
 
 function playerAdded(player: Player) {

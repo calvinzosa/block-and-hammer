@@ -18,7 +18,10 @@ import {
 	getTime,
 	numLerp,
 	PlayerAttributes,
+	getCurrentArea,
 } from 'shared/utils';
+
+import LightningBolt from 'shared/lua/lightning_bolt';
 
 const Events = {
 	DestroyedPart: ReplicatedStorage.WaitForChild('DestroyedPart') as RemoteEvent,
@@ -39,8 +42,14 @@ const StrokeScale = require(ReplicatedStorage.WaitForChild('Modules').WaitForChi
 const player = Players.LocalPlayer;
 const camera = Workspace.CurrentCamera ?? (Workspace.WaitForChild('Camera') as Camera);
 
+const debrisTypes = ReplicatedStorage.WaitForChild('DebrisTypes') as Folder;
+const sfx = ReplicatedStorage.WaitForChild('SFX') as Folder;
+const particlesFolder = ReplicatedStorage.WaitForChild('Particles') as Folder;
+const shockwaveParticle = particlesFolder.WaitForChild('Shockwave').WaitForChild('Shockwave') as Attachment & { Shockwave: ParticleEmitter };
+const wind = sfx.WaitForChild('wind') as Sound;
 const GUI = player.WaitForChild('PlayerGui') as PlayerGui;
 const screenGui = GUI.WaitForChild('ScreenGui') as ScreenGui;
+const travelGui = screenGui.WaitForChild('FastTravelGUI') as Frame;
 const valueInstances = GUI.WaitForChild('Values') as ScreenGui;
 const canMove = valueInstances.WaitForChild('can_move') as BoolValue;
 const isSpectating = valueInstances.WaitForChild('is_spectating') as BoolValue;
@@ -48,11 +57,10 @@ const spectatePlayer = isSpectating.WaitForChild('player') as StringValue;
 const shakeIntensity = valueInstances.WaitForChild('shake_intensity') as NumberValue;
 const speedLines = screenGui.WaitForChild('SpeedLines') as ImageLabel;
 const mapFolder = Workspace.WaitForChild('Map') as Folder;
+const blastShardsFolder = mapFolder.WaitForChild('BlastShards') as Folder;
+const voltShardsFolder = mapFolder.WaitForChild('VoltShards') as Folder;
 const nonBreakable = Workspace.WaitForChild('NonBreakable') as Folder;
 const effectsFolder = Workspace.WaitForChild('Effects') as Folder;
-const debrisTypes = ReplicatedStorage.WaitForChild('DebrisTypes') as Folder;
-const sfx = ReplicatedStorage.WaitForChild('SFX') as Folder;
-const wind = sfx.WaitForChild('wind') as Sound;
 
 const subtractOptions = {
 	CollisionFidelity: Enum.CollisionFidelity.Default,
@@ -71,14 +79,29 @@ let head: BasePart | undefined = undefined;
 
 const speedImages = ['rbxassetid://13484709347', 'rbxassetid://13484709591', 'rbxassetid://13484709832', 'rbxassetid://13484710115', 'rbxassetid://13484710536'];
 
-function createDebris(
-	velocity: Vector3,
-	position: Vector3,
-	part: BasePart,
-	multiplier: number[] | number,
-	createHole: boolean = false,
-	hammerTexture: Accessories.HammerTexture = getHammerTexture(),
-): void {
+function createBolt(attachment0: Attachment, attachment1: Attachment) {
+	const bolt = new LightningBolt(attachment0, attachment1, 20);
+	bolt.CurveSize0 = 5;
+	bolt.CurveSize1 = 5;
+	bolt.MinRadius = 0;
+	bolt.MaxRadius = 2.4;
+	bolt.Frequency = 10;
+	bolt.AnimationSpeed = 15;
+	bolt.Thickness = 0.5;
+	bolt.MinThicknessMultiplier = 0.2;
+	bolt.MaxThicknessMultiplier = 1;
+	bolt.MinTransparency = 0;
+	bolt.MaxTransparency = 1;
+	bolt.PulseSpeed = 10;
+	bolt.PulseLength = 1000000;
+	bolt.FadeLength = 0.2;
+	bolt.ContractFrom = 0.5;
+	bolt.Color = Color3.fromRGB(55, 211, 92);
+	bolt.ColorOffsetSpeed = 3;
+	return bolt;
+}
+
+function createDebris(velocity: Vector3, position: Vector3, part: BasePart, multiplier: number[] | number, createHole = false, hammerTexture = getHammerTexture()) {
 	let multiplierArray: number[];
 	let originalMultiplier = 1;
 	if (typeIs(multiplier, 'number')) {
@@ -447,25 +470,26 @@ function newMapObject(object: Instance) {
 
 function newPart(part: Instance) {
 	if (!part.GetAttribute('isCube') || part.GetAttribute('processed') || !part.IsA('BasePart')) return;
-
+	
 	part.SetAttribute('processed', true);
-
+	
 	$print(`Cube added: ${part.Name} (Client: cube${player.UserId})`);
-
+	
 	StrokeScale.ScaleBillboardGui(part.WaitForChild('OverheadGUI') as BillboardGui, 950);
-
+	
 	if (!isClientCube(part)) return;
-
+	
 	$print('> Client cube respawned');
-
+	
 	cube = part;
-	head = cube.WaitForChild('Head') as BasePart;
+	head = cube.WaitForChild('Head', 30) as (BasePart | undefined);
+	if (!head) return;
 
 	head.Touched.Connect((otherPart: BasePart) => {
 		if (!head || !cube) return;
-
+		
 		if (debounce || !otherPart || !otherPart.CanCollide || otherPart.GetAttribute('notCollidable') || (cube.GetAttribute('ragdollTime') ?? 0) !== 0) return;
-
+		
 		RunService.Stepped.Wait();
 		
 		const cubeScale = (cube.GetAttribute('scale') as number | undefined) ?? 1;
@@ -475,7 +499,7 @@ function newPart(part: Instance) {
 		
 		if (otherPart.IsDescendantOf(mapFolder)) {
 			let newVelocity = currentVelocity.sub(otherVelocity).sub(cube.AssemblyLinearVelocity.div(4)).Magnitude;
-			if (player.GetAttribute(PlayerAttributes.InErrorLand)) newVelocity *= 2;
+			if (getCurrentArea(cube) === 'ErrorLand') newVelocity *= 2;
 			if (hammerTexture === Accessories.HammerTexture.SteelHammer && getSetting(GameSetting.Modifiers)) newVelocity *= 1.5;
 			
 			newVelocity /= cubeScale;
@@ -483,10 +507,10 @@ function newPart(part: Instance) {
 			if (newVelocity > 165) {
 				if (otherPart.Material !== Enum.Material.DiamondPlate) {
 					Events.DestroyedPart.FireServer(otherPart);
-
+					
 					const partId = getPartId(otherPart);
 					let dataString: string | undefined = undefined;
-
+					
 					const removeBreaks = hammerTexture === Accessories.HammerTexture.SteelHammer && getSetting(GameSetting.Modifiers);
 					const canBreak = otherPart.GetAttribute('CAN_BREAK');
 					const canShatter = otherPart.GetAttribute('CAN_SHATTER');
@@ -500,7 +524,7 @@ function newPart(part: Instance) {
 						const velocity = head.AssemblyLinearVelocity;
 						const position = head.Position;
 						createDebris(velocity, position, otherPart, 1, true);
-
+						
 						dataString = string.format(
 							'destroy,%d,%d,,%d,%d,,%s',
 							math.round(position.X * 1000),
@@ -510,14 +534,93 @@ function newPart(part: Instance) {
 							partId,
 						);
 					}
-
+					
 					if (dataString) Events.MakeReplayEvent.Fire(dataString);
-
+					
+					if (otherPart.IsDescendantOf(blastShardsFolder)) {
+						Events.ClientRagdoll.Fire(3)
+						
+						cube.AssemblyLinearVelocity = cube.Position.sub(otherPart.Position).Unit.mul(250);
+						
+						playSound('electric_explosion', { Volume: 2 });
+						
+						const explosion = new Instance('Explosion');
+						explosion.Position = head.Position;
+						explosion.BlastRadius = 0;
+						explosion.BlastPressure = 0;
+						explosion.Parent = effectsFolder;
+						
+						const shockwave = shockwaveParticle.Clone();
+						shockwave.Parent = otherPart;
+						
+						shockwave.Shockwave.Emit(1);
+						
+						Debris.AddItem(shockwave, shockwave.Shockwave.Lifetime.Max);
+					} else if (otherPart.IsDescendantOf(voltShardsFolder)) {
+						Events.ClientRagdoll.Fire(3.5);
+						
+						const highlight = new Instance('Highlight');
+						highlight.Adornee = cube;
+						highlight.DepthMode = Enum.HighlightDepthMode.Occluded;
+						highlight.OutlineColor = Color3.fromRGB(255, 255, 255);
+						highlight.OutlineTransparency = 0;
+						highlight.FillColor = Color3.fromRGB(74, 204, 105);
+						highlight.FillTransparency = 0.75;
+						highlight.Parent = cube;
+						
+						for (const descendant of cube.GetDescendants()) {
+							if (descendant.IsA('BasePart')) {
+								const descendantHighlight = highlight.Clone();
+								descendantHighlight.Adornee = descendant;
+								descendantHighlight.Parent = highlight;
+							}
+						}
+						
+						Debris.AddItem(highlight, 2);
+						
+						if (getSetting(GameSetting.Effects)) {
+							const rootAttachment = cube.FindFirstChild('CenterAttachment');
+							const headAttachment = head.FindFirstChild('ArmAttachment');
+							if (rootAttachment?.IsA('Attachment') && headAttachment?.IsA('Attachment')) {
+								const targetAttachment = new Instance('Attachment');
+								targetAttachment.Position = otherPart.GetClosestPointOnSurface(head.Position);
+								targetAttachment.Parent = Workspace.FindFirstChild('Terrain');
+								
+								const bolt1 = createBolt(rootAttachment, headAttachment);
+								const bolt2 = createBolt(headAttachment, targetAttachment);
+								
+								task.delay(2, () => {
+									bolt1.Destroy();
+									bolt2.Destroy();
+									
+									targetAttachment.Destroy();
+								});
+							}
+						}
+						
+						head.AssemblyLinearVelocity = head.Position.sub(otherPart.Position).Unit.mul(25);
+						task.delay(0.25, () => {
+							const startTime = time();
+							while ((time() - startTime) < 1.75 && cube !== undefined && head !== undefined) {
+								head.AssemblyLinearVelocity = randomDirection(randomFloat(0.5, 25));
+								cube.AssemblyLinearVelocity = randomDirection(randomFloat(0.5, 25));
+								
+								head.AssemblyAngularVelocity = Vector3.zero;
+								cube.AssemblyAngularVelocity = Vector3.zero;
+								
+								task.wait();
+							}
+						});
+						
+						playSound('zap2', { Volume: 1 });
+						playSound('shock', { Volume: 1, PlaybackSpeed: 1.384 });
+					}
+					
 					if (hammerTexture === Accessories.HammerTexture.Hammer404 && getSetting(GameSetting.Effects)) {
 						const params = new RaycastParams();
 						params.FilterType = Enum.RaycastFilterType.Include;
 						params.FilterDescendantsInstances = [otherPart];
-
+						
 						const result = Workspace.Raycast(head.Position, otherPart.Position.sub(head.Position), params);
 						if (result) {
 							const normal = normalToFace(result.Normal, otherPart);
@@ -527,30 +630,31 @@ function newPart(part: Instance) {
 								texture.Face = normal;
 								texture.Name = 'ERROR_TEXTURE';
 								texture.Parent = otherPart;
-
+								
 								task.spawn(() => {
 									let currentTime = getTime();
-
+									
 									const startTime = currentTime;
 									const endTime = startTime + 1;
 									while (currentTime < endTime) {
 										currentTime = getTime();
-
+										
 										const totalTime = currentTime - startTime;
 										texture.Transparency = math.clamp(totalTime * 2, 0, 1);
-
+										
 										texture.OffsetStudsU = math.random() * 2 - 1;
 										texture.OffsetStudsV = math.random() * 2 - 1;
-
+										
 										RunService.RenderStepped.Wait();
 									}
-
+									
 									texture.Destroy();
 								});
 							}
 						}
 					} else if (hammerTexture === Accessories.HammerTexture.SteelHammer && getSetting(GameSetting.Modifiers) && !otherPart.IsA('UnionOperation') && false) {
 						// TODO: fix steel hammer modifier
+						
 						// if (geometryDebounce || otherPart.Size.Magnitude > 750) return;
 						// geometryDebounce = true;
 						// const area = new Instance('Part');
@@ -710,7 +814,7 @@ function newPart(part: Instance) {
 						});
 						
 						createDebris(velocity, head.Position, otherPart, 2.5);
-
+						
 						const explosion = new Instance('Explosion');
 						explosion.Position = head.Position;
 						explosion.BlastRadius = 0;
@@ -767,7 +871,7 @@ function newPart(part: Instance) {
 			task.delay(0.25, () => (debounce = false));
 		} else if (otherPart.IsDescendantOf(nonBreakable)) {
 			let newVelocity = currentVelocity.sub(otherVelocity).Magnitude;
-			if (player.GetAttribute(PlayerAttributes.InErrorLand)) newVelocity *= 2;
+			if (getCurrentArea(cube) === 'ErrorLand') newVelocity *= 2;
 
 			if (newVelocity > 50)
 				playSound('fabric_hit', {
@@ -806,22 +910,35 @@ RunService.Stepped.Connect((_, dt) => {
 	
 	targetCube = (Workspace.FindFirstChild('REPLAY_VIEW') as BasePart | undefined) ?? targetCube;
 	
-	if (!player.GetAttribute(PlayerAttributes.InErrorLand)) {
+	const area = getCurrentArea(cube);
+	if (area !== 'ErrorLand' && !travelGui.Visible) {
 		Workspace.SetAttribute('default_gravity', 196.2);
 		
 		let targetTime = 14.5;
 		
-		const [ altitude ] = convertStudsToMeters(targetCube.Position.Y, true);
-		if (altitude < 100) targetTime = 14.5;
-		else if (altitude < 200) targetTime = 6.4;
-		else if (altitude < 300) targetTime = 12;
-		else if (altitude < 400) targetTime = 5;
-		else if (altitude < 500) targetTime = 3;
-		else {
-			const percent = math.clamp((altitude - 700) / 100, -1, 1);
-			targetTime += (9.5 * (percent + 1)) / 2;
+		if (area === 'Level 1') {
+			const [ altitude ] = convertStudsToMeters(targetCube.Position.Y, true);
+			if (altitude < 100) targetTime = 14.5;
+			else if (altitude < 200) targetTime = 6.4;
+			else if (altitude < 300) targetTime = 12;
+			else if (altitude < 400) targetTime = 5;
+			else if (altitude < 500) targetTime = 3;
+			else {
+				const percent = math.clamp((altitude - 700) / 100, -1, 1);
+				targetTime += (9.5 * (percent + 1)) / 2;
+				
+				Workspace.SetAttribute('default_gravity', 88.1 * (1 - percent) + 20);
+			}
+		} else if (area === 'Level 2') {
+			const [ altitude ] = convertStudsToMeters(targetCube.Position.Y, true);
 			
-			Workspace.SetAttribute('default_gravity', 88.1 * (1 - percent) + 20);
+			targetTime = 11.9;
+		} else if (area === 'Level 2: Entrance') {
+			Workspace.SetAttribute('default_gravity', 120);
+			
+			targetTime = 6;
+		} else if (area === 'Level 2: Cave 1') {
+			targetTime = 0;
 		}
 		
 		Lighting.ClockTime = numLerp(Lighting.ClockTime, targetTime, dt * 2);
@@ -961,20 +1078,20 @@ $print('Started running visual_effects.client.ts');
 while (task.wait(0.05)) {
 	speedIndex = (speedIndex + 1) % speedImages.size();
 	speedLines.Image = speedImages[speedIndex];
-
+	
 	if (!cube) continue;
-
+	
 	let targetCube = cube as BasePart;
 	if (isSpectating.Value) {
 		const otherPlayer = Players.FindFirstChild(spectatePlayer.Value) as Player | undefined;
 		if (otherPlayer) targetCube = (Workspace.FindFirstChild(`cube{otherPlayer.UserId}`) as BasePart) ?? targetCube;
 	}
-
+	
 	targetCube = (Workspace.FindFirstChild('REPLAY_VIEW') as BasePart) ?? targetCube;
-
+	
 	if (targetCube) {
 		const cubeScale = (targetCube.GetAttribute('scale') as number | undefined) ?? 1;
-	
+		
 		const fieldOfView = 70 + math.max(targetCube.AssemblyLinearVelocity.div(cubeScale).Magnitude - 100, 0) / 5;
 		const size = math.clamp((110 - fieldOfView) / 10, 1, 6);
 		speedLines.Size = UDim2.fromScale(size, size);

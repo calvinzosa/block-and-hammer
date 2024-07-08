@@ -29,12 +29,12 @@ export = class Replays {
 		this.recordingData.clear();
 		this.eventBuffer.clear();
 		
-		const [ cubeTime ] = getCubeTime(Workspace.FindFirstChild(`cube${player}`));
+		const [ cubeTime ] = getCubeTime(Workspace.FindFirstChild(`cube${player.UserId}`));
 		
 		this.previousTime = -1;
 		this.isRecording = true;
 		this.startTime = undefined;
-		this.cubeStartTime = math.round(cubeTime * 1000);
+		this.cubeStartTime = cubeTime !== -1 ? math.round(cubeTime * 1000) : 0;
 		this.cubeData = [
 			(player.GetAttribute('cube_Hat') as string | undefined) ?? '',
 			(player.GetAttribute('cube_Face') as string | undefined) ?? '',
@@ -52,7 +52,7 @@ export = class Replays {
 		const totalTime = currentTime - (this.startTime ?? 0);
 		
 		const cubeData = string.format('%s,%s,%s,%s,%s', ...this.cubeData);
-		this.recordingData.insert(0, string.format('0,%d,%d,%d,%d:%s', totalTime, 60, this.cubeStartTime ?? currentTime, currentTime, cubeData));
+		this.recordingData.insert(0, string.format('0,%d,%d,%d,%d:%s', totalTime, 60, this.cubeStartTime ?? 0, currentTime, cubeData));
 		
 		this.isRecording = false;
 		return totalTime;

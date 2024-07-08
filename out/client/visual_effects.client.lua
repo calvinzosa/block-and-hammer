@@ -26,6 +26,8 @@ local getPartId = _utils.getPartId
 local getTime = _utils.getTime
 local numLerp = _utils.numLerp
 local PlayerAttributes = _utils.PlayerAttributes
+local getCurrentArea = _utils.getCurrentArea
+local LightningBolt = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "lua", "lightning_bolt")
 local Events = {
 	DestroyedPart = ReplicatedStorage:WaitForChild("DestroyedPart"),
 	GroundImpact = ReplicatedStorage:WaitForChild("GroundImpact"),
@@ -38,8 +40,14 @@ local Events = {
 local StrokeScale = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("StrokeScale"))
 local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera or (Workspace:WaitForChild("Camera"))
+local debrisTypes = ReplicatedStorage:WaitForChild("DebrisTypes")
+local sfx = ReplicatedStorage:WaitForChild("SFX")
+local particlesFolder = ReplicatedStorage:WaitForChild("Particles")
+local shockwaveParticle = particlesFolder:WaitForChild("Shockwave"):WaitForChild("Shockwave")
+local wind = sfx:WaitForChild("wind")
 local GUI = player:WaitForChild("PlayerGui")
 local screenGui = GUI:WaitForChild("ScreenGui")
+local travelGui = screenGui:WaitForChild("FastTravelGUI")
 local valueInstances = GUI:WaitForChild("Values")
 local canMove = valueInstances:WaitForChild("can_move")
 local isSpectating = valueInstances:WaitForChild("is_spectating")
@@ -47,11 +55,10 @@ local spectatePlayer = isSpectating:WaitForChild("player")
 local shakeIntensity = valueInstances:WaitForChild("shake_intensity")
 local speedLines = screenGui:WaitForChild("SpeedLines")
 local mapFolder = Workspace:WaitForChild("Map")
+local blastShardsFolder = mapFolder:WaitForChild("BlastShards")
+local voltShardsFolder = mapFolder:WaitForChild("VoltShards")
 local nonBreakable = Workspace:WaitForChild("NonBreakable")
 local effectsFolder = Workspace:WaitForChild("Effects")
-local debrisTypes = ReplicatedStorage:WaitForChild("DebrisTypes")
-local sfx = ReplicatedStorage:WaitForChild("SFX")
-local wind = sfx:WaitForChild("wind")
 local subtractOptions = {
 	CollisionFidelity = Enum.CollisionFidelity.Default,
 }
@@ -64,6 +71,27 @@ local lastVelocity = Vector3.new(0, 0, 0)
 local cube = nil
 local head = nil
 local speedImages = { "rbxassetid://13484709347", "rbxassetid://13484709591", "rbxassetid://13484709832", "rbxassetid://13484710115", "rbxassetid://13484710536" }
+local function createBolt(attachment0, attachment1)
+	local bolt = LightningBolt.new(attachment0, attachment1, 20)
+	bolt.CurveSize0 = 5
+	bolt.CurveSize1 = 5
+	bolt.MinRadius = 0
+	bolt.MaxRadius = 2.4
+	bolt.Frequency = 10
+	bolt.AnimationSpeed = 15
+	bolt.Thickness = 0.5
+	bolt.MinThicknessMultiplier = 0.2
+	bolt.MaxThicknessMultiplier = 1
+	bolt.MinTransparency = 0
+	bolt.MaxTransparency = 1
+	bolt.PulseSpeed = 10
+	bolt.PulseLength = 1000000
+	bolt.FadeLength = 0.2
+	bolt.ContractFrom = 0.5
+	bolt.Color = Color3.fromRGB(55, 211, 92)
+	bolt.ColorOffsetSpeed = 3
+	return bolt
+end
 local function createDebris(velocity, position, part, multiplier, createHole, hammerTexture)
 	if createHole == nil then
 		createHole = false
@@ -462,14 +490,17 @@ local function newPart(part)
 		return nil
 	end
 	part:SetAttribute("processed", true)
-	print("[src/client/visual_effects.client.ts:453]", `Cube added: {part.Name} (Client: cube{player.UserId})`)
+	print("[src/client/visual_effects.client.ts:476]", `Cube added: {part.Name} (Client: cube{player.UserId})`)
 	StrokeScale:ScaleBillboardGui(part:WaitForChild("OverheadGUI"), 950)
 	if not isClientCube(part) then
 		return nil
 	end
-	print("[src/client/visual_effects.client.ts:459]", "> Client cube respawned")
+	print("[src/client/visual_effects.client.ts:482]", "> Client cube respawned")
 	cube = part
-	head = cube:WaitForChild("Head")
+	head = cube:WaitForChild("Head", 30)
+	if not head then
+		return nil
+	end
 	head.Touched:Connect(function(otherPart)
 		if not head or not cube then
 			return nil
@@ -500,8 +531,7 @@ local function newPart(part)
 			local _exp = currentVelocity - otherVelocity
 			local _arg0 = cube.AssemblyLinearVelocity / 4
 			local newVelocity = (_exp - _arg0).Magnitude
-			local _value_1 = player:GetAttribute(PlayerAttributes.InErrorLand)
-			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
+			if getCurrentArea(cube) == "ErrorLand" then
 				newVelocity *= 2
 			end
 			if hammerTexture == Accessories.HammerTexture.SteelHammer and getSetting(GameSetting.Modifiers) then
@@ -540,6 +570,90 @@ local function newPart(part)
 					end
 					if dataString ~= "" and dataString then
 						Events.MakeReplayEvent:Fire(dataString)
+					end
+					if otherPart:IsDescendantOf(blastShardsFolder) then
+						Events.ClientRagdoll:Fire(3)
+						local _position = cube.Position
+						local _position_1 = otherPart.Position
+						cube.AssemblyLinearVelocity = (_position - _position_1).Unit * 250
+						playSound("electric_explosion", {
+							Volume = 2,
+						})
+						local explosion = Instance.new("Explosion")
+						explosion.Position = head.Position
+						explosion.BlastRadius = 0
+						explosion.BlastPressure = 0
+						explosion.Parent = effectsFolder
+						local shockwave = shockwaveParticle:Clone()
+						shockwave.Parent = otherPart
+						shockwave.Shockwave:Emit(1)
+						Debris:AddItem(shockwave, shockwave.Shockwave.Lifetime.Max)
+					elseif otherPart:IsDescendantOf(voltShardsFolder) then
+						Events.ClientRagdoll:Fire(3.5)
+						local highlight = Instance.new("Highlight")
+						highlight.Adornee = cube
+						highlight.DepthMode = Enum.HighlightDepthMode.Occluded
+						highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+						highlight.OutlineTransparency = 0
+						highlight.FillColor = Color3.fromRGB(74, 204, 105)
+						highlight.FillTransparency = 0.75
+						highlight.Parent = cube
+						for _, descendant in cube:GetDescendants() do
+							if descendant:IsA("BasePart") then
+								local descendantHighlight = highlight:Clone()
+								descendantHighlight.Adornee = descendant
+								descendantHighlight.Parent = highlight
+							end
+						end
+						Debris:AddItem(highlight, 2)
+						if getSetting(GameSetting.Effects) then
+							local rootAttachment = cube:FindFirstChild("CenterAttachment")
+							local headAttachment = head:FindFirstChild("ArmAttachment")
+							local _result = rootAttachment
+							if _result ~= nil then
+								_result = _result:IsA("Attachment")
+							end
+							local _condition_4 = _result
+							if _condition_4 then
+								local _result_1 = headAttachment
+								if _result_1 ~= nil then
+									_result_1 = _result_1:IsA("Attachment")
+								end
+								_condition_4 = _result_1
+							end
+							if _condition_4 then
+								local targetAttachment = Instance.new("Attachment")
+								targetAttachment.Position = otherPart:GetClosestPointOnSurface(head.Position)
+								targetAttachment.Parent = Workspace:FindFirstChild("Terrain")
+								local bolt1 = createBolt(rootAttachment, headAttachment)
+								local bolt2 = createBolt(headAttachment, targetAttachment)
+								task.delay(2, function()
+									bolt1:Destroy()
+									bolt2:Destroy()
+									targetAttachment:Destroy()
+								end)
+							end
+						end
+						local _position = head.Position
+						local _position_1 = otherPart.Position
+						head.AssemblyLinearVelocity = (_position - _position_1).Unit * 25
+						task.delay(0.25, function()
+							local startTime = time()
+							while (time() - startTime) < 1.75 and cube ~= nil and head ~= nil do
+								head.AssemblyLinearVelocity = randomDirection(randomFloat(0.5, 25))
+								cube.AssemblyLinearVelocity = randomDirection(randomFloat(0.5, 25))
+								head.AssemblyAngularVelocity = Vector3.zero
+								cube.AssemblyAngularVelocity = Vector3.zero
+								task.wait()
+							end
+						end)
+						playSound("zap2", {
+							Volume = 1,
+						})
+						playSound("shock", {
+							Volume = 1,
+							PlaybackSpeed = 1.384,
+						})
 					end
 					if hammerTexture == Accessories.HammerTexture.Hammer404 and getSetting(GameSetting.Effects) then
 						local params = RaycastParams.new()
@@ -643,8 +757,8 @@ local function newPart(part)
 					elseif hammerTexture == Accessories.HammerTexture.IcyHammer and getSetting(GameSetting.Modifiers) then
 						local arm = cube:FindFirstChild("Arm")
 						local trail = head:FindFirstChild("Trail")
-						local _value_2 = not arm or not trail or cube:GetAttribute("shatteredHammer")
-						if _value_2 ~= 0 and _value_2 == _value_2 and _value_2 ~= "" and _value_2 then
+						local _value_1 = not arm or not trail or cube:GetAttribute("shatteredHammer")
+						if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 							return nil
 						end
 						arm.CanCollide = false
@@ -806,8 +920,7 @@ local function newPart(part)
 			end)
 		elseif otherPart:IsDescendantOf(nonBreakable) then
 			local newVelocity = (currentVelocity - otherVelocity).Magnitude
-			local _value_1 = player:GetAttribute(PlayerAttributes.InErrorLand)
-			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
+			if getCurrentArea(cube) == "ErrorLand" then
 				newVelocity *= 2
 			end
 			if newVelocity > 50 then
@@ -847,26 +960,37 @@ RunService.Stepped:Connect(function(_, dt)
 		end
 	end
 	targetCube = (Workspace:FindFirstChild("REPLAY_VIEW")) or targetCube
-	local _value = player:GetAttribute(PlayerAttributes.InErrorLand)
-	if not (_value ~= 0 and _value == _value and _value ~= "" and _value) then
+	local area = getCurrentArea(cube)
+	if area ~= "ErrorLand" and not travelGui.Visible then
 		Workspace:SetAttribute("default_gravity", 196.2)
 		local targetTime = 14.5
-		local _binding = convertStudsToMeters(targetCube.Position.Y, true)
-		local altitude = _binding[1]
-		if altitude < 100 then
-			targetTime = 14.5
-		elseif altitude < 200 then
-			targetTime = 6.4
-		elseif altitude < 300 then
-			targetTime = 12
-		elseif altitude < 400 then
-			targetTime = 5
-		elseif altitude < 500 then
-			targetTime = 3
-		else
-			local percent = math.clamp((altitude - 700) / 100, -1, 1)
-			targetTime += (9.5 * (percent + 1)) / 2
-			Workspace:SetAttribute("default_gravity", 88.1 * (1 - percent) + 20)
+		if area == "Level 1" then
+			local _binding = convertStudsToMeters(targetCube.Position.Y, true)
+			local altitude = _binding[1]
+			if altitude < 100 then
+				targetTime = 14.5
+			elseif altitude < 200 then
+				targetTime = 6.4
+			elseif altitude < 300 then
+				targetTime = 12
+			elseif altitude < 400 then
+				targetTime = 5
+			elseif altitude < 500 then
+				targetTime = 3
+			else
+				local percent = math.clamp((altitude - 700) / 100, -1, 1)
+				targetTime += (9.5 * (percent + 1)) / 2
+				Workspace:SetAttribute("default_gravity", 88.1 * (1 - percent) + 20)
+			end
+		elseif area == "Level 2" then
+			local _binding = convertStudsToMeters(targetCube.Position.Y, true)
+			local altitude = _binding[1]
+			targetTime = 11.9
+		elseif area == "Level 2: Entrance" then
+			Workspace:SetAttribute("default_gravity", 120)
+			targetTime = 6
+		elseif area == "Level 2: Cave 1" then
+			targetTime = 0
 		end
 		Lighting.ClockTime = numLerp(Lighting.ClockTime, targetTime, dt * 2)
 	end
@@ -876,8 +1000,8 @@ RunService.Stepped:Connect(function(_, dt)
 	end
 	local cubeScale = _condition
 	local velocity = targetCube.AssemblyLinearVelocity / cubeScale
-	local _value_1 = player:GetAttribute(PlayerAttributes.Client.InMainMenu)
-	local _condition_1 = not (_value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1)
+	local _value = player:GetAttribute(PlayerAttributes.Client.InMainMenu)
+	local _condition_1 = not (_value ~= 0 and _value == _value and _value ~= "" and _value)
 	if _condition_1 then
 		_condition_1 = screenGui.Enabled
 	end
@@ -987,7 +1111,7 @@ RunService.Stepped:Connect(function(_, dt)
 	prevCubePosition = cube.Position
 	cube:SetAttribute("lastVelocity", cube.AssemblyLinearVelocity)
 end)
-print("[src/client/visual_effects.client.ts:959]", "Started running visual_effects.client.ts")
+print("[src/client/visual_effects.client.ts:1076]", "Started running visual_effects.client.ts")
 while true do
 	local _value = task.wait(0.05)
 	if not (_value ~= 0 and _value == _value and _value) then

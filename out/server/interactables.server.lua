@@ -4,6 +4,7 @@ local Workspace = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
 local giveBadge = _utils.giveBadge
 local Badge = _utils.Badge
+local PlayerAttributes = _utils.PlayerAttributes
 local interactablesFolder = Workspace:FindFirstChild("Interactables")
 local steelHammer = interactablesFolder:FindFirstChild("SteelHammer")
 local glowPart = interactablesFolder:FindFirstChild("Glow");
@@ -17,7 +18,7 @@ local glowPart = interactablesFolder:FindFirstChild("Glow");
 		return nil
 	end
 	if player:GetAttribute("activeQuest") == "LostSteelHammer" then
-		player:SetAttribute("hasSteelHammer", true)
+		player:SetAttribute(PlayerAttributes.HasSteelHammer, true)
 	end
 end);
 (glowPart:FindFirstChild("Interacted")).OnServerEvent:Connect(function(player)
@@ -29,22 +30,22 @@ end);
 	if not _result then
 		return nil
 	end
-	local _value = player:GetAttribute("glowDebounce")
+	local _value = player:GetAttribute(PlayerAttributes.GlowDebounce)
 	if _value ~= 0 and _value == _value and _value ~= "" and _value then
 		return nil
 	end
-	player:SetAttribute("glowDebounce", true)
+	player:SetAttribute(PlayerAttributes.GlowDebounce, true)
 	task.delay(20, function()
-		return player:SetAttribute("glowDebounce", nil)
+		return player:SetAttribute(PlayerAttributes.GlowDebounce, nil)
 	end)
 	local _condition = (player:GetAttribute("glowPhase"))
 	if _condition == nil then
 		_condition = 0
 	end
 	local currentPhase = _condition + 1
-	player:SetAttribute("glowPhase", currentPhase)
+	player:SetAttribute(PlayerAttributes.GlowDebounce, currentPhase)
 	if currentPhase == 5 then
-		player:SetAttribute("glowPhase", nil)
+		player:SetAttribute(PlayerAttributes.GlowDebounce, nil)
 		giveBadge(player, Badge.Glowing)
 	end
 end)

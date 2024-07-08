@@ -4,6 +4,7 @@ import {
 	HttpService,
 	RunService,
 	Workspace,
+	Lighting,
 	Players,
 } from '@rbxts/services';
 
@@ -41,6 +42,7 @@ const Events = {
 
 const debounces = { reset: false };
 
+const camera = Workspace.CurrentCamera ?? Workspace.WaitForChild('Camera') as Camera;
 const player = Players.LocalPlayer;
 const GUI = player.WaitForChild('PlayerGui') as PlayerGui;
 
@@ -68,17 +70,38 @@ const questGui = screenGui.WaitForChild('QuestGUI') as Frame;
 const leaderboardGui = screenGui.WaitForChild('LeaderboardGUI') as Frame;
 const changelogsGui = screenGui.WaitForChild('Changelogs') as Frame;
 const replaysGui = screenGui.WaitForChild('ReplaysGUI') as Frame;
+const travelGui = screenGui.WaitForChild('FastTravelGUI') as Frame;
 const statsGui = screenGui.WaitForChild('StatsGUI') as Frame;
 
 const playerList: string[] = [  ];
 const clickThreshold = 0.2;
 const menuToggle = new Icon().setLabel('Menu').lock();
 
+const blur = new Instance('BlurEffect');
+blur.Size = 0;
+blur.Parent = Lighting;
+
+const travellableAreas = [
+	{
+		name: 'Level 1',
+		hasArea: () => true,
+		cameraCFrame: new CFrame(18.589, 34.544, -45.753, -0.943, -0.167, 0.287, 0.000, 0.864, 0.503, -0.332, 0.475, -0.815),
+		teleportPosition: new Vector3(0, 14, 0),
+	},
+	{
+		name: 'Level 2',
+		hasArea: () => player.GetAttribute(PlayerAttributes.HasLevel2),
+		cameraCFrame: new CFrame(-5892.511, 19.957, -45.243, -0.923, -0.116, 0.367, 0, 0.953, 0.302, -0.385, 0.279, -0.88),
+		teleportPosition: new Vector3(-5912, 14, 0),
+	},
+];
+
+let currentTravelIndex = 0;
+
 const openableGuis = [
 	resetConfirmation,
 	settingsGui,
 	accessoriesGui,
-	spectatingGui,
 	tutorialConfirmation,
 	colorChanger,
 	credits,
@@ -89,9 +112,10 @@ const openableGuis = [
 	replaysGui,
 ];
 
+const previousSettings = table.clone(Settings);
+
 let lastChange = getTime();
 let areSettingsSaved = true;
-let previousSettings = table.clone(Settings);
 let clickCount = 0;
 let lastClickTime = 0;
 
@@ -100,8 +124,10 @@ Icon.setDisplayOrder(999999999);
 function resetCharacter(fullReset: boolean = false) {
 	let cube = Workspace.FindFirstChild(`cube${player.UserId}`);
 	
-	if (player.GetAttribute(PlayerAttributes.InErrorLand)) {
-		if (cube?.IsA('BasePart')) cube.PivotTo(new CFrame(0, 14, 0));
+	let prevArea = getCurrentArea(cube);
+	
+	if (cube?.IsA('BasePart') && getCurrentArea(cube) === 'ErrorLand') {
+		cube.PivotTo(new CFrame(0, 14, 0));
 		return;
 	}
 	
@@ -124,8 +150,11 @@ function resetCharacter(fullReset: boolean = false) {
 		
 		const cubeScale = cube.GetAttribute('scale') as (number | undefined) ?? 1;
 		
+		let position = new Vector3(0, 0, 0);
+		if (prevArea === 'Level 2' || prevArea === 'Level 2: Cave 1') position = new Vector3(-5912, 0, 0);
+		
 		cube.SetAttribute('previousVelocity', Vector3.zero);
-		cube.PivotTo(new CFrame(0, cubeScale > 10 ? 400 : 14, 0));
+		cube.PivotTo(new CFrame(position.X, position.Y + (cubeScale > 10 ? 400 : 14), position.Z));
 		cube.AssemblyLinearVelocity = Vector3.zero;
 		for (const descendant of cube.GetDescendants()) {
 			if (descendant.IsA('BasePart')) descendant.AssemblyLinearVelocity = Vector3.zero;
@@ -245,21 +274,56 @@ menuToggle.toggled.Connect(() => {
 
 RunService.RenderStepped.Connect((dt) => {
 	const currentTime = getTime();
-
+	
 	const alpha = dt * 15;
-
+	
 	if (menuOpen.Value) menuGui.AnchorPoint = menuGui.AnchorPoint.Lerp(new Vector2(0, 0.5), alpha);
 	else menuGui.AnchorPoint = menuGui.AnchorPoint.Lerp(new Vector2(1, 0.5), alpha);
-
+	
+	if (travelGui.Visible) {
+		const mouse = UserInputService.GetMouseLocation();
+		
+		const area = travellableAreas[currentTravelIndex];
+		
+		const screenHeight = camera.ViewportSize.Y;
+		const screenWidth = camera.ViewportSize.X;
+		const halfHeight = screenHeight / 2;
+		const halfWidth = screenWidth / 2;
+		
+		const mouseRotation = CFrame.fromOrientation(
+            math.rad((((mouse.Y - halfHeight) / screenHeight)) * -5),
+            math.rad((((mouse.X - halfWidth) / screenWidth)) * -5),
+            0
+      	);
+		
+		camera.CFrame = camera.CFrame.Lerp(area.cameraCFrame.mul(mouseRotation), math.clamp(dt * 25, 0, 1));
+		
+		if (area.hasArea()) {
+			blur.Size = 0;
+			(travelGui.FindFirstChild('AreaName') as TextLabel).Text = area.name;
+			(travelGui.FindFirstChild('Teleport') as TextButton).Visible = true;
+		} else {
+			blur.Size = 64;
+			(travelGui.FindFirstChild('AreaName') as TextLabel).Text = '???';
+			(travelGui.FindFirstChild('Teleport') as TextButton).Visible = false;
+		}
+		
+		if (area.name === 'Level 1') {
+			Lighting.ClockTime = 14.5;
+		} else if (area.name === 'Level 2') {
+			Lighting.ClockTime = 0;
+		}
+	} else blur.Size = 0;
+	
 	const shouldHideOthers = getSetting(GameSetting.HideOthers);
-
+	
 	for (const otherPlayer of Players.GetPlayers()) {
 		if (otherPlayer === player) continue;
 
 		const cube = Workspace.FindFirstChild(`cube${otherPlayer.UserId}`);
 		if (cube?.IsA('BasePart')) {
 			const cubeTransparency = shouldHideOthers ? 1 : (cube.GetAttribute('transparency') as number | undefined) ?? 0;
-
+			
 			cube.LocalTransparencyModifier = cubeTransparency;
 			for (const part of [cube?.FindFirstChild('Arm'), cube.FindFirstChild('Head')]) {
 				if (part?.IsA('BasePart')) {
@@ -267,32 +331,34 @@ RunService.RenderStepped.Connect((dt) => {
 					part.LocalTransparencyModifier = transparency;
 				}
 			}
-
+			
 			const nameDisplay = cube.FindFirstChild('NameDisplay') as BillboardGui | undefined;
 			if (nameDisplay) nameDisplay.Enabled = !shouldHideOthers;
 		}
 	}
-
+	
 	if (playerList.size() > 0) {
 		let idx = playerList.findIndex((name) => name === spectatePlayer.Value);
 		if (idx <= 0) {
 			spectatePlayer.Value = playerList[0];
 			idx = 0;
 		}
-
+		
 		spectatePlayer.Value = playerList[idx];
 	}
-
-	for (const [name, value] of pairs(Settings)) {
-		if (previousSettings[name] !== value) {
-			lastChange = currentTime;
-			areSettingsSaved = false;
-
-			previousSettings[name] = value;
+	
+	if (areSettingsSaved) {
+		for (const [ name, value ] of pairs(Settings)) {
+			if (previousSettings[name] !== value) {
+				lastChange = currentTime;
+				areSettingsSaved = false;
+	
+				previousSettings[name] = value;
+			}
 		}
 	}
-
-	if (currentTime - lastChange > 5 && !areSettingsSaved && !settingsGui.Visible) {
+	
+	if ((currentTime - lastChange) > 5 && !areSettingsSaved && !settingsGui.Visible) {
 		$print(`Saved settings: ${HttpService.JSONEncode(Settings)}`);
 		Events.SaveSettingsJSON.FireServer(Settings);
 		areSettingsSaved = true;
@@ -308,13 +374,15 @@ Events.LoadSettingsJSON.OnClientEvent.Connect((settingsJSON: string) => {
 		$warn(`Unable to decode settings JSON | Error: ${err}`);
 		return;
 	}
-
-	for (const [name] of pairs(Settings)) {
-		if (name in newSettings) setSetting(name, newSettings[name]);
+	
+	for (const [ name ] of pairs(Settings)) {
+		if (name in newSettings) {
+			const value = newSettings[name];
+			Settings[name] = value;
+			previousSettings[name] = value;
+		}
 	}
-
-	previousSettings = table.clone(Settings);
-
+	
 	if (getSetting(GameSetting.Modifiers)) Events.SetModifiersSetting.FireServer(true);
 
 	updateSettingButtons();
@@ -388,7 +456,7 @@ Events.LoadSettingsJSON.OnClientEvent.Connect((settingsJSON: string) => {
 });
 
 (spectatingGui.WaitForChild('Next') as TextButton).MouseButton1Click.Connect(() => {
-	let playerIndex = playerList.findIndex((name) => name === spectatePlayer.Name);
+	let playerIndex = playerList.findIndex((name) => name === spectatePlayer.Value);
 	if (playerIndex >= 0) {
 		playerIndex++;
 		if (playerIndex >= playerList.size()) playerIndex = 0;
@@ -398,7 +466,7 @@ Events.LoadSettingsJSON.OnClientEvent.Connect((settingsJSON: string) => {
 });
 
 (spectatingGui.WaitForChild('Previous') as TextButton).MouseButton1Click.Connect(() => {
-	let playerIndex = playerList.findIndex((name) => name === spectatePlayer.Name);
+	let playerIndex = playerList.findIndex((name) => name === spectatePlayer.Value);
 	if (playerIndex >= 0) {
 		playerIndex--;
 		if (playerIndex < 0) playerIndex = playerList.size() - 1;
@@ -408,7 +476,8 @@ Events.LoadSettingsJSON.OnClientEvent.Connect((settingsJSON: string) => {
 });
 
 (menuButtons.WaitForChild('Tutorial') as TextButton).MouseButton1Click.Connect(() => {
-	if (player.GetAttribute(PlayerAttributes.InErrorLand)) return;
+	const cube = Workspace.FindFirstChild(`cube${player.UserId}`);
+	if (cube?.IsA('BasePart') && getCurrentArea(cube) === 'ErrorLand') return;
 
 	menuOpen.Value = false;
 	tutorialConfirmation.Visible = true;
@@ -503,6 +572,49 @@ Events.LoadSettingsJSON.OnClientEvent.Connect((settingsJSON: string) => {
 (replaysGui.WaitForChild('Close') as TextButton).MouseButton1Click.Connect(() => {
 	menuOpen.Value = true;
 	replaysGui.Visible = false;
+});
+
+(menuButtons.WaitForChild('FastTravel') as TextButton).MouseButton1Click.Connect(() => {
+	menuOpen.Value = false;
+	travelGui.Visible = true;
+	
+	currentTravelIndex = 0;
+	camera.CFrame = travellableAreas[currentTravelIndex].cameraCFrame.mul(CFrame.fromOrientation(0, math.pi * 0.5, 0));
+});
+
+(travelGui.WaitForChild('Close') as TextButton).MouseButton1Click.Connect(() => {
+	menuOpen.Value = true;
+	travelGui.Visible = false;
+});
+
+(travelGui.WaitForChild('Next') as TextButton).MouseButton1Click.Connect(() => {
+	currentTravelIndex++;
+	if (currentTravelIndex > travellableAreas.size() - 1) currentTravelIndex = 0;
+	
+	camera.CFrame = travellableAreas[currentTravelIndex].cameraCFrame.mul(CFrame.fromOrientation(0, math.pi * 0.5, 0));
+});
+
+(travelGui.WaitForChild('Previous') as TextButton).MouseButton1Click.Connect(() => {
+	currentTravelIndex--;
+	if (currentTravelIndex < 0) currentTravelIndex = travellableAreas.size() - 1;
+	
+	camera.CFrame = travellableAreas[currentTravelIndex].cameraCFrame.mul(CFrame.fromOrientation(0, math.pi * 0.5, 0));
+});
+
+(travelGui.WaitForChild('Teleport') as TextButton).MouseButton1Click.Connect(() => {
+	const area = travellableAreas[currentTravelIndex];
+	
+	const cube = Workspace.WaitForChild(`cube${player.UserId}`);
+	if (!cube.IsA('BasePart') || !area.hasArea()) return;
+	
+	menuOpen.Value = false;
+	canMove.Value = true;
+	travelGui.Visible = false;
+	
+	resetCharacter();
+	
+	task.wait(0.05);
+	cube.PivotTo(new CFrame(travellableAreas[currentTravelIndex].teleportPosition));
 });
 
 Events.SettingChanged.Event.Connect(updateSettingButtons);

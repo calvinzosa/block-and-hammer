@@ -67,12 +67,12 @@ export const hammerFunctions: Record<string, (cube: BasePart, player: Player) =>
 		const arm = cube.FindFirstChild('Arm');
 		const head = cube.FindFirstChild('Head');
 		if (!arm?.IsA('BasePart') || !head?.IsA('BasePart')) return emptyFunction;
-
+		
 		arm.Color = Color3.fromRGB(255, 255, 128);
 		arm.Material = Enum.Material.Foil;
 		head.Color = Color3.fromRGB(255, 255, 128);
 		head.Material = Enum.Material.Foil;
-
+		
 		return () => {
 			if (!arm || !head) return;
 			arm.BrickColor = new BrickColor('Brown');
@@ -404,14 +404,9 @@ export const hammerFunctions: Record<string, (cube: BasePart, player: Player) =>
 	},
 };
 
-export function loadAccessories(
-	cube: BasePart,
-	data: { face?: string; hammer?: string; hat?: string; aura?: string },
-	player: Player | undefined,
-	hammerRemoveFunction: (() => void) | undefined,
-) {
+export function loadAccessories(cube: BasePart, data: { face?: string; hammer?: string; hat?: string; aura?: string }, player: Player | undefined, hammerRemoveFunction: (() => void) | undefined) {
 	const { face, hammer, hat, aura } = data;
-
+	
 	if (typeIs(face, 'string')) {
 		const accessoryData = accessoryList[face];
 		if (typeIs(accessoryData?.data, 'string')) {
@@ -519,13 +514,13 @@ export function loadAccessories(
 			if (typeIs(data, 'Instance')) data.Clone().Parent = auraAttachment;
 		}
 	}
-
+	
 	if (hammerRemoveFunction !== undefined) {
 		try {
 			hammerRemoveFunction();
-		} catch (err) {}
+		} catch (err) {  }
 	}
-
+	
 	if (typeIs(hammer, 'string')) {
 		const accessoryData = accessoryList[hammer];
 		const data = accessoryData?.data;
@@ -534,17 +529,11 @@ export function loadAccessories(
 			if (typeIs(data, 'string') && typeIs(hammerFunction, 'function') && player) return hammerFunction(cube, player);
 		}
 	}
-
+	
 	return undefined;
 }
 
-export function reloadAccessories(
-	cube: BasePart,
-	b: Color3 | Player,
-	hatAccessory: string = Accessories.CubeHat.NoHat,
-	auraAccessory: string = Accessories.CubeAura.NoAura,
-	hammerAccessory: string = Accessories.HammerTexture.NoHammerTexture,
-) {
+export function reloadAccessories(cube: BasePart, b: Color3 | Player, hatAccessory: string = Accessories.CubeHat.NoHat, auraAccessory: string = Accessories.CubeAura.NoAura, hammerAccessory: string = Accessories.HammerTexture.NoHammerTexture) {
 	let cubeColor: Color3;
 	if (typeIs(b, 'Instance') && b.IsA('Player')) {
 		cubeColor = (b.GetAttribute('CUBE_COLOR') as Color3) ?? computeNameColor(b.Name);
@@ -552,21 +541,21 @@ export function reloadAccessories(
 		auraAccessory = getCubeAura(b);
 		hammerAccessory = getHammerTexture(b);
 	} else cubeColor = b;
-
-	const hat = cube.FindFirstChild('CLONED_HAT') as BasePart | undefined;
-	const aura = cube.FindFirstChild('AuraAttachment') as Attachment | undefined;
-
+	
+	const hat = cube.FindFirstChild('CLONED_HAT');
+	const aura = cube.FindFirstChild('AuraAttachment');
+	
 	try {
 		if (hatAccessory === Accessories.CubeHat.InstantGyro && hat?.IsA('BasePart')) hat.Color = new Color3(1 - cubeColor.R, 1 - cubeColor.G, 1 - cubeColor.B);
 	} catch (err) {}
-
+	
 	try {
 		if (auraAccessory === Accessories.CubeAura.Glow && aura) (aura.FindFirstChild('Glow')?.FindFirstChild('Glow') as ParticleEmitter).Color = new ColorSequence(cubeColor);
 	} catch (err) {}
-
+	
 	try {
-		if ((hammerAccessory = Accessories.HammerTexture.HitboxHammer)) (cube.FindFirstChild('CubeOutline') as SelectionBox).Color3 = cubeColor;
+		if (hammerAccessory = Accessories.HammerTexture.HitboxHammer) (cube.FindFirstChild('CubeOutline') as SelectionBox).Color3 = cubeColor;
 	} catch (err) {}
-
+	
 	$print(`Updated accessories for ${cube.Name}`);
 }

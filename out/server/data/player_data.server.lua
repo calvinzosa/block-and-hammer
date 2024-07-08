@@ -67,7 +67,7 @@ local function playerAdded(player)
 			success = true
 			return TS.TRY_BREAK
 		end, function(err)
-			warn("[src/server/data/player_data.server.ts:108]", err)
+			warn("[src/server/data/player_data.server.ts:113]", err)
 			success = false
 			errorMessage = err
 		end)
@@ -81,7 +81,7 @@ local function playerAdded(player)
 			TS.try(function()
 				jsonData = HttpService:JSONDecode(data)
 			end, function(err)
-				warn("[src/server/data/player_data.server.ts:120]", err)
+				warn("[src/server/data/player_data.server.ts:125]", err)
 			end)
 			if not jsonData then
 				player:Kick("Your data is most likely corrupted! Please go to the discord server and tell the developer of this message and your username or try rejoining")
@@ -118,12 +118,17 @@ local function playerAdded(player)
 			end
 			if decodedData.time_data then
 				if decodedData.time_data.modded then
-					player:SetAttribute("modifiers", true)
+					player:SetAttribute(PlayerAttributes.HasModifiers, true)
 					cube:SetAttribute("used_modifiers", true)
 				end
-				player:SetAttribute("finished", decodedData.time_data.finished)
+				player:SetAttribute(PlayerAttributes.CompletedGame, decodedData.time_data.finished)
 				cube:SetAttribute("extra_time", decodedData.time_data.extra_time)
 				cube:SetAttribute("finishTotalTime", decodedData.time_data.finish_total_time)
+			end
+			if decodedData.discovered_levels then
+				if decodedData.discovered_levels.level_2 then
+					player:SetAttribute(PlayerAttributes.HasLevel2, true)
+				end
 			end
 			local _condition = decodedData.active_quest
 			if _condition ~= "" and _condition then
@@ -182,12 +187,12 @@ local function playerAdded(player)
 					return cube.Anchored
 				end)
 			end
-			print("[src/server/data/player_data.server.ts:187]", `Loaded data for player {player.Name} ({player.UserId}) | Total Data Chunks: {totalDataChunks}`)
+			print("[src/server/data/player_data.server.ts:196]", `Loaded data for player {player.Name} ({player.UserId}) | Total Data Chunks: {totalDataChunks}`)
 		else
-			print("[src/server/data/player_data.server.ts:188]", `No data was found for player {player.Name} ({player.UserId})`)
+			print("[src/server/data/player_data.server.ts:197]", `No data was found for player {player.Name} ({player.UserId})`)
 		end
 	else
-		warn("[src/server/data/player_data.server.ts:190]", `Unable to load data for player {player.Name}`)
+		warn("[src/server/data/player_data.server.ts:199]", `Unable to load data for player {player.Name}`)
 		player:Kick(`Unable to load data, please try again later | Error Message: {errorMessage}`)
 		return nil
 	end
@@ -240,6 +245,9 @@ local function playerRemoved(player)
 	_object[_left] = _object_1
 	_object.settings_json = settingsJSON
 	_object.active_quest = activeQuest
+	_object.discovered_levels = {
+		level_2 = player:GetAttribute(PlayerAttributes.HasLevel2),
+	}
 	_object.stats = {
 		total_time_played = currentTime - serverJoinTime,
 		total_restarts = player:GetAttribute("totalRestarts"),
@@ -266,10 +274,10 @@ local function playerRemoved(player)
 				currentData = string.sub(_currentData, _arg0)
 				iteration += 1
 			end
-			print("[src/server/data/player_data.server.ts:259]", `Saved data for player {player.Name} ({player.UserId}) succesfully.`)
+			print("[src/server/data/player_data.server.ts:271]", `Saved data for player {player.Name} ({player.UserId}) succesfully.`)
 			return TS.TRY_BREAK
 		end, function(err)
-			warn("[src/server/data/player_data.server.ts:262]", `Could not save data for player {player.Name} ({player.UserId})! | Retrying {5 - retryAttempt} more time(s) | Error: {err}`)
+			warn("[src/server/data/player_data.server.ts:274]", `Could not save data for player {player.Name} ({player.UserId})! | Retrying {5 - retryAttempt} more time(s) | Error: {err}`)
 			task.wait(0.5)
 		end)
 		if _exitType then
@@ -311,9 +319,9 @@ Events.SaveSettingsJSON.OnServerEvent:Connect(function(player, settingsJSON)
 	end)
 	if success then
 		player:SetAttribute("settings_json", encodedData)
-		print("[src/server/data/player_data.server.ts:300]", `Updated setting data for player {player.Name}`)
+		print("[src/server/data/player_data.server.ts:312]", `Updated setting data for player {player.Name}`)
 	else
-		warn("[src/server/data/player_data.server.ts:301]", `Unable to convert setting data for player {player.Name} into JSON`)
+		warn("[src/server/data/player_data.server.ts:313]", `Unable to convert setting data for player {player.Name} into JSON`)
 	end
 end)
 Events.ForceEquip.Event:Connect(function(player, name)

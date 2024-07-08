@@ -6,6 +6,7 @@ local UserInputService = _services.UserInputService
 local HttpService = _services.HttpService
 local RunService = _services.RunService
 local Workspace = _services.Workspace
+local Lighting = _services.Lighting
 local Players = _services.Players
 local Icon = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "topbar-plus", "out").Icon
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
@@ -35,6 +36,7 @@ local Events = {
 local debounces = {
 	reset = false,
 }
+local camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera")
 local player = Players.LocalPlayer
 local GUI = player:WaitForChild("PlayerGui")
 local effectsFolder = Workspace:WaitForChild("Effects")
@@ -61,14 +63,34 @@ local questGui = screenGui:WaitForChild("QuestGUI")
 local leaderboardGui = screenGui:WaitForChild("LeaderboardGUI")
 local changelogsGui = screenGui:WaitForChild("Changelogs")
 local replaysGui = screenGui:WaitForChild("ReplaysGUI")
+local travelGui = screenGui:WaitForChild("FastTravelGUI")
 local statsGui = screenGui:WaitForChild("StatsGUI")
 local playerList = {}
 local clickThreshold = 0.2
 local menuToggle = Icon.new():setLabel("Menu"):lock()
-local openableGuis = { resetConfirmation, settingsGui, accessoriesGui, spectatingGui, tutorialConfirmation, colorChanger, credits, questGui, leaderboardGui, changelogsGui, statsGui, replaysGui }
+local blur = Instance.new("BlurEffect")
+blur.Size = 0
+blur.Parent = Lighting
+local travellableAreas = { {
+	name = "Level 1",
+	hasArea = function()
+		return true
+	end,
+	cameraCFrame = CFrame.new(18.589, 34.544, -45.753, -0.943, -0.167, 0.287, 0.000, 0.864, 0.503, -0.332, 0.475, -0.815),
+	teleportPosition = Vector3.new(0, 14, 0),
+}, {
+	name = "Level 2",
+	hasArea = function()
+		return player:GetAttribute(PlayerAttributes.HasLevel2)
+	end,
+	cameraCFrame = CFrame.new(-5892.511, 19.957, -45.243, -0.923, -0.116, 0.367, 0, 0.953, 0.302, -0.385, 0.279, -0.88),
+	teleportPosition = Vector3.new(-5912, 14, 0),
+} }
+local currentTravelIndex = 0
+local openableGuis = { resetConfirmation, settingsGui, accessoriesGui, tutorialConfirmation, colorChanger, credits, questGui, leaderboardGui, changelogsGui, statsGui, replaysGui }
+local previousSettings = table.clone(Settings)
 local lastChange = getTime()
 local areSettingsSaved = true
-local previousSettings = table.clone(Settings)
 local clickCount = 0
 local lastClickTime = 0
 Icon.setDisplayOrder(999999999)
@@ -77,22 +99,24 @@ local function resetCharacter(fullReset)
 		fullReset = false
 	end
 	local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
-	local _value = player:GetAttribute(PlayerAttributes.InErrorLand)
-	if _value ~= 0 and _value == _value and _value ~= "" and _value then
-		local _result = cube
-		if _result ~= nil then
-			_result = _result:IsA("BasePart")
-		end
-		if _result then
-			cube:PivotTo(CFrame.new(0, 14, 0))
-		end
-		return nil
-	end
+	local prevArea = getCurrentArea(cube)
 	local _result = cube
 	if _result ~= nil then
 		_result = _result:IsA("BasePart")
 	end
-	if _result then
+	local _condition = _result
+	if _condition then
+		_condition = getCurrentArea(cube) == "ErrorLand"
+	end
+	if _condition then
+		cube:PivotTo(CFrame.new(0, 14, 0))
+		return nil
+	end
+	local _result_1 = cube
+	if _result_1 ~= nil then
+		_result_1 = _result_1:IsA("BasePart")
+	end
+	if _result_1 then
 		local area = getCurrentArea(cube)
 		if area == "Tutorial" then
 			cube:Destroy()
@@ -100,27 +124,31 @@ local function resetCharacter(fullReset)
 			Events.EndTutorial:FireServer()
 		end
 	end
-	local _result_1 = cube
-	if _result_1 ~= nil then
-		_result_1 = _result_1:IsA("BasePart")
+	local _result_2 = cube
+	if _result_2 ~= nil then
+		_result_2 = _result_2:IsA("BasePart")
 	end
-	local _condition = not _result_1
-	if not _condition then
-		_condition = fullReset
+	local _condition_1 = not _result_2
+	if not _condition_1 then
+		_condition_1 = fullReset
 	end
-	if _condition then
+	if _condition_1 then
 		Events.ClientReset:Fire(true)
 		Events.Reset:FireServer(true)
 	else
 		Events.ClientReset:Fire(false)
 		Events.Reset:FireServer(false)
-		local _condition_1 = cube:GetAttribute("scale")
-		if _condition_1 == nil then
-			_condition_1 = 1
+		local _condition_2 = cube:GetAttribute("scale")
+		if _condition_2 == nil then
+			_condition_2 = 1
 		end
-		local cubeScale = _condition_1
+		local cubeScale = _condition_2
+		local position = Vector3.new(0, 0, 0)
+		if prevArea == "Level 2" or prevArea == "Level 2: Cave 1" then
+			position = Vector3.new(-5912, 0, 0)
+		end
 		cube:SetAttribute("previousVelocity", Vector3.zero)
-		cube:PivotTo(CFrame.new(0, if cubeScale > 10 then 400 else 14, 0))
+		cube:PivotTo(CFrame.new(position.X, position.Y + (if cubeScale > 10 then 400 else 14), position.Z))
 		cube.AssemblyLinearVelocity = Vector3.zero
 		for _, descendant in cube:GetDescendants() do
 			if descendant:IsA("BasePart") then
@@ -128,11 +156,11 @@ local function resetCharacter(fullReset)
 			end
 		end
 		local arm = cube:FindFirstChild("Arm")
-		local _result_2 = arm
-		if _result_2 ~= nil then
-			_result_2 = _result_2:IsA("BasePart")
+		local _result_3 = arm
+		if _result_3 ~= nil then
+			_result_3 = _result_3:IsA("BasePart")
 		end
-		if _result_2 then
+		if _result_3 then
 			local _cFrame = CFrame.new(cube.Position)
 			local _arg0 = CFrame.fromOrientation(0, 0, math.pi / 2)
 			arm.CFrame = _cFrame * _arg0
@@ -259,6 +287,33 @@ RunService.RenderStepped:Connect(function(dt)
 	else
 		menuGui.AnchorPoint = menuGui.AnchorPoint:Lerp(Vector2.new(1, 0.5), alpha)
 	end
+	if travelGui.Visible then
+		local mouse = UserInputService:GetMouseLocation()
+		local area = travellableAreas[currentTravelIndex + 1]
+		local screenHeight = camera.ViewportSize.Y
+		local screenWidth = camera.ViewportSize.X
+		local halfHeight = screenHeight / 2
+		local halfWidth = screenWidth / 2
+		local mouseRotation = CFrame.fromOrientation(math.rad(((mouse.Y - halfHeight) / screenHeight) * -5), math.rad(((mouse.X - halfWidth) / screenWidth) * -5), 0)
+		camera.CFrame = camera.CFrame:Lerp(area.cameraCFrame * mouseRotation, math.clamp(dt * 25, 0, 1))
+		local _value = area.hasArea()
+		if _value ~= 0 and _value == _value and _value ~= "" and _value then
+			blur.Size = 0
+			(travelGui:FindFirstChild("AreaName")).Text = area.name;
+			(travelGui:FindFirstChild("Teleport")).Visible = true
+		else
+			blur.Size = 64
+			(travelGui:FindFirstChild("AreaName")).Text = "???"
+			(travelGui:FindFirstChild("Teleport")).Visible = false
+		end
+		if area.name == "Level 1" then
+			Lighting.ClockTime = 14.5
+		elseif area.name == "Level 2" then
+			Lighting.ClockTime = 0
+		end
+	else
+		blur.Size = 0
+	end
 	local shouldHideOthers = getSetting(GameSetting.HideOthers)
 	for _, otherPlayer in Players:GetPlayers() do
 		if otherPlayer == player then
@@ -332,15 +387,17 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 		spectatePlayer.Value = playerList[idx + 1]
 	end
-	for name, value in pairs(Settings) do
-		if previousSettings[name] ~= value then
-			lastChange = currentTime
-			areSettingsSaved = false
-			previousSettings[name] = value
+	if areSettingsSaved then
+		for name, value in pairs(Settings) do
+			if previousSettings[name] ~= value then
+				lastChange = currentTime
+				areSettingsSaved = false
+				previousSettings[name] = value
+			end
 		end
 	end
-	if currentTime - lastChange > 5 and not areSettingsSaved and not settingsGui.Visible then
-		print("[src/client/gui/menu.client.ts:296]", `Saved settings: {HttpService:JSONEncode(Settings)}`)
+	if (currentTime - lastChange) > 5 and not areSettingsSaved and not settingsGui.Visible then
+		print("[src/client/gui/menu.client.ts:362]", `Saved settings: {HttpService:JSONEncode(Settings)}`)
 		Events.SaveSettingsJSON:FireServer(Settings)
 		areSettingsSaved = true
 	end
@@ -351,7 +408,7 @@ Events.LoadSettingsJSON.OnClientEvent:Connect(function(settingsJSON)
 		local decodedSettings = HttpService:JSONDecode(settingsJSON)
 		newSettings = decodedSettings
 	end, function(err)
-		warn("[src/client/gui/menu.client.ts:308]", `Unable to decode settings JSON | Error: {err}`)
+		warn("[src/client/gui/menu.client.ts:374]", `Unable to decode settings JSON | Error: {err}`)
 		return TS.TRY_RETURN, {}
 	end)
 	if _exitType then
@@ -359,15 +416,16 @@ Events.LoadSettingsJSON.OnClientEvent:Connect(function(settingsJSON)
 	end
 	for name in pairs(Settings) do
 		if newSettings[name] ~= nil then
-			setSetting(name, newSettings[name])
+			local value = newSettings[name]
+			Settings[name] = value
+			previousSettings[name] = value
 		end
 	end
-	previousSettings = table.clone(Settings)
 	if getSetting(GameSetting.Modifiers) then
 		Events.SetModifiersSetting:FireServer(true)
 	end
 	updateSettingButtons()
-	print("[src/client/gui/menu.client.ts:322]", `Loaded settings data: {settingsJSON}`)
+	print("[src/client/gui/menu.client.ts:390]", `Loaded settings data: {settingsJSON}`)
 end);
 (menuButtons:WaitForChild("Reset")).MouseButton1Click:Connect(function()
 	if debounces.reset then
@@ -432,7 +490,7 @@ end);
 (spectatingGui:WaitForChild("Next")).MouseButton1Click:Connect(function()
 	-- ▼ ReadonlyArray.findIndex ▼
 	local _callback = function(name)
-		return name == spectatePlayer.Name
+		return name == spectatePlayer.Value
 	end
 	local _result = -1
 	for _i, _v in playerList do
@@ -454,7 +512,7 @@ end);
 (spectatingGui:WaitForChild("Previous")).MouseButton1Click:Connect(function()
 	-- ▼ ReadonlyArray.findIndex ▼
 	local _callback = function(name)
-		return name == spectatePlayer.Name
+		return name == spectatePlayer.Value
 	end
 	local _result = -1
 	for _i, _v in playerList do
@@ -474,8 +532,16 @@ end);
 	end
 end);
 (menuButtons:WaitForChild("Tutorial")).MouseButton1Click:Connect(function()
-	local _value = player:GetAttribute(PlayerAttributes.InErrorLand)
-	if _value ~= 0 and _value == _value and _value ~= "" and _value then
+	local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
+	local _result = cube
+	if _result ~= nil then
+		_result = _result:IsA("BasePart")
+	end
+	local _condition = _result
+	if _condition then
+		_condition = getCurrentArea(cube) == "ErrorLand"
+	end
+	if _condition then
 		return nil
 	end
 	menuOpen.Value = false
@@ -552,6 +618,54 @@ end);
 (replaysGui:WaitForChild("Close")).MouseButton1Click:Connect(function()
 	menuOpen.Value = true
 	replaysGui.Visible = false
+end);
+(menuButtons:WaitForChild("FastTravel")).MouseButton1Click:Connect(function()
+	menuOpen.Value = false
+	travelGui.Visible = true
+	currentTravelIndex = 0
+	local _cameraCFrame = travellableAreas[currentTravelIndex + 1].cameraCFrame
+	local _arg0 = CFrame.fromOrientation(0, math.pi * 0.5, 0)
+	camera.CFrame = _cameraCFrame * _arg0
+end);
+(travelGui:WaitForChild("Close")).MouseButton1Click:Connect(function()
+	menuOpen.Value = true
+	travelGui.Visible = false
+end);
+(travelGui:WaitForChild("Next")).MouseButton1Click:Connect(function()
+	currentTravelIndex += 1
+	if currentTravelIndex > #travellableAreas - 1 then
+		currentTravelIndex = 0
+	end
+	local _cameraCFrame = travellableAreas[currentTravelIndex + 1].cameraCFrame
+	local _arg0 = CFrame.fromOrientation(0, math.pi * 0.5, 0)
+	camera.CFrame = _cameraCFrame * _arg0
+end);
+(travelGui:WaitForChild("Previous")).MouseButton1Click:Connect(function()
+	currentTravelIndex -= 1
+	if currentTravelIndex < 0 then
+		currentTravelIndex = #travellableAreas - 1
+	end
+	local _cameraCFrame = travellableAreas[currentTravelIndex + 1].cameraCFrame
+	local _arg0 = CFrame.fromOrientation(0, math.pi * 0.5, 0)
+	camera.CFrame = _cameraCFrame * _arg0
+end);
+(travelGui:WaitForChild("Teleport")).MouseButton1Click:Connect(function()
+	local area = travellableAreas[currentTravelIndex + 1]
+	local cube = Workspace:WaitForChild(`cube{player.UserId}`)
+	local _condition = not cube:IsA("BasePart")
+	if not _condition then
+		local _value = area.hasArea()
+		_condition = not (_value ~= 0 and _value == _value and _value ~= "" and _value)
+	end
+	if _condition then
+		return nil
+	end
+	menuOpen.Value = false
+	canMove.Value = true
+	travelGui.Visible = false
+	resetCharacter()
+	task.wait(0.05)
+	cube:PivotTo(CFrame.new(travellableAreas[currentTravelIndex + 1].teleportPosition))
 end)
 Events.SettingChanged.Event:Connect(updateSettingButtons)
 Events.StartClientTutorial.Event:Connect(function()

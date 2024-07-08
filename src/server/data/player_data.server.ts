@@ -42,22 +42,27 @@ type PlayerData = {
 	cube_color: Color3 | undefined;
 	time_data:
 		| {
-				extra_time: number;
-				finished: boolean | undefined;
-				finish_total_time: number | undefined;
-				modded: boolean | undefined;
+			extra_time: number | undefined;
+			finished: boolean | undefined;
+			finish_total_time: number | undefined;
+			modded: boolean | undefined;
 		  }
 		| undefined;
 	settings_json: string | undefined;
 	active_quest: string | undefined;
+	discovered_levels:
+		| {
+			level_2: boolean | undefined;
+		  }
+		| undefined;
 	stats:
 		| {
-				total_time_played: number | undefined;
-				total_restarts: number | undefined;
-				total_ragdolls: number | undefined;
-				times_joined: number | undefined;
-				total_wins: number | undefined;
-				total_modded_wins: number | undefined;
+			total_time_played: number | undefined;
+			total_restarts: number | undefined;
+			total_ragdolls: number | undefined;
+			times_joined: number | undefined;
+			total_wins: number | undefined;
+			total_modded_wins: number | undefined;
 		  }
 		| undefined;
 };
@@ -153,14 +158,18 @@ function playerAdded(player: Player) {
 			
 			if (decodedData.time_data) {
 				if (decodedData.time_data.modded) {
-					player.SetAttribute('modifiers', true);
+					player.SetAttribute(PlayerAttributes.HasModifiers, true);
 					cube.SetAttribute('used_modifiers', true);
 				}
 				
-				player.SetAttribute('finished', decodedData.time_data.finished);
+				player.SetAttribute(PlayerAttributes.CompletedGame, decodedData.time_data.finished);
 				cube.SetAttribute('extra_time', decodedData.time_data.extra_time);
 				
 				cube.SetAttribute('finishTotalTime', decodedData.time_data.finish_total_time);
+			}
+			
+			if (decodedData.discovered_levels) {
+				if (decodedData.discovered_levels.level_2) player.SetAttribute(PlayerAttributes.HasLevel2, true);
 			}
 			
 			if (decodedData.active_quest && decodedData.active_quest in quests) player.SetAttribute('activeQuest', decodedData.active_quest);
@@ -226,6 +235,9 @@ function playerRemoved(player: Player) {
 		},
 		settings_json: settingsJSON,
 		active_quest: activeQuest,
+		discovered_levels: {
+			level_2: player.GetAttribute(PlayerAttributes.HasLevel2) as (boolean | undefined),
+		},
 		stats: {
 			total_time_played: currentTime - serverJoinTime,
 			total_restarts: player.GetAttribute('totalRestarts') as (number | undefined),

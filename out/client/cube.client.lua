@@ -32,6 +32,7 @@ local Settings = _utils.Settings
 local numLerp = _utils.numLerp
 local getTime = _utils.getTime
 local randomDirection = _utils.randomDirection
+local getCurrentArea = _utils.getCurrentArea
 local _mobile_buttons = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "mobile_buttons")
 local createMobileButton = _mobile_buttons.createMobileButton
 local getMobileButtonsByCategory = _mobile_buttons.getMobileButtonsByCategory
@@ -61,11 +62,15 @@ local canMove = valueInstances:WaitForChild("can_move")
 local screenGui = GUI:WaitForChild("ScreenGui")
 local mobileButtons = GUI:WaitForChild("MobileButtons")
 local replayGui = GUI:WaitForChild("ReplayGui")
+local spectatingGui = screenGui:WaitForChild("SpectatingGUI")
+local spectateUsername = spectatingGui:WaitForChild("PlayerName")
 local mouseIcon = screenGui:WaitForChild("MouseIcon")
 local debugInfo = screenGui:WaitForChild("DebugInfo")
+local newAreaLabel = screenGui:WaitForChild("NewArea")
 local timerLabel = screenGui:WaitForChild("Timer")
 local speedometerLabel = screenGui:WaitForChild("Speedometer")
 local altitudeLabel = screenGui:WaitForChild("Altitude")
+local travelGui = screenGui:WaitForChild("FastTravelGUI")
 local nonBreakable = Workspace:WaitForChild("NonBreakable")
 local resetParts = Workspace:WaitForChild("ResetParts")
 local mapFolder = Workspace:WaitForChild("Map")
@@ -74,7 +79,8 @@ local platformsFolder = mapFolder:WaitForChild("Platforms")
 local propellersFolder = mapFolder:WaitForChild("Propellers")
 local mudParts = mapFolder:WaitForChild("MudParts")
 local effectsFolder = Workspace:WaitForChild("Effects")
-local winArea = mapFolder:WaitForChild("WinArea")
+local winAreaLevel1 = mapFolder:WaitForChild("Level1WinArea")
+local winAreaLevel2 = mapFolder:WaitForChild("Level2WinArea")
 local wallPlane = Workspace:WaitForChild("Wall")
 local flippedGravity = ReplicatedStorage:WaitForChild("flipped_gravity")
 local mouseVisual = Workspace:WaitForChild("MouseVisual")
@@ -126,14 +132,20 @@ local function newPropeller(propeller)
 	if not propeller:IsA("Model") then
 		return nil
 	end
-	local hitbox = propeller:WaitForChild("Hitbox")
-	local _condition = not hitbox
+	local hitbox = propeller:WaitForChild("Hitbox", 15)
+	local _result = hitbox
+	if _result ~= nil then
+		_result = _result:IsA("BasePart")
+	end
+	local _condition = not _result
 	if not _condition then
 		local _arg0 = propeller:GetAttribute("windVelocity")
 		_condition = not (type(_arg0) == "number")
 	end
 	if _condition then
-		warn("[src/client/cube.client.ts:135]", "An invalid propeller was created.")
+		if propeller.Parent == propellersFolder then
+			warn("[src/client/cube.client.ts:141]", "An invalid propeller was created.")
+		end
 		return nil
 	end
 	local _propeller = propeller
@@ -147,7 +159,7 @@ local function updatePropellers(cube, head, dt)
 			_result = _result:IsA("BasePart")
 		end
 		if not _result then
-			warn("[src/client/cube.client.ts:146]", "A propeller has broke!")
+			warn("[src/client/cube.client.ts:152]", "A propeller has broke!")
 			table.remove(cachedPropellers, i + 1)
 			break
 		end
@@ -966,6 +978,27 @@ local function updateModifiers()
 		end
 	end
 end
+local function winTouched(otherPart)
+	local _condition = otherPart:GetAttribute("isCube")
+	if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
+		_condition = isClientCube(otherPart)
+		if _condition then
+			local _value = player:GetAttribute(PlayerAttributes.CompletedGame)
+			_condition = not (_value ~= 0 and _value == _value and _value ~= "" and _value)
+		end
+	end
+	if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
+		local currentArea = getCurrentArea(otherPart, true)
+		if currentArea ~= "Level 1" and currentArea ~= "Level 2" then
+			return nil
+		end
+		player:SetAttribute(PlayerAttributes.CompletedGame, true)
+		local totalTime = getCubeTime(otherPart)
+		print("[src/client/cube.client.ts:734]", `Completed '{currentArea}' in {totalTime}s`)
+		Events.CompleteGame:FireServer(totalTime)
+		Events.MakeReplayEvent:Fire(string.format("win,%d", totalTime * 1000))
+	end
+end
 task.spawn(updateModifiers)
 player.AttributeChanged:Connect(function(attr)
 	if attr == PlayerAttributes.HammerTexture or attr == PlayerAttributes.Client.SettingsJSON then
@@ -974,7 +1007,7 @@ player.AttributeChanged:Connect(function(attr)
 end)
 Events.ClientRagdoll.Event:Connect(function(seconds)
 	local previousRagdollTime = ragdollTime
-	ragdollTime = seconds
+	ragdollTime = math.max(ragdollTime, seconds)
 	local currentHat = getCubeHat()
 	if currentHat ~= Accessories.CubeHat.InstantGyro and previousRagdollTime == 0 then
 		Events.AddRagdollCount:FireServer()
@@ -997,6 +1030,11 @@ RunService.Heartbeat:Connect(function(dt)
 			_timeValue = _timeValue:FindFirstChild("Time")
 		end
 		local timeValue = _timeValue
+		local _areaValue = leaderstats
+		if _areaValue ~= nil then
+			_areaValue = _areaValue:FindFirstChild("Area")
+		end
+		local areaValue = _areaValue
 		local _result = altitudeValue
 		if _result ~= nil then
 			_result = _result:IsA("StringValue")
@@ -1008,6 +1046,13 @@ RunService.Heartbeat:Connect(function(dt)
 				_result_1 = _result_1:IsA("StringValue")
 			end
 			_condition = _result_1
+			if _condition then
+				local _result_2 = areaValue
+				if _result_2 ~= nil then
+					_result_2 = _result_2:IsA("StringValue")
+				end
+				_condition = _result_2
+			end
 		end
 		if _condition then
 			local otherCube = Workspace:FindFirstChild(`cube{otherPlayer.UserId}`)
@@ -1025,15 +1070,12 @@ RunService.Heartbeat:Connect(function(dt)
 				local _1, minutes, seconds, milliseconds = getTimeUnits(cubeTime * 1000)
 				newTimeValue = string.format("%02d:%02d.%d", minutes, seconds, math.floor(milliseconds / 100))
 			end
-			local _condition_1 = player:GetAttribute(PlayerAttributes.InErrorLand)
-			if not (_condition_1 ~= 0 and _condition_1 == _condition_1 and _condition_1 ~= "" and _condition_1) then
-				_condition_1 = otherPlayer:GetAttribute(PlayerAttributes.InErrorLand)
-			end
-			if _condition_1 ~= 0 and _condition_1 == _condition_1 and _condition_1 ~= "" and _condition_1 then
+			if getCurrentArea(cube) == "ErrorLand" or getCurrentArea(cube) == "ErrorLand" then
 				newAltitudeValue = "--"
 			end
 			timeValue.Value = newTimeValue
 			altitudeValue.Value = newAltitudeValue
+			areaValue.Value = getCurrentArea(otherCube, true)
 		end
 	end
 	local currentHammer = getHammerTexture()
@@ -1046,11 +1088,8 @@ RunService.Heartbeat:Connect(function(dt)
 	if getSetting(GameSetting.Modifiers) then
 		if cubeHat == Accessories.CubeHat.AstronautHelmet then
 			Workspace.Gravity = 5
-		else
-			local _value_1 = currentHammer == Accessories.HammerTexture.Hammer404 or player:GetAttribute(PlayerAttributes.InErrorLand)
-			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
-				Workspace.Gravity /= 2
-			end
+		elseif currentHammer == Accessories.HammerTexture.Hammer404 or getCurrentArea(cube) == "ErrorLand" then
+			Workspace.Gravity /= 2
 		end
 	end
 	local spectatingCube = nil
@@ -1072,6 +1111,9 @@ RunService.Heartbeat:Connect(function(dt)
 		if _result then
 			spectatingCube = otherCube
 		end
+		spectateUsername.Text = spectatePlayer.Value
+	else
+		spectateUsername.Text = "None"
 	end
 	if not cube or cube.Parent ~= Workspace then
 		local localCube = Workspace:FindFirstChild(`cube{player.UserId}`)
@@ -1087,6 +1129,55 @@ RunService.Heartbeat:Connect(function(dt)
 	if spectatingCube or cube then
 		local targetPlayer = otherPlayer or player
 		local targetCube = spectatingCube or cube
+		local _condition_2 = targetCube:GetAttribute("_previousArea")
+		if _condition_2 == nil then
+			_condition_2 = "None"
+		end
+		local previousArea = _condition_2
+		local currentArea = getCurrentArea(cube, true)
+		if previousArea ~= currentArea then
+			targetCube:SetAttribute("_previousArea", currentArea)
+			if currentArea ~= "None" then
+				local _value_1 = newAreaLabel:GetAttribute("animating")
+				if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
+					newAreaLabel:SetAttribute("stop", true)
+					while true do
+						local _value_2 = newAreaLabel:GetAttribute("animating")
+						if not (_value_2 ~= 0 and _value_2 == _value_2 and _value_2 ~= "" and _value_2) then
+							break
+						end
+						RunService.Heartbeat:Wait()
+					end
+				end
+				newAreaLabel:SetAttribute("animating", true)
+				newAreaLabel.AnchorPoint = Vector2.new(0, 1)
+				newAreaLabel.TextTransparency = 1
+				newAreaLabel.Text = `<stroke thickness="1"><u>{currentArea}</u></stroke>`
+				newAreaLabel.Visible = true
+				local startTime = time()
+				local totalTime = 2
+				local currentTime = startTime
+				while (currentTime - startTime) < totalTime do
+					local _value_2 = newAreaLabel:GetAttribute("stop")
+					if _value_2 ~= 0 and _value_2 == _value_2 and _value_2 ~= "" and _value_2 then
+						newAreaLabel:SetAttribute("stop", nil)
+						break
+					end
+					local percent = (currentTime - startTime) / totalTime
+					newAreaLabel.TextTransparency = math.abs(2 * percent - 1)
+					newAreaLabel.AnchorPoint = Vector2.new(0, (1 - percent) / 2 + 0.5)
+					newAreaLabel.Text = `<stroke thickness="1" transparency="{newAreaLabel.TextTransparency}"><u>{currentArea}</u></stroke>`
+					RunService.Heartbeat:Wait()
+					currentTime = time()
+				end
+				newAreaLabel.Visible = false
+				newAreaLabel:SetAttribute("animating", nil)
+				local _value_2 = newAreaLabel:GetAttribute("stop")
+				if _value_2 ~= 0 and _value_2 == _value_2 and _value_2 ~= "" and _value_2 then
+					newAreaLabel:SetAttribute("stop", nil)
+				end
+			end
+		end
 		local _binding = convertStudsToMeters(targetCube.Position.Y, true)
 		local altitudeString = _binding[2]
 		local _binding_1 = convertStudsToMeters(targetCube.AssemblyLinearVelocity.Magnitude)
@@ -1118,11 +1209,11 @@ RunService.Heartbeat:Connect(function(dt)
 				if _result ~= nil then
 					_result = _result:IsA("StringValue")
 				end
-				local _condition_2 = _result
-				if _condition_2 then
-					_condition_2 = timeValue.Value == "--"
+				local _condition_3 = _result
+				if _condition_3 then
+					_condition_3 = timeValue.Value == "--"
 				end
-				if _condition_2 then
+				if _condition_3 then
 					timerLabel.TextColor3 = Color3.fromRGB(179, 179, 179)
 				end
 			end
@@ -1275,7 +1366,7 @@ RunService.Heartbeat:Connect(function(dt)
 			armAlignOrientation.Enabled = true
 		end
 		if ragdollTime == 0 and previousRagdollTime > 0 then
-			print("[src/client/cube.client.ts:884]", "Pivot hammer back to cube")
+			print("[src/client/cube.client.ts:957]", "Pivot hammer back to cube")
 			local _cFrame = CFrame.new(cube.Position)
 			local _arg0 = CFrame.fromOrientation(0, 0, math.pi / 2)
 			arm.CFrame = _cFrame * _arg0
@@ -1308,14 +1399,6 @@ RunService.Heartbeat:Connect(function(dt)
 		intensity = shakeIntensity.Value
 		if isSpectating.Value and otherPlayer then
 			intensity = 0
-			local _result_5 = screenGui:FindFirstChild("SpectatingGUI")
-			if _result_5 ~= nil then
-				_result_5 = _result_5:FindFirstChild("PlayerName")
-			end
-			local label = _result_5
-			if label then
-				label.Text = otherPlayer.DisplayName
-			end
 		end
 		if flippedGravity.Value then
 			alignOrientation.CFrame = CFrame.fromOrientation(0, 0, math.pi)
@@ -1428,7 +1511,7 @@ RunService.Heartbeat:Connect(function(dt)
 				}):Play()
 			end
 		end
-		if not replayGui.Enabled and not isAnimating then
+		if not replayGui.Enabled and not travelGui.Visible and not isAnimating then
 			local _position = camera.CFrame.Position
 			local _position_1 = cameraCFrame.Position
 			if (_position - _position_1).Magnitude > 50 then
@@ -1515,8 +1598,8 @@ RunService.Heartbeat:Connect(function(dt)
 		if cubeScale ~= 1 then
 			maxRange *= cubeScale
 		end
-		local _value_1 = player:GetAttribute(PlayerAttributes.InErrorLand)
-		if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
+		local area = getCurrentArea(cube)
+		if area == "ErrorLand" then
 			armAlignPosition.MaxForce = 6250
 			armAlignPosition.Responsiveness = 40
 			armAlignOrientation.Responsiveness = 100
@@ -1660,23 +1743,8 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 	end
 end)
-winArea.Touched:Connect(function(otherPart)
-	local _condition = otherPart:GetAttribute("isCube")
-	if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
-		_condition = isClientCube(otherPart)
-		if _condition then
-			local _value = player:GetAttribute(PlayerAttributes.CompletedGame)
-			_condition = not (_value ~= 0 and _value == _value and _value ~= "" and _value)
-		end
-	end
-	if _condition ~= 0 and _condition == _condition and _condition ~= "" and _condition then
-		player:SetAttribute(PlayerAttributes.CompletedGame, true)
-		local totalTime = getCubeTime(otherPart)
-		print("[src/client/cube.client.ts:1263]", `Completed game in {totalTime} seconds`)
-		Events.CompleteGame:FireServer(totalTime)
-		Events.MakeReplayEvent:Fire(string.format("win,%d", totalTime * 1000))
-	end
-end)
+winAreaLevel1.Touched:Connect(winTouched)
+winAreaLevel2.Touched:Connect(winTouched)
 Events.ClientReset.Event:Connect(function(fullReset)
 	player:SetAttribute(PlayerAttributes.CompletedGame, nil)
 	for key in pairs(AbilityCooldowns) do
@@ -1685,8 +1753,13 @@ Events.ClientReset.Event:Connect(function(fullReset)
 	flippedGravity.Value = false
 	shakeIntensity.Value = 0
 	ragdollTime = 0
-	if not fullReset and getSetting(GameSetting.Modifiers) then
-		updateModifiers()
+	if not fullReset then
+		if getSetting(GameSetting.Modifiers) then
+			updateModifiers()
+		end
+		if cube then
+			cube:SetAttribute("_previousArea", nil)
+		end
 	end
 end)
 Events.StartClientTutorial.Event:Connect(function()
@@ -1754,7 +1827,7 @@ level2Teleport.Touched:Connect(function(otherPart)
 		return nil
 	end
 	if otherPart == cube or otherPart == cube:FindFirstChild("Head") or otherPart == cube:FindFirstChild("Arm") then
-		doTeleportAnimation(level2Teleport.Position, Vector3.new(0, 1500, 0))
+		doTeleportAnimation(level2Teleport.Position, Vector3.new(-5912, 14, 0))
 	end
 end)
 Events.SaySystemMessage.OnClientEvent:Connect(saySystemMessage)

@@ -24,6 +24,7 @@ local function newPart(part)
 			return nil
 		end
 		local clone = part:Clone()
+		clone.CollisionGroup = "objects"
 		local attachment = Instance.new("Attachment", clone)
 		local alignOrientation = Instance.new("AlignOrientation")
 		alignOrientation.Mode = Enum.OrientationAlignmentMode.OneAttachment
@@ -51,11 +52,19 @@ local function newPart(part)
 	elseif part.Parent == unanchoredPartsFolder then
 		local clone = part:Clone()
 		clone.Parent = unanchoredParts
-		if part:IsA("PVInstance") then
-			clone:SetAttribute("_pivot", part:GetPivot())
-			if part:IsA("BasePart") then
-				clone:SetAttribute("_linearvelocity", part.AssemblyLinearVelocity)
-				clone:SetAttribute("_angularvelocity", part.AssemblyAngularVelocity)
+		if clone:IsA("PVInstance") then
+			clone:SetAttribute("_pivot", clone:GetPivot())
+			if clone:IsA("BasePart") then
+				clone.CollisionGroup = "objects"
+				clone:SetAttribute("_linearvelocity", clone.AssemblyLinearVelocity)
+				clone:SetAttribute("_angularvelocity", clone.AssemblyAngularVelocity)
+			end
+		end
+		for _, descendant in clone:GetDescendants() do
+			if descendant:IsA("BasePart") then
+				descendant.CollisionGroup = "objects"
+				descendant:SetAttribute("_linearvelocity", descendant.AssemblyLinearVelocity)
+				descendant:SetAttribute("_angularvelocity", descendant.AssemblyAngularVelocity)
 			end
 		end
 	end

@@ -34,11 +34,11 @@ do
 	function Replays:startRecording()
 		table.clear(self.recordingData)
 		table.clear(self.eventBuffer)
-		local cubeTime = getCubeTime(Workspace:FindFirstChild(`cube{player}`))
+		local cubeTime = getCubeTime(Workspace:FindFirstChild(`cube{player.UserId}`))
 		self.previousTime = -1
 		self.isRecording = true
 		self.startTime = nil
-		self.cubeStartTime = math.round(cubeTime * 1000)
+		self.cubeStartTime = if cubeTime ~= -1 then math.round(cubeTime * 1000) else 0
 		local _condition = (player:GetAttribute("cube_Hat"))
 		if _condition == nil then
 			_condition = ""
@@ -73,7 +73,7 @@ do
 		local _fn = string
 		local _condition_1 = self.cubeStartTime
 		if _condition_1 == nil then
-			_condition_1 = currentTime
+			_condition_1 = 0
 		end
 		local _arg1 = _fn.format("0,%d,%d,%d,%d:%s", totalTime, 60, _condition_1, currentTime, cubeData)
 		table.insert(_recordingData, 1, _arg1)

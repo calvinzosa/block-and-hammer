@@ -798,7 +798,7 @@ local function reloadAccessories(cube, b, hatAccessory, auraAccessory, hammerAcc
 			(cube:FindFirstChild("CubeOutline")).Color3 = cubeColor
 		end
 	end, function(err) end)
-	print("[src/shared/accessory_loader.ts:571]", `Updated accessories for {cube.Name}`)
+	print("[src/shared/accessory_loader.ts:560]", `Updated accessories for {cube.Name}`)
 end
 return {
 	loadAccessories = loadAccessories,

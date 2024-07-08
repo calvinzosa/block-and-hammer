@@ -40,10 +40,10 @@ do
 	local _container = PlayerAttributes
 	local HasDataLoaded = "DataLoaded"
 	_container.HasDataLoaded = HasDataLoaded
-	local InErrorLand = "inErrorLand"
-	_container.InErrorLand = InErrorLand
 	local HasModifiers = "modifiers"
 	_container.HasModifiers = HasModifiers
+	local HasLevel2 = "hasLevel2"
+	_container.HasLevel2 = HasLevel2
 	local Impacts = "impacts"
 	_container.Impacts = Impacts
 	local IsNew = "isNew"
@@ -86,8 +86,12 @@ do
 	_container.ActiveQuest = ActiveQuest
 	local GlowPhase = "glowPhase"
 	_container.GlowPhase = GlowPhase
+	local GlowDebounce = "glowDebounce"
+	_container.GlowDebounce = GlowDebounce
 	local HasSteelHammer = "hasSteelHammer"
 	_container.HasSteelHammer = HasSteelHammer
+	local DidShatterPart = "didShatterPart"
+	_container.DidShatterPart = DidShatterPart
 	local Device = "device"
 	_container.Device = Device
 	local Client = {
@@ -169,8 +173,8 @@ do
 	_inverse[2146308286] = "_404"
 	Badge.ErrorLand = 2146357550
 	_inverse[2146357550] = "ErrorLand"
-	Badge.ProfessionalClimber = 2146411244
-	_inverse[2146411244] = "ProfessionalClimber"
+	Badge.ProfessionalClimberI = 2146411244
+	_inverse[2146411244] = "ProfessionalClimberI"
 	Badge.FreeAccessory = 2146441455
 	_inverse[2146441455] = "FreeAccessory"
 	Badge.Explosive = 2146508969
@@ -199,6 +203,8 @@ do
 	_inverse[4410861265533965] = "Visits35k"
 	Badge.Glowing = 254003402602004
 	_inverse[254003402602004] = "Glowing"
+	Badge.ProfessionalClimberII = 1706467395869465
+	_inverse[1706467395869465] = "ProfessionalClimberII"
 end
 local MouseImageIcon = {
 	Default = "",
@@ -330,16 +336,9 @@ local function canUseSetting(name)
 		if modifierDisablers ~= nil then
 			params.FilterDescendantsInstances = { modifierDisablers }
 		end
-		local _condition = player:GetAttribute(PlayerAttributes.InErrorLand)
-		if not (_condition ~= 0 and _condition == _condition and _condition ~= "" and _condition) then
-			_condition = (cube ~= nil and getCurrentArea(cube) == "Tutorial")
-		end
-		local areaCondition = _condition
-		local _condition_1 = areaCondition
-		if not (_condition_1 ~= 0 and _condition_1 == _condition_1 and _condition_1 ~= "" and _condition_1) then
-			_condition_1 = (player and cube and #Workspace:GetPartsInPart(cube, params) > 0)
-		end
-		if _condition_1 ~= 0 and _condition_1 == _condition_1 and _condition_1 ~= "" and _condition_1 then
+		local currentArea = getCurrentArea(cube)
+		local areaCondition = currentArea == "ErrorLand" or currentArea == "Tutorial" or currentArea == "Level 2: Entrance"
+		if areaCondition or (player and cube and #Workspace:GetPartsInPart(cube, params) > 0) then
 			return false
 		end
 	end
@@ -403,7 +402,13 @@ local function fixSettings()
 		Settings[name] = _condition
 	end
 end
-function getCurrentArea(cube)
+function getCurrentArea(cube, shortName)
+	if shortName == nil then
+		shortName = false
+	end
+	if cube == nil or not cube:IsA("BasePart") then
+		return "None"
+	end
 	local params = OverlapParams.new()
 	params.FilterType = Enum.RaycastFilterType.Include
 	params.FilterDescendantsInstances = { areasFolder }
@@ -413,7 +418,15 @@ function getCurrentArea(cube)
 	end
 	local areaPart = _areaPart
 	if areaPart then
-		return areaPart.Name
+		if not shortName then
+			return areaPart.Name
+		else
+			local _condition = areaPart:GetAttribute("shortName")
+			if _condition == nil then
+				_condition = areaPart.Name
+			end
+			return _condition
+		end
 	else
 		return "None"
 	end
@@ -537,8 +550,16 @@ local function playSound(name, properties, ignoreReplay)
 			end
 		end
 	end
-	local _value = player:GetAttribute(PlayerAttributes.InErrorLand)
-	if _value ~= 0 and _value == _value and _value ~= "" and _value then
+	local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
+	local _result_2 = cube
+	if _result_2 ~= nil then
+		_result_2 = _result_2:IsA("BasePart")
+	end
+	local _condition = _result_2
+	if _condition then
+		_condition = getCurrentArea(cube) == "ErrorLand"
+	end
+	if _condition then
 		sound.PlaybackSpeed *= 0.5
 	end
 	sound.Volume = math.min(sound.Volume, 1.5)
@@ -776,7 +797,7 @@ local function giveBadge(player, badgeId)
 		return nil
 	end
 	if isTestingServer() then
-		warn("[src/shared/utils.ts:569]", `Badges are disabled in the Testing Server | Attempted to give badge {badgeId} to {player.Name}`)
+		warn("[src/shared/utils.ts:579]", `Badges are disabled in the Testing Server | Attempted to give badge {badgeId} to {player.Name}`)
 		return nil
 	end
 	local userId = player.UserId
@@ -793,11 +814,11 @@ local function giveBadge(player, badgeId)
 			local _exitType, _returns = TS.try(function()
 				if not BadgeService:UserHasBadgeAsync(userId, badgeId) then
 					BadgeService:AwardBadge(userId, badgeId)
-					print("[src/shared/utils.ts:582]", `Successfully badge {badgeId} to {player.Name}`)
+					print("[src/shared/utils.ts:592]", `Successfully badge {badgeId} to {player.Name}`)
 				end
 				return TS.TRY_BREAK
 			end, function(err)
-				warn("[src/shared/utils.ts:587]", err)
+				warn("[src/shared/utils.ts:597]", err)
 			end)
 			if _exitType then
 				break

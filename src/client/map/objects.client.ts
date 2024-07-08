@@ -28,6 +28,7 @@ function newPart(part: Instance) {
 		if (!part.IsA('BasePart')) return;
 		
 		const clone = part.Clone();
+		clone.CollisionGroup = 'objects';
 		
 		const attachment = new Instance('Attachment', clone);
 		
@@ -61,11 +62,20 @@ function newPart(part: Instance) {
 		const clone = part.Clone();
 		clone.Parent = unanchoredParts;
 		
-		if (part.IsA('PVInstance')) {
-			clone.SetAttribute('_pivot', part.GetPivot());
-			if (part.IsA('BasePart')) {
-				clone.SetAttribute('_linearvelocity', part.AssemblyLinearVelocity);
-				clone.SetAttribute('_angularvelocity', part.AssemblyAngularVelocity);
+		if (clone.IsA('PVInstance')) {
+			clone.SetAttribute('_pivot', clone.GetPivot());
+			if (clone.IsA('BasePart')) {
+				clone.CollisionGroup = 'objects';
+				clone.SetAttribute('_linearvelocity', clone.AssemblyLinearVelocity);
+				clone.SetAttribute('_angularvelocity', clone.AssemblyAngularVelocity);
+			}
+		}
+		
+		for (const descendant of clone.GetDescendants()) {
+			if (descendant.IsA('BasePart')) {
+				descendant.CollisionGroup = 'objects';
+				descendant.SetAttribute('_linearvelocity', descendant.AssemblyLinearVelocity);
+				descendant.SetAttribute('_angularvelocity', descendant.AssemblyAngularVelocity);
 			}
 		}
 	}
