@@ -159,10 +159,17 @@ export default {
 						faceTo: '_player',
 						choices: {
 							'how to level 2': {
-								message: 'i heard that if you used the reached the top of this wall beside me, you can get to level 2',
-								goodbyeEnabled: true,
-								faceTo: '_player',
-								choices: {  }
+								message: 'i heard that if you reached the top of this wall beside me, you can get to level 2, but you didn\'t hear that from me',
+								goodbyeEnabled: false,
+								faceTo: new Vector3(1600, 10, 0),
+								choices: {
+									'...': {
+										message: '... oh wait you did',
+										goodbyeEnabled: true,
+										faceTo: '_player',
+										choices: {  }
+									}
+								}
 							},
 							'what that glowy thing beside you?': {
 								message: 'idk',

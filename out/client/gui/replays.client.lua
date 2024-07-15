@@ -9,6 +9,7 @@ local RunService = _services.RunService
 local Workspace = _services.Workspace
 local Players = _services.Players
 local Debris = _services.Debris
+local Lighting = _services.Lighting
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
 local convertStudsToMeters = _utils.convertStudsToMeters
 local roundDecimalPlaces = _utils.roundDecimalPlaces
@@ -83,6 +84,7 @@ local durationProgress = durationBar:WaitForChild("Progress")
 local durationInput = durationBar:WaitForChild("Input")
 local exitButton = playbackControls:WaitForChild("Exit")
 local timerDisplay = viewGui:WaitForChild("Timer")
+local menuBlur = Lighting:WaitForChild("MenuBlur")
 local Recorder = ReplayModule.new()
 local finishDraggingDuration = false
 local isDraggingDuration = false
@@ -110,6 +112,7 @@ local function startRecording()
 	if getCurrentArea(Workspace:FindFirstChild(`cube{player.UserId}`)) == "ErrorLand" then
 		return nil
 	end
+	menuBlur.Size = 0
 	recordingIndicator.Visible = true
 	startRecordingButton.BackgroundTransparency = 0.5
 	startRecordingButton.TextColor3 = Color3.fromRGB(175, 175, 175)
@@ -138,7 +141,7 @@ local function stopRecording()
 	stopRecordingButton:SetAttribute("disabled", true)
 	local totalTime = Recorder:stopRecording()
 	compressedData = compressData(Recorder.recordingData, false)
-	print("[src/client/gui/replays.client.ts:161]", Recorder.recordingData)
+	print("[src/client/gui/replays.client.ts:164]", Recorder.recordingData)
 	local _, minutes, seconds, milliseconds = getTimeUnits(totalTime)
 	local info = { `length: {string.format("%02d:%02d.%03d", minutes, seconds, milliseconds)}/10:00.000`, `frames: {#Recorder.recordingData - 1}`, `size: {formatBytes(#compressedData)}`, `fps: 60` }
 	descriptionLabel.Text = table.concat(info, "\n")
@@ -164,7 +167,7 @@ local function viewReplay(userId, frames)
 	end
 	local cubeMetadata = string.split(_condition, ",")
 	local cubeHexColor = cubeMetadata[5]
-	print("[src/client/gui/replays.client.ts:198]", frames)
+	print("[src/client/gui/replays.client.ts:201]", frames)
 	local cubeColor = nil
 	TS.try(function()
 		cubeColor = Color3.fromHex(cubeHexColor)
@@ -771,7 +774,7 @@ end);
 	if not (compressedData ~= "" and compressedData) then
 		return nil
 	end
-	print("[src/client/gui/replays.client.ts:633]", `Deleting {#compressedData} characters of replay data`)
+	print("[src/client/gui/replays.client.ts:636]", `Deleting {#compressedData} characters of replay data`)
 	compressedData = nil
 	uploadConfirmation.Visible = false
 	replayGui.Visible = true
@@ -931,6 +934,6 @@ while true do
 			Recorder:update(cube)
 		end
 	end, function(err)
-		warn("[src/client/gui/replays.client.ts:789]", err)
+		warn("[src/client/gui/replays.client.ts:792]", err)
 	end)
 end

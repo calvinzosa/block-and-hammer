@@ -222,11 +222,10 @@ function createDebris(velocity: Vector3, position: Vector3, part: BasePart, mult
 		} else if (hammerTexture === Accessories.HammerTexture.IcyHammer) {
 			playSound('shatter', { PlaybackSpeed: randomFloat(0.9, 1) }, true);
 		}
-
-		playSound('hit2', {
-			PlaybackSpeed: randomFloat(0.9, 1),
-			Volume: velocity.Magnitude / 7.5,
-		});
+		
+		const volume = velocity.Magnitude / 7.5;
+		const speed = randomFloat(0.9, 1);
+		playSound('hit2', { PlaybackSpeed: speed, Volume: volume });
 	}
 }
 
@@ -842,20 +841,6 @@ function newPart(part: Instance) {
 				const headVelocity = head.AssemblyLinearVelocity;
 				const unitVelocity = headVelocity.Unit;
 				
-				if (getSetting(GameSetting.Effects)) {
-					const sparkTemplate = ReplicatedStorage.FindFirstChild('Particles')?.FindFirstChild('spark') as BasePart | undefined;
-					if (sparkTemplate) {
-						const spark = sparkTemplate.Clone();
-						spark.CFrame = CFrame.lookAlong(point, unitVelocity.mul(-1));
-						spark.Parent = effectsFolder;
-						
-						const particleEmitter = spark.FindFirstChild('ParticleEmitter') as ParticleEmitter;
-						task.delay(0.1, () => (particleEmitter.Enabled = false));
-						
-						task.delay(particleEmitter.Lifetime.Max + 0.1, () => particleEmitter.Destroy());
-					}
-				}
-
 				const dataString = string.format(
 					'spark,%d,%d,,%d,%d,',
 					math.round(point.X * 1000),
@@ -866,7 +851,42 @@ function newPart(part: Instance) {
 				
 				Events.MakeReplayEvent.Fire(dataString);
 				
-				playSound('hit1', { PlaybackSpeed: randomFloat(0.9, 1), Volume: headVelocity.Magnitude / 30 }, true);
+				const volume = headVelocity.Magnitude / 30;
+				const speed = randomFloat(0.9, 1);
+				
+				if (otherPart.Material === Enum.Material.Wood || otherPart.Material === Enum.Material.WoodPlanks) {
+					playSound('wood_hit', { PlaybackSpeed: speed, Volume: volume * 0.4 }, true);
+				} else if (otherPart.Material === Enum.Material.Plastic) {
+					playSound('plastic_hit', { PlaybackSpeed: speed, Volume: volume }, true);
+				} else if (otherPart.Material === Enum.Material.Grass || otherPart.Material === Enum.Material.LeafyGrass) {
+					playSound('grass_hit', { PlaybackSpeed: speed, Volume: volume }, true);
+				} else if (otherPart.Material === Enum.Material.Ground) {
+					playSound('dirt_hit', { PlaybackSpeed: speed, Volume: volume }, true);
+				} else if (otherPart.Material === Enum.Material.Slate || otherPart.Material === Enum.Material.Concrete || otherPart.Material === Enum.Material.Marble) {
+					playSound('stone_hit', { PlaybackSpeed: speed, Volume: volume }, true);
+				} else if (otherPart.Material === Enum.Material.Glass) {
+					playSound('glass_hit', { PlaybackSpeed: speed, Volume: volume }, true);
+				} else if (otherPart.Material === Enum.Material.Brick) {
+					playSound('brick_hit', { PlaybackSpeed: speed, Volume: volume }, true);
+				} else if (otherPart.Material === Enum.Material.Sand) {
+					playSound('sand_hit', { PlaybackSpeed: speed, Volume: volume }, true);
+				} else {
+					if (getSetting(GameSetting.Effects)) {
+						const sparkTemplate = ReplicatedStorage.FindFirstChild('Particles')?.FindFirstChild('spark') as BasePart | undefined;
+						if (sparkTemplate) {
+							const spark = sparkTemplate.Clone();
+							spark.CFrame = CFrame.lookAlong(point, unitVelocity.mul(-1));
+							spark.Parent = effectsFolder;
+							
+							const particleEmitter = spark.FindFirstChild('ParticleEmitter') as ParticleEmitter;
+							task.delay(0.1, () => (particleEmitter.Enabled = false));
+							
+							task.delay(particleEmitter.Lifetime.Max + 0.1, () => particleEmitter.Destroy());
+						}
+					}
+					
+					playSound('hit1', { PlaybackSpeed: speed, Volume: volume }, true);
+				}
 			}
 			
 			debounce = true;
@@ -1073,6 +1093,19 @@ RunService.Stepped.Connect((_, dt) => {
 
 	prevCubePosition = cube.Position;
 	cube.SetAttribute('lastVelocity', cube.AssemblyLinearVelocity);
+});
+
+Workspace.Terrain.Touched.Connect((otherPart) => {
+	if (!cube) return;
+	
+	if (otherPart === cube || (otherPart.IsDescendantOf(cube) && (otherPart.Name === 'Head' || otherPart.Name === 'Arm'))) {
+		if (otherPart.GetAttribute('waterSplashDebounce')) return;
+		
+		otherPart.SetAttribute('waterSplashDebounce', true);
+		task.delay(0.2, () => otherPart.SetAttribute('waterSplashDebounce', undefined));
+		
+		playSound('water_splash', { PlaybackSpeed: randomFloat(0.9, 1), Volume: math.clamp(otherPart.AssemblyLinearVelocity.Magnitude / 10, 1, 1.5) })
+	}
 });
 
 $print('Started running visual_effects.client.ts');

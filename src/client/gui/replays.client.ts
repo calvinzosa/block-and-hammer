@@ -1,12 +1,13 @@
 import {
-	    CollectionService,
-	    ReplicatedStorage,
-	    UserInputService,
-	    UserService,
-	    RunService,
+	CollectionService,
+	ReplicatedStorage,
+	UserInputService,
+	UserService,
+	RunService,
     Workspace,
     Players,
     Debris,
+	Lighting,
 } from '@rbxts/services'
 
 import { $print, $warn } from 'rbxts-transform-debug';
@@ -94,6 +95,7 @@ const durationProgress = durationBar.WaitForChild('Progress') as Frame;
 const durationInput = durationBar.WaitForChild('Input') as TextButton;
 const exitButton = playbackControls.WaitForChild('Exit') as TextButton;
 const timerDisplay = viewGui.WaitForChild('Timer') as TextLabel;
+const menuBlur = Lighting.WaitForChild('MenuBlur') as BlurEffect;
 
 const Recorder = new ReplayModule();
 
@@ -127,6 +129,7 @@ function formatUnixTimestamp(milliseconds: number) {
 function startRecording() {
     if (getCurrentArea(Workspace.FindFirstChild(`cube${player.UserId}`)) === 'ErrorLand') return;
 	
+	menuBlur.Size = 0;
 	recordingIndicator.Visible = true;
 	startRecordingButton.BackgroundTransparency = 0.5;
 	startRecordingButton.TextColor3 = Color3.fromRGB(175, 175, 175);

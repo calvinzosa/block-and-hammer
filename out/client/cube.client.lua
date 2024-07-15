@@ -86,6 +86,7 @@ local flippedGravity = ReplicatedStorage:WaitForChild("flipped_gravity")
 local mouseVisual = Workspace:WaitForChild("MouseVisual")
 local modifierDisablers = Workspace:WaitForChild("ForceDisableModifiers")
 local hitboxFolder = Workspace:WaitForChild("Hitboxes")
+local prevObstructedParts = {}
 local AbilityCooldowns = {
 	ExplosiveHammer = false,
 	Shotgun = false,
@@ -144,7 +145,7 @@ local function newPropeller(propeller)
 	end
 	if _condition then
 		if propeller.Parent == propellersFolder then
-			warn("[src/client/cube.client.ts:141]", "An invalid propeller was created.")
+			warn("[src/client/cube.client.ts:143]", "An invalid propeller was created.")
 		end
 		return nil
 	end
@@ -159,7 +160,7 @@ local function updatePropellers(cube, head, dt)
 			_result = _result:IsA("BasePart")
 		end
 		if not _result then
-			warn("[src/client/cube.client.ts:152]", "A propeller has broke!")
+			warn("[src/client/cube.client.ts:154]", "A propeller has broke!")
 			table.remove(cachedPropellers, i + 1)
 			break
 		end
@@ -994,7 +995,7 @@ local function winTouched(otherPart)
 		end
 		player:SetAttribute(PlayerAttributes.CompletedGame, true)
 		local totalTime = getCubeTime(otherPart)
-		print("[src/client/cube.client.ts:734]", `Completed '{currentArea}' in {totalTime}s`)
+		print("[src/client/cube.client.ts:736]", `Completed '{currentArea}' in {totalTime}s`)
 		Events.CompleteGame:FireServer(totalTime)
 		Events.MakeReplayEvent:Fire(string.format("win,%d", totalTime * 1000))
 	end
@@ -1366,7 +1367,7 @@ RunService.Heartbeat:Connect(function(dt)
 			armAlignOrientation.Enabled = true
 		end
 		if ragdollTime == 0 and previousRagdollTime > 0 then
-			print("[src/client/cube.client.ts:957]", "Pivot hammer back to cube")
+			print("[src/client/cube.client.ts:959]", "Pivot hammer back to cube")
 			local _cFrame = CFrame.new(cube.Position)
 			local _arg0 = CFrame.fromOrientation(0, 0, math.pi / 2)
 			arm.CFrame = _cFrame * _arg0
@@ -1497,7 +1498,8 @@ RunService.Heartbeat:Connect(function(dt)
 		local params = OverlapParams.new()
 		params.FilterType = Enum.RaycastFilterType.Include
 		params.FilterDescendantsInstances = { mapFolder }
-		for _, obstructingPart in Workspace:GetPartBoundsInBox(CFrame.new(start.X, start.Y, 0), Vector3.new(10, 10, 4096), params) do
+		local obstructingPartsList = Workspace:GetPartBoundsInBox(CFrame.new(start.X, start.Y, 0), Vector3.new(32, 32, 4096), params)
+		for _, obstructingPart in obstructingPartsList do
 			local _value_1 = obstructingPart:GetAttribute("CAMERA_TRANSPARENT")
 			if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then
 				local _condition_8 = (obstructingPart:GetAttribute("CAMERA_TRANSPARENCY"))
@@ -1506,6 +1508,14 @@ RunService.Heartbeat:Connect(function(dt)
 				end
 				local transparency = _condition_8
 				obstructingPart.LocalTransparencyModifier = numLerp(obstructingPart.LocalTransparencyModifier, transparency, dt * 5)
+				if not (table.find(prevObstructedParts, obstructingPart) ~= nil) then
+					table.insert(prevObstructedParts, obstructingPart)
+				end
+			end
+		end
+		for i, obstructingPart in pairs(prevObstructedParts) do
+			if not (table.find(obstructingPartsList, obstructingPart) ~= nil) then
+				table.remove(prevObstructedParts, i + 1)
 				TweenService:Create(obstructingPart, tweenTypes.linear.short, {
 					LocalTransparencyModifier = 0,
 				}):Play()

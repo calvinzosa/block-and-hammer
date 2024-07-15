@@ -6,6 +6,7 @@ import {
 	Workspace,
 	Lighting,
 	Players,
+	TweenService,
 } from '@rbxts/services';
 
 import { $print, $warn } from 'rbxts-transform-debug';
@@ -39,8 +40,6 @@ const Events = {
 	SettingChanged: ReplicatedStorage.WaitForChild('SettingChanged') as BindableEvent,
 	ClientReset: ReplicatedStorage.WaitForChild('ClientReset') as BindableEvent,
 };
-
-const debounces = { reset: false };
 
 const camera = Workspace.CurrentCamera ?? Workspace.WaitForChild('Camera') as Camera;
 const player = Players.LocalPlayer;
@@ -77,9 +76,17 @@ const playerList: string[] = [  ];
 const clickThreshold = 0.2;
 const menuToggle = new Icon().setLabel('Menu').lock();
 
-const blur = new Instance('BlurEffect');
-blur.Size = 0;
-blur.Parent = Lighting;
+const areaBlur = new Instance('BlurEffect');
+areaBlur.Name = 'AreaBlur';
+areaBlur.Size = 0;
+areaBlur.Parent = Lighting;
+
+const menuBlur = areaBlur.Clone();
+menuBlur.Enabled = true;
+menuBlur.Name = 'MenuBlur';
+menuBlur.Parent = Lighting;
+
+const debounces = { reset: false };
 
 const travellableAreas = [
 	{
@@ -168,6 +175,8 @@ function resetCharacter(fullReset: boolean = false) {
 }
 
 function updateSettingButtons() {
+	menuBlur.Enabled = getSetting(GameSetting.MenuBlur);
+	
 	for (const button of settingButtons.GetChildren()) {
 		if (button.IsA('TextButton')) button.Destroy();
 	}
@@ -200,15 +209,16 @@ function updateSettingButtons() {
 				const currentValue = !getSetting(name as GameSetting);
 				setSetting(name as GameSetting, currentValue);
 				
-				if (name === GameSetting.Modifiers) Events.SetModifiersSetting.FireServer(getSetting(GameSetting.Modifiers));
-				else if (name === GameSetting.TimerGUI) (screenGui.FindFirstChild('Timer') as TextLabel).Visible = getSetting(GameSetting.TimerGUI);
+				if (name === GameSetting.Modifiers) Events.SetModifiersSetting.FireServer(getSetting(name));
+				else if (name === GameSetting.TimerGUI) (screenGui.FindFirstChild('Timer') as TextLabel).Visible = getSetting(name);
 				else if (name === GameSetting.InvertMobileButtons) update();
+				else if (name === GameSetting.MenuBlur) menuBlur.Enabled = getSetting(name);
 				
 				button.Text = `${alias}: ${currentValue ? '✅' : '❌'}`;
 			});
 		}
 	}
-
+	
 	fixSettings();
 	player.SetAttribute(PlayerAttributes.Client.SettingsJSON, HttpService.JSONEncode(Settings));
 }
@@ -224,17 +234,19 @@ function toggleMenu() {
 			if (gui.Visible) {
 				gui.Visible = false;
 				menuOpen.Value = true;
-
+				
 				break;
 			}
 		}
 	}
-
+	
+	TweenService.Create(menuBlur, new TweenInfo(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), { Size: (!canMove.Value || menuOpen.Value) ? 24 : 0 }).Play();
+	
 	menuToggle.lock();
-
+	
 	if (!canMove.Value || menuOpen.Value) menuToggle.select();
 	else menuToggle.deselect();
-
+	
 	menuToggle.unlock();
 }
 
@@ -299,11 +311,11 @@ RunService.RenderStepped.Connect((dt) => {
 		camera.CFrame = camera.CFrame.Lerp(area.cameraCFrame.mul(mouseRotation), math.clamp(dt * 25, 0, 1));
 		
 		if (area.hasArea()) {
-			blur.Size = 0;
+			areaBlur.Size = 0;
 			(travelGui.FindFirstChild('AreaName') as TextLabel).Text = area.name;
 			(travelGui.FindFirstChild('Teleport') as TextButton).Visible = true;
 		} else {
-			blur.Size = 64;
+			areaBlur.Size = 64;
 			(travelGui.FindFirstChild('AreaName') as TextLabel).Text = '???';
 			(travelGui.FindFirstChild('Teleport') as TextButton).Visible = false;
 		}
@@ -313,7 +325,7 @@ RunService.RenderStepped.Connect((dt) => {
 		} else if (area.name === 'Level 2') {
 			Lighting.ClockTime = 0;
 		}
-	} else blur.Size = 0;
+	} else areaBlur.Size = 0;
 	
 	const shouldHideOthers = getSetting(GameSetting.HideOthers);
 	
@@ -384,10 +396,15 @@ Events.LoadSettingsJSON.OnClientEvent.Connect((settingsJSON: string) => {
 	}
 	
 	if (getSetting(GameSetting.Modifiers)) Events.SetModifiersSetting.FireServer(true);
-
+	if (getSetting(GameSetting.MenuBlur)) menuBlur.Enabled = getSetting(GameSetting.MenuBlur);
+	
 	updateSettingButtons();
-
+	
 	$print(`Loaded settings data: ${settingsJSON}`);
+});
+
+menuOpen.GetPropertyChangedSignal('Value').Connect(() => {
+	if (!menuOpen.Value && canMove.Value) TweenService.Create(menuBlur, new TweenInfo(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), { Size: 0 }).Play();
 });
 
 (menuButtons.WaitForChild('Reset') as TextButton).MouseButton1Click.Connect(() => {
@@ -575,6 +592,8 @@ Events.LoadSettingsJSON.OnClientEvent.Connect((settingsJSON: string) => {
 });
 
 (menuButtons.WaitForChild('FastTravel') as TextButton).MouseButton1Click.Connect(() => {
+	menuBlur.Size = 0;
+	
 	menuOpen.Value = false;
 	travelGui.Visible = true;
 	
@@ -618,7 +637,11 @@ Events.LoadSettingsJSON.OnClientEvent.Connect((settingsJSON: string) => {
 });
 
 Events.SettingChanged.Event.Connect(updateSettingButtons);
-Events.StartClientTutorial.Event.Connect(() => menuToggle.lock().deselect().unlock());
+
+Events.StartClientTutorial.Event.Connect(() => {
+	menuToggle.lock().deselect().unlock();
+	TweenService.Create(menuBlur, new TweenInfo(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), { Size: 0 }).Play();
+});
 
 for (const otherPlayer of Players.GetPlayers()) {
 	if (otherPlayer !== player) playerList.push(otherPlayer.Name);

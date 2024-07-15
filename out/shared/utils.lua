@@ -224,6 +224,7 @@ local GameSetting = {
 	CSG = "csg",
 	OrthographicView = "orthographic",
 	InvertMobileButtons = "invertmobilebuttons",
+	MenuBlur = "menublur",
 }
 local Settings = {
 	hideothers = false,
@@ -237,6 +238,7 @@ local Settings = {
 	csg = true,
 	orthographic = false,
 	invertmobilebuttons = false,
+	menublur = true,
 }
 local DefaultSettings = table.clone(Settings)
 local tweenTypes = {
@@ -264,19 +266,21 @@ local settingAlias = {
 	[GameSetting.CSG] = "CSG",
 	[GameSetting.OrthographicView] = "Orthographic View",
 	[GameSetting.InvertMobileButtons] = "Invert Mobile Buttons",
+	[GameSetting.MenuBlur] = "Menu Blur",
 }
 local settingOrder = {
 	[GameSetting.Modifiers] = 1,
 	[GameSetting.Music] = 2,
 	[GameSetting.Sounds] = 3,
 	[GameSetting.Effects] = 4,
-	[GameSetting.CSG] = 5,
-	[GameSetting.ScreenShake] = 6,
-	[GameSetting.ShowRange] = 7,
-	[GameSetting.HideOthers] = 8,
-	[GameSetting.TimerGUI] = 9,
-	[GameSetting.OrthographicView] = 10,
-	[GameSetting.InvertMobileButtons] = 11,
+	[GameSetting.MenuBlur] = 5,
+	[GameSetting.CSG] = 6,
+	[GameSetting.ScreenShake] = 7,
+	[GameSetting.ShowRange] = 8,
+	[GameSetting.HideOthers] = 9,
+	[GameSetting.TimerGUI] = 10,
+	[GameSetting.OrthographicView] = 11,
+	[GameSetting.InvertMobileButtons] = 12,
 }
 local function numLerp(a, b, t)
 	return a + (b - a) * t
@@ -803,7 +807,7 @@ local function giveBadge(player, badgeId)
 		return nil
 	end
 	if isTestingServer() then
-		warn("[src/shared/utils.ts:579]", `Badges are disabled in the Testing Server | Attempted to give badge {badgeId} to {player.Name}`)
+		warn("[src/shared/utils.ts:583]", `Badges are disabled in the Testing Server | Attempted to give badge {badgeId} to {player.Name}`)
 		return nil
 	end
 	local userId = player.UserId
@@ -820,11 +824,11 @@ local function giveBadge(player, badgeId)
 			local _exitType, _returns = TS.try(function()
 				if not BadgeService:UserHasBadgeAsync(userId, badgeId) then
 					BadgeService:AwardBadge(userId, badgeId)
-					print("[src/shared/utils.ts:592]", `Successfully badge {badgeId} to {player.Name}`)
+					print("[src/shared/utils.ts:596]", `Successfully badge {badgeId} to {player.Name}`)
 				end
 				return TS.TRY_BREAK
 			end, function(err)
-				warn("[src/shared/utils.ts:597]", err)
+				warn("[src/shared/utils.ts:601]", err)
 			end)
 			if _exitType then
 				break

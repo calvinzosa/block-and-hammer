@@ -93,6 +93,8 @@ const mouseVisual = Workspace.WaitForChild('MouseVisual') as BasePart;
 const modifierDisablers = Workspace.WaitForChild('ForceDisableModifiers') as BasePart;
 const hitboxFolder = Workspace.WaitForChild('Hitboxes') as Folder;
 
+const prevObstructedParts: BasePart[] = [  ];
+
 const AbilityCooldowns = {
 	ExplosiveHammer: false,
 	Shotgun: false,
@@ -1039,7 +1041,7 @@ RunService.Heartbeat.Connect((dt) => {
 		if (cubeScale !== 1) zoom *= cubeScale;
 		
 		wallPlane.Transparency = 1;
-
+		
 		if (getSetting(GameSetting.OrthographicView)) {
 			wallPlane.Transparency = 0.75;
 			
@@ -1047,33 +1049,42 @@ RunService.Heartbeat.Connect((dt) => {
 			
 			for (const [ i, particle ] of pairs(cachedParticles)) {
 				if (!particle.IsDescendantOf(Workspace)) cachedParticles.remove(i - 1);
-
+				
 				if (!particle.Enabled || particle.GetAttribute('__emitDebounce')) continue;
-
+				
 				if (particle.Rate < math.huge) {
 					particle.SetAttribute('__emitDebounce', true);
 					task.delay(1 / particle.Rate, () => particle.SetAttribute('__emitDebounce', undefined));
 				}
-
+				
 				particle.Emit(1);
 			}
 		}
-
+		
 		const cameraCFrame = CFrame.lookAt(cameraPosition.sub(new Vector3(0, 0, zoom + velocity)), cameraPosition, up);
-
+		
 		const start = cube.Position;
-
+		
 		const params = new OverlapParams();
 		params.FilterType = Enum.RaycastFilterType.Include;
 		params.FilterDescendantsInstances = [mapFolder];
-
-		for (const obstructingPart of Workspace.GetPartBoundsInBox(new CFrame(start.X, start.Y, 0), new Vector3(10, 10, 4096), params)) {
+		
+		const obstructingPartsList = Workspace.GetPartBoundsInBox(new CFrame(start.X, start.Y, 0), new Vector3(32, 32, 4096), params);
+		
+		for (const obstructingPart of obstructingPartsList) {
 			if (obstructingPart.GetAttribute('CAMERA_TRANSPARENT')) {
 				const transparency = (obstructingPart.GetAttribute('CAMERA_TRANSPARENCY') as number) ?? 0.9;
 				obstructingPart.LocalTransparencyModifier = numLerp(obstructingPart.LocalTransparencyModifier, transparency, dt * 5);
-				TweenService.Create(obstructingPart, tweenTypes.linear.short, {
-					LocalTransparencyModifier: 0,
-				}).Play();
+				
+				if (!prevObstructedParts.includes(obstructingPart)) prevObstructedParts.push(obstructingPart);
+			}
+		}
+		
+		for (const [ i, obstructingPart ] of pairs(prevObstructedParts)) {
+			if (!obstructingPartsList.includes(obstructingPart)) {
+				prevObstructedParts.remove(i);
+				
+				TweenService.Create(obstructingPart, tweenTypes.linear.short, { LocalTransparencyModifier: 0 }).Play();
 			}
 		}
 		

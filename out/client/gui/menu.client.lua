@@ -8,6 +8,7 @@ local RunService = _services.RunService
 local Workspace = _services.Workspace
 local Lighting = _services.Lighting
 local Players = _services.Players
+local TweenService = _services.TweenService
 local Icon = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "topbar-plus", "out").Icon
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
 local PlayerAttributes = _utils.PlayerAttributes
@@ -32,9 +33,6 @@ local Events = {
 	ClientForceReset = ReplicatedStorage:WaitForChild("ClientForceReset"),
 	SettingChanged = ReplicatedStorage:WaitForChild("SettingChanged"),
 	ClientReset = ReplicatedStorage:WaitForChild("ClientReset"),
-}
-local debounces = {
-	reset = false,
 }
 local camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera")
 local player = Players.LocalPlayer
@@ -68,9 +66,17 @@ local statsGui = screenGui:WaitForChild("StatsGUI")
 local playerList = {}
 local clickThreshold = 0.2
 local menuToggle = Icon.new():setLabel("Menu"):lock()
-local blur = Instance.new("BlurEffect")
-blur.Size = 0
-blur.Parent = Lighting
+local areaBlur = Instance.new("BlurEffect")
+areaBlur.Name = "AreaBlur"
+areaBlur.Size = 0
+areaBlur.Parent = Lighting
+local menuBlur = areaBlur:Clone()
+menuBlur.Enabled = true
+menuBlur.Name = "MenuBlur"
+menuBlur.Parent = Lighting
+local debounces = {
+	reset = false,
+}
 local travellableAreas = { {
 	name = "Level 1",
 	hasArea = function()
@@ -169,6 +175,7 @@ local function resetCharacter(fullReset)
 	effectsFolder:ClearAllChildren()
 end
 local function updateSettingButtons()
+	menuBlur.Enabled = getSetting(GameSetting.MenuBlur)
 	for _, button in settingButtons:GetChildren() do
 		if button:IsA("TextButton") then
 			button:Destroy()
@@ -202,11 +209,13 @@ local function updateSettingButtons()
 				local currentValue = not getSetting(name)
 				setSetting(name, currentValue)
 				if name == GameSetting.Modifiers then
-					Events.SetModifiersSetting:FireServer(getSetting(GameSetting.Modifiers))
+					Events.SetModifiersSetting:FireServer(getSetting(name))
 				elseif name == GameSetting.TimerGUI then
-					(screenGui:FindFirstChild("Timer")).Visible = getSetting(GameSetting.TimerGUI)
+					(screenGui:FindFirstChild("Timer")).Visible = getSetting(name)
 				elseif name == GameSetting.InvertMobileButtons then
 					update()
+				elseif name == GameSetting.MenuBlur then
+					menuBlur.Enabled = getSetting(name)
 				end
 				button.Text = `{alias}: {if currentValue then "✅" else "❌"}`
 			end)
@@ -231,6 +240,9 @@ local function toggleMenu()
 			end
 		end
 	end
+	TweenService:Create(menuBlur, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+		Size = if (not canMove.Value or menuOpen.Value) then 24 else 0,
+	}):Play()
 	menuToggle:lock()
 	if not canMove.Value or menuOpen.Value then
 		menuToggle:select()
@@ -298,11 +310,11 @@ RunService.RenderStepped:Connect(function(dt)
 		camera.CFrame = camera.CFrame:Lerp(area.cameraCFrame * mouseRotation, math.clamp(dt * 25, 0, 1))
 		local _value = area.hasArea()
 		if _value ~= 0 and _value == _value and _value ~= "" and _value then
-			blur.Size = 0
+			areaBlur.Size = 0
 			(travelGui:FindFirstChild("AreaName")).Text = area.name;
 			(travelGui:FindFirstChild("Teleport")).Visible = true
 		else
-			blur.Size = 64
+			areaBlur.Size = 64
 			(travelGui:FindFirstChild("AreaName")).Text = "???"
 			(travelGui:FindFirstChild("Teleport")).Visible = false
 		end
@@ -312,7 +324,7 @@ RunService.RenderStepped:Connect(function(dt)
 			Lighting.ClockTime = 0
 		end
 	else
-		blur.Size = 0
+		areaBlur.Size = 0
 	end
 	local shouldHideOthers = getSetting(GameSetting.HideOthers)
 	for _, otherPlayer in Players:GetPlayers() do
@@ -397,7 +409,7 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 	end
 	if (currentTime - lastChange) > 5 and not areSettingsSaved and not settingsGui.Visible then
-		print("[src/client/gui/menu.client.ts:362]", `Saved settings: {HttpService:JSONEncode(Settings)}`)
+		print("[src/client/gui/menu.client.ts:374]", `Saved settings: {HttpService:JSONEncode(Settings)}`)
 		Events.SaveSettingsJSON:FireServer(Settings)
 		areSettingsSaved = true
 	end
@@ -408,7 +420,7 @@ Events.LoadSettingsJSON.OnClientEvent:Connect(function(settingsJSON)
 		local decodedSettings = HttpService:JSONDecode(settingsJSON)
 		newSettings = decodedSettings
 	end, function(err)
-		warn("[src/client/gui/menu.client.ts:374]", `Unable to decode settings JSON | Error: {err}`)
+		warn("[src/client/gui/menu.client.ts:386]", `Unable to decode settings JSON | Error: {err}`)
 		return TS.TRY_RETURN, {}
 	end)
 	if _exitType then
@@ -424,8 +436,18 @@ Events.LoadSettingsJSON.OnClientEvent:Connect(function(settingsJSON)
 	if getSetting(GameSetting.Modifiers) then
 		Events.SetModifiersSetting:FireServer(true)
 	end
+	if getSetting(GameSetting.MenuBlur) then
+		menuBlur.Enabled = getSetting(GameSetting.MenuBlur)
+	end
 	updateSettingButtons()
-	print("[src/client/gui/menu.client.ts:390]", `Loaded settings data: {settingsJSON}`)
+	print("[src/client/gui/menu.client.ts:403]", `Loaded settings data: {settingsJSON}`)
+end)
+menuOpen:GetPropertyChangedSignal("Value"):Connect(function()
+	if not menuOpen.Value and canMove.Value then
+		TweenService:Create(menuBlur, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+			Size = 0,
+		}):Play()
+	end
 end);
 (menuButtons:WaitForChild("Reset")).MouseButton1Click:Connect(function()
 	if debounces.reset then
@@ -620,6 +642,7 @@ end);
 	replaysGui.Visible = false
 end);
 (menuButtons:WaitForChild("FastTravel")).MouseButton1Click:Connect(function()
+	menuBlur.Size = 0
 	menuOpen.Value = false
 	travelGui.Visible = true
 	currentTravelIndex = 0
@@ -669,7 +692,10 @@ end);
 end)
 Events.SettingChanged.Event:Connect(updateSettingButtons)
 Events.StartClientTutorial.Event:Connect(function()
-	return menuToggle:lock():deselect():unlock()
+	menuToggle:lock():deselect():unlock()
+	TweenService:Create(menuBlur, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+		Size = 0,
+	}):Play()
 end)
 for _, otherPlayer in Players:GetPlayers() do
 	if otherPlayer ~= player then

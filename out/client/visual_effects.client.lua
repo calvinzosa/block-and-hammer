@@ -219,9 +219,11 @@ local function createDebris(velocity, position, part, multiplier, createHole, ha
 				PlaybackSpeed = randomFloat(0.9, 1),
 			}, true)
 		end
+		local volume = velocity.Magnitude / 7.5
+		local speed = randomFloat(0.9, 1)
 		playSound("hit2", {
-			PlaybackSpeed = randomFloat(0.9, 1),
-			Volume = velocity.Magnitude / 7.5,
+			PlaybackSpeed = speed,
+			Volume = volume,
 		})
 	end
 end
@@ -523,12 +525,12 @@ local function newPart(part)
 		return nil
 	end
 	part:SetAttribute("processed", true)
-	print("[src/client/visual_effects.client.ts:477]", `Cube added: {part.Name} (Client: cube{player.UserId})`)
+	print("[src/client/visual_effects.client.ts:476]", `Cube added: {part.Name} (Client: cube{player.UserId})`)
 	StrokeScale:ScaleBillboardGui(part:WaitForChild("OverheadGUI"), 950)
 	if not isClientCube(part) then
 		return nil
 	end
-	print("[src/client/visual_effects.client.ts:483]", "> Client cube respawned")
+	print("[src/client/visual_effects.client.ts:482]", "> Client cube respawned")
 	cube = part
 	head = cube:WaitForChild("Head", 30)
 	if not head then
@@ -927,32 +929,76 @@ local function newPart(part)
 				local point = otherPart:GetClosestPointOnSurface(head.Position)
 				local headVelocity = head.AssemblyLinearVelocity
 				local unitVelocity = headVelocity.Unit
-				if getSetting(GameSetting.Effects) then
-					local _result = ReplicatedStorage:FindFirstChild("Particles")
-					if _result ~= nil then
-						_result = _result:FindFirstChild("spark")
-					end
-					local sparkTemplate = _result
-					if sparkTemplate then
-						local spark = sparkTemplate:Clone()
-						spark.CFrame = CFrame.lookAlong(point, unitVelocity * (-1))
-						spark.Parent = effectsFolder
-						local particleEmitter = spark:FindFirstChild("ParticleEmitter")
-						task.delay(0.1, function()
-							particleEmitter.Enabled = false
-							return particleEmitter.Enabled
-						end)
-						task.delay(particleEmitter.Lifetime.Max + 0.1, function()
-							return particleEmitter:Destroy()
-						end)
-					end
-				end
 				local dataString = string.format("spark,%d,%d,,%d,%d,", math.round(point.X * 1000), math.round(point.Y * 1000), math.round(headVelocity.X * 1000), math.round(headVelocity.Y * 1000))
 				Events.MakeReplayEvent:Fire(dataString)
-				playSound("hit1", {
-					PlaybackSpeed = randomFloat(0.9, 1),
-					Volume = headVelocity.Magnitude / 30,
-				}, true)
+				local volume = headVelocity.Magnitude / 30
+				local speed = randomFloat(0.9, 1)
+				if otherPart.Material == Enum.Material.Wood or otherPart.Material == Enum.Material.WoodPlanks then
+					playSound("wood_hit", {
+						PlaybackSpeed = speed,
+						Volume = volume * 0.4,
+					}, true)
+				elseif otherPart.Material == Enum.Material.Plastic then
+					playSound("plastic_hit", {
+						PlaybackSpeed = speed,
+						Volume = volume,
+					}, true)
+				elseif otherPart.Material == Enum.Material.Grass or otherPart.Material == Enum.Material.LeafyGrass then
+					playSound("grass_hit", {
+						PlaybackSpeed = speed,
+						Volume = volume,
+					}, true)
+				elseif otherPart.Material == Enum.Material.Ground then
+					playSound("dirt_hit", {
+						PlaybackSpeed = speed,
+						Volume = volume,
+					}, true)
+				elseif otherPart.Material == Enum.Material.Slate or otherPart.Material == Enum.Material.Concrete or otherPart.Material == Enum.Material.Marble then
+					playSound("stone_hit", {
+						PlaybackSpeed = speed,
+						Volume = volume,
+					}, true)
+				elseif otherPart.Material == Enum.Material.Glass then
+					playSound("glass_hit", {
+						PlaybackSpeed = speed,
+						Volume = volume,
+					}, true)
+				elseif otherPart.Material == Enum.Material.Brick then
+					playSound("brick_hit", {
+						PlaybackSpeed = speed,
+						Volume = volume,
+					}, true)
+				elseif otherPart.Material == Enum.Material.Sand then
+					playSound("sand_hit", {
+						PlaybackSpeed = speed,
+						Volume = volume,
+					}, true)
+				else
+					if getSetting(GameSetting.Effects) then
+						local _result = ReplicatedStorage:FindFirstChild("Particles")
+						if _result ~= nil then
+							_result = _result:FindFirstChild("spark")
+						end
+						local sparkTemplate = _result
+						if sparkTemplate then
+							local spark = sparkTemplate:Clone()
+							spark.CFrame = CFrame.lookAlong(point, unitVelocity * (-1))
+							spark.Parent = effectsFolder
+							local particleEmitter = spark:FindFirstChild("ParticleEmitter")
+							task.delay(0.1, function()
+								particleEmitter.Enabled = false
+								return particleEmitter.Enabled
+							end)
+							task.delay(particleEmitter.Lifetime.Max + 0.1, function()
+								return particleEmitter:Destroy()
+							end)
+						end
+					end
+					playSound("hit1", {
+						PlaybackSpeed = speed,
+						Volume = volume,
+					}, true)
+				end
 			end
 			debounce = true
 			task.delay(0.25, function()
@@ -1154,7 +1200,26 @@ RunService.Stepped:Connect(function(_, dt)
 	prevCubePosition = cube.Position
 	cube:SetAttribute("lastVelocity", cube.AssemblyLinearVelocity)
 end)
-print("[src/client/visual_effects.client.ts:1078]", "Started running visual_effects.client.ts")
+Workspace.Terrain.Touched:Connect(function(otherPart)
+	if not cube then
+		return nil
+	end
+	if otherPart == cube or (otherPart:IsDescendantOf(cube) and (otherPart.Name == "Head" or otherPart.Name == "Arm")) then
+		local _value = otherPart:GetAttribute("waterSplashDebounce")
+		if _value ~= 0 and _value == _value and _value ~= "" and _value then
+			return nil
+		end
+		otherPart:SetAttribute("waterSplashDebounce", true)
+		task.delay(0.2, function()
+			return otherPart:SetAttribute("waterSplashDebounce", nil)
+		end)
+		playSound("water_splash", {
+			PlaybackSpeed = randomFloat(0.9, 1),
+			Volume = math.clamp(otherPart.AssemblyLinearVelocity.Magnitude / 10, 1, 1.5),
+		})
+	end
+end)
+print("[src/client/visual_effects.client.ts:1111]", "Started running visual_effects.client.ts")
 while true do
 	local _value = task.wait(0.05)
 	if not (_value ~= 0 and _value == _value and _value) then

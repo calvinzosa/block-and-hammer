@@ -172,6 +172,7 @@ export enum GameSetting {
 	CSG = 'csg',
 	OrthographicView = 'orthographic',
 	InvertMobileButtons = 'invertmobilebuttons',
+	MenuBlur = 'menublur',
 }
 
 export type BaseSettings = Record<GameSetting, boolean>;
@@ -188,6 +189,7 @@ export const Settings: BaseSettings = {
 	csg: true,
 	orthographic: false,
 	invertmobilebuttons: false,
+	menublur: true,
 };
 
 export const DefaultSettings = table.clone(Settings);
@@ -217,6 +219,7 @@ const settingAlias: Record<GameSetting, string> = {
 	[GameSetting.CSG]: 'CSG',
 	[GameSetting.OrthographicView]: 'Orthographic View',
 	[GameSetting.InvertMobileButtons]: 'Invert Mobile Buttons',
+	[GameSetting.MenuBlur]: 'Menu Blur',
 };
 
 const settingOrder: Record<GameSetting, number> = {
@@ -224,13 +227,14 @@ const settingOrder: Record<GameSetting, number> = {
 	[GameSetting.Music]: 2,
 	[GameSetting.Sounds]: 3,
 	[GameSetting.Effects]: 4,
-	[GameSetting.CSG]: 5,
-	[GameSetting.ScreenShake]: 6,
-	[GameSetting.ShowRange]: 7,
-	[GameSetting.HideOthers]: 8,
-	[GameSetting.TimerGUI]: 9,
-	[GameSetting.OrthographicView]: 10,
-	[GameSetting.InvertMobileButtons]: 11,
+	[GameSetting.MenuBlur]: 5,
+	[GameSetting.CSG]: 6,
+	[GameSetting.ScreenShake]: 7,
+	[GameSetting.ShowRange]: 8,
+	[GameSetting.HideOthers]: 9,
+	[GameSetting.TimerGUI]: 10,
+	[GameSetting.OrthographicView]: 11,
+	[GameSetting.InvertMobileButtons]: 12,
 };
 
 export function numLerp(a: number, b: number, t: number) {

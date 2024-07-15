@@ -91,7 +91,11 @@ function createCube(player: Player, firstTime: boolean, prevArea = 'None') {
 	cube.SetAttribute('start_time', getTime());
 	
 	task.spawn(() => {
-		while (!cube.CanSetNetworkOwnership()) task.wait();
+		let [ canSetNetworkOwner ] = cube.CanSetNetworkOwnership();
+		while (!canSetNetworkOwner) {
+			task.wait(0.1);
+			[ canSetNetworkOwner ] = cube.CanSetNetworkOwnership();
+		}
 		
 		cube.SetNetworkOwner(player);
 		head.SetNetworkOwner(player);
@@ -348,6 +352,18 @@ RunService.Stepped.Connect(() => {
 	for (const player of Players.GetPlayers()) {
 		const cube = Workspace.FindFirstChild(`cube${player.UserId}`) as BasePart | undefined;
 		if (cube) {
+			const [ canSetNetworkOwner ] = cube.CanSetNetworkOwnership();
+			if (canSetNetworkOwner) {
+				if (cube.GetNetworkOwner() !== player && !cube.GetAttribute('networkOwnerDebounce')) {
+					try {
+						cube.SetNetworkOwner(player);
+					} catch (err) {  }
+					
+					cube.SetAttribute('networkOwnerDebounce', true);
+					task.delay(2, () => cube.SetAttribute('networkOwnerDebounce', undefined));
+				}
+			}
+			
 			const [ altitude ] = convertStudsToMeters(cube.Position.Y, true);
 			if (altitude > 800) {
 				if (player.GetAttribute(PlayerAttributes.HasGravityBadge) === undefined) {

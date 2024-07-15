@@ -115,8 +115,10 @@ local function createCube(player, firstTime, prevArea)
 	player:SetAttribute(PlayerAttributes.TotalTime, nil)
 	cube:SetAttribute("start_time", getTime())
 	task.spawn(function()
-		while not { cube:CanSetNetworkOwnership() } do
-			task.wait()
+		local canSetNetworkOwner = cube:CanSetNetworkOwnership()
+		while not canSetNetworkOwner do
+			task.wait(0.1)
+			canSetNetworkOwner = cube:CanSetNetworkOwnership()
 		end
 		cube:SetNetworkOwner(player)
 		head:SetNetworkOwner(player)
@@ -493,6 +495,23 @@ RunService.Stepped:Connect(function()
 	for _, player in Players:GetPlayers() do
 		local cube = Workspace:FindFirstChild(`cube{player.UserId}`)
 		if cube then
+			local canSetNetworkOwner = cube:CanSetNetworkOwnership()
+			if canSetNetworkOwner then
+				local _condition = cube:GetNetworkOwner() ~= player
+				if _condition then
+					local _value = cube:GetAttribute("networkOwnerDebounce")
+					_condition = not (_value ~= 0 and _value == _value and _value ~= "" and _value)
+				end
+				if _condition then
+					TS.try(function()
+						cube:SetNetworkOwner(player)
+					end, function(err) end)
+					cube:SetAttribute("networkOwnerDebounce", true)
+					task.delay(2, function()
+						return cube:SetAttribute("networkOwnerDebounce", nil)
+					end)
+				end
+			end
 			local _binding = convertStudsToMeters(cube.Position.Y, true)
 			local altitude = _binding[1]
 			if altitude > 800 then
