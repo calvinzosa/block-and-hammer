@@ -10,7 +10,9 @@ local convertStudsToMeters = _utils.convertStudsToMeters
 local getHammerTexture = _utils.getHammerTexture
 local PlayerAttributes = _utils.PlayerAttributes
 local getCurrentArea = _utils.getCurrentArea
+local GameSetting = _utils.GameSetting
 local Accessories = _utils.Accessories
+local getSetting = _utils.getSetting
 local numLerp = _utils.numLerp
 local player = Players.LocalPlayer
 local GUI = player:WaitForChild("PlayerGui")
@@ -59,48 +61,50 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 	local currentHammer = getHammerTexture(targetPlayer)
 	local activeMusic = nil
-	local _value = player:GetAttribute(PlayerAttributes.Client.InMainMenu)
-	if _value ~= 0 and _value == _value and _value ~= "" and _value then
-		activeMusic = Music.Jamming
-	else
-		local _result_1 = targetCube
-		if _result_1 ~= nil then
-			_result_1 = _result_1:IsA("BasePart")
-		end
-		if _result_1 then
-			local area = getCurrentArea(targetCube)
-			local _binding = convertStudsToMeters(targetCube.Position.Y, true)
-			local altitude = _binding[1]
-			if area == "Tutorial" then
-				activeMusic = Music.CrystalCave
-			elseif area == "Level 1" then
-				if altitude < 100 then
-					activeMusic = Music.StartingOff
-				elseif altitude < 200 then
-					activeMusic = Music.SolitaryIsle
-				elseif altitude < 300 then
-					activeMusic = Music.TheLake
-				elseif altitude < 400 then
-					activeMusic = Music.Mountain
-				elseif altitude < 500 then
-					activeMusic = Music.HauntedField
-				elseif altitude < 700 then
-					activeMusic = Music.Mountain
-				else
-					activeMusic = Music.Garden
+	if getSetting(GameSetting.Music) then
+		local _value = player:GetAttribute(PlayerAttributes.Client.InMainMenu)
+		if _value ~= 0 and _value == _value and _value ~= "" and _value then
+			activeMusic = Music.Jamming
+		else
+			local _result_1 = targetCube
+			if _result_1 ~= nil then
+				_result_1 = _result_1:IsA("BasePart")
+			end
+			if _result_1 then
+				local area = getCurrentArea(targetCube)
+				local _binding = convertStudsToMeters(targetCube.Position.Y, true)
+				local altitude = _binding[1]
+				if area == "Tutorial" then
+					activeMusic = Music.CrystalCave
+				elseif area == "Level 1" then
+					if altitude < 100 then
+						activeMusic = Music.StartingOff
+					elseif altitude < 200 then
+						activeMusic = Music.SolitaryIsle
+					elseif altitude < 300 then
+						activeMusic = Music.TheLake
+					elseif altitude < 400 then
+						activeMusic = Music.Mountain
+					elseif altitude < 500 then
+						activeMusic = Music.HauntedField
+					elseif altitude < 700 then
+						activeMusic = Music.Mountain
+					else
+						activeMusic = Music.Garden
+					end
+				elseif area == "Level 2: Entrance" then
+					activeMusic = Music.ForestOfFall
+				elseif area == "Level 2: Cave 1" then
+					activeMusic = Music.CrystallizedAbyss
+				elseif area == "Level 2" then
 				end
-			elseif area == "Level 2: Entrance" then
-				activeMusic = Music.ForestOfFall
-			elseif area == "Level 2: Cave 1" then
-				activeMusic = Music.CrystallizedAbyss
-			elseif area == "Level 2" then
 			end
 		end
 	end
 	for _, sound in pairs(Music) do
 		local targetVolume = if sound == activeMusic then (sound:GetAttribute("originalVolume")) else 0
 		sound.Volume = numLerp(sound.Volume, targetVolume, dt * 5)
-		local _value_1 = currentHammer == Accessories.HammerTexture.Hammer404 and targetPlayer:GetAttribute(PlayerAttributes.HasModifiers)
-		sound.PlaybackSpeed = if _value_1 ~= 0 and _value_1 == _value_1 and _value_1 ~= "" and _value_1 then 0.5 else 1
+		local _value = currentHammer == Accessories.HammerTexture.Hammer404 and targetPlayer:GetAttribute(PlayerAttributes.HasModifiers)
+		sound.PlaybackSpeed = if _value ~= 0 and _value == _value and _value ~= "" and _value then 0.5 else 1
 	end
 end)

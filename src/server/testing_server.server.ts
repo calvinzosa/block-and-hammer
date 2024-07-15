@@ -14,7 +14,7 @@ else ownerId.Value = game.PrivateServerOwnerId;
 if (isMainServer()) {
 	$print('Server Type: Main');
 
-	if (ownerId.Value === GameData.CreatorId) {
+	if (GameData.CreatorIds.includes(ownerId.Value)) {
 		while (task.wait(3)) {
 			let savedServerId;
 			while (true) {

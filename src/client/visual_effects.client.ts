@@ -1,4 +1,13 @@
-import { CollectionService, ReplicatedStorage, GeometryService, TweenService, RunService, Lighting, Players, Debris, Workspace } from '@rbxts/services';
+import {
+	CollectionService,
+	ReplicatedStorage,
+	GeometryService,
+	TweenService,
+	RunService,
+	Workspace,
+	Lighting,
+	Players,
+} from '@rbxts/services';
 
 import { $print } from 'rbxts-transform-debug';
 
@@ -130,10 +139,8 @@ function createDebris(velocity: Vector3, position: Vector3, part: BasePart, mult
 			weld.Parent = circle;
 
 			task.delay(5, () => {
-				TweenService.Create(circle, tweenTypes.linear.short, {
-					Transparency: 1,
-				}).Play();
-				Debris.AddItem(circle, 1);
+				TweenService.Create(circle, tweenTypes.linear.short, { Transparency: 1 }).Play();
+				task.delay(1, () => circle.Destroy());
 			});
 
 			circle.Parent = effectsFolder;
@@ -174,10 +181,8 @@ function createDebris(velocity: Vector3, position: Vector3, part: BasePart, mult
 					debris.AssemblyAngularVelocity = randomDirection();
 
 					task.delay(1, () => {
-						TweenService.Create(debris, tweenTypes.linear.short, {
-							Transparency: 1,
-						}).Play();
-						Debris.AddItem(debris, 1);
+						TweenService.Create(debris, tweenTypes.linear.short, { Transparency: 1 }).Play();
+						task.delay(1, () => debris.Destroy());
 					});
 				}
 			}
@@ -239,10 +244,10 @@ function normalToFace(normalVector: Vector3, part: BasePart): Enum.NormalId | un
 
 function breakPart(otherPart: BasePart, head: BasePart, isOnlyEffect: boolean = false): void {
 	createDebris(head.AssemblyLinearVelocity, head.Position, otherPart, 1, false);
-
+	
 	const particles = otherPart.FindFirstChildWhichIsA('ParticleEmitter');
 	if (particles) particles.Emit(math.random(20, 30));
-
+	
 	if (!isOnlyEffect) {
 		otherPart.CanCollide = false;
 		otherPart.LocalTransparencyModifier = 0.75;
@@ -254,85 +259,81 @@ function breakPart(otherPart: BasePart, head: BasePart, isOnlyEffect: boolean = 
 			}
 		}
 	}
-
-	if (getSetting(GameSetting.CSG)) {
-		const model = new Instance('Model');
-		otherPart.Clone().Parent = model;
-		const [_, boundingBox] = model.GetBoundingBox();
-		model.Destroy();
-
-		const closestPoint = otherPart.GetClosestPointOnSurface(head.Position);
-		const maxSize = math.max(boundingBox.X, boundingBox.Y, boundingBox.Z);
-		const flingVector = new Vector3(0, 30, 0);
-
-		if (otherPart.IsA('UnionOperation')) {
-			const piece = otherPart.Clone();
-			piece.Anchored = false;
-			piece.CanCollide = true;
-			piece.CollisionGroup = 'debris';
-			piece.AssemblyLinearVelocity = piece.GetClosestPointOnSurface(closestPoint).sub(closestPoint).Unit.mul(10).add(flingVector);
-			piece.AssemblyAngularVelocity = randomDirection();
-			piece.Parent = effectsFolder;
-
-			TweenService.Create(piece, tweenTypes.linear.medium, {
-				Transparency: 1,
-			}).Play();
-			Debris.AddItem(piece, tweenTypes.linear.medium.Time);
-		} else {
-			const slicers: BasePart[] = [];
-
-			for (const i of $range(1, 6)) {
-				const plane = new Instance('Part');
-				plane.CanCollide = false;
-				plane.Anchored = true;
-				plane.Transparency = 1;
-				plane.CFrame = CFrame.lookAlong(otherPart.Position.add(randomDirection(boundingBox.div(2))), randomDirection());
-				plane.Size = new Vector3(0.5, maxSize * 3, maxSize * 3);
-				plane.Parent = effectsFolder;
-				slicers.push(plane);
-			}
-
-			const pieces = GeometryService.SubtractAsync(otherPart, slicers, subtractOptions) as PartOperation[];
-			for (const piece of pieces) {
+	
+	task.spawn(() => {
+		if (getSetting(GameSetting.CSG)) {
+			const model = new Instance('Model');
+			otherPart.Clone().Parent = model;
+			
+			const [ , boundingBox ] = model.GetBoundingBox();
+			model.Destroy();
+			
+			const closestPoint = otherPart.GetClosestPointOnSurface(head.Position);
+			const maxSize = math.max(boundingBox.X, boundingBox.Y, boundingBox.Z);
+			const flingVector = new Vector3(0, 30, 0);
+			
+			if (otherPart.IsA('UnionOperation')) {
+				const piece = otherPart.Clone();
 				piece.Anchored = false;
 				piece.CanCollide = true;
 				piece.CollisionGroup = 'debris';
 				piece.AssemblyLinearVelocity = piece.GetClosestPointOnSurface(closestPoint).sub(closestPoint).Unit.mul(10).add(flingVector);
 				piece.AssemblyAngularVelocity = randomDirection();
 				piece.Parent = effectsFolder;
-
-				TweenService.Create(piece, tweenTypes.linear.medium, {
-					Transparency: 1,
-				}).Play();
-				Debris.AddItem(piece, tweenTypes.linear.medium.Time);
+				
+				TweenService.Create(piece, tweenTypes.linear.medium, { Transparency: 1 }).Play();
+				task.delay(2.5, () => piece.Destroy());
+			} else {
+				const slicers: BasePart[] = [];
+				
+				for (const _ of $range(1, 6)) {
+					const plane = new Instance('Part');
+					plane.CanCollide = false;
+					plane.Anchored = true;
+					plane.Transparency = 1;
+					plane.CFrame = CFrame.lookAlong(otherPart.Position.add(randomDirection(boundingBox.div(2))), randomDirection());
+					plane.Size = new Vector3(0.5, maxSize * 3, maxSize * 3);
+					plane.Parent = effectsFolder;
+					slicers.push(plane);
+				}
+				
+				const pieces = GeometryService.SubtractAsync(otherPart, slicers, subtractOptions) as PartOperation[];
+				for (const piece of pieces) {
+					piece.Anchored = false;
+					piece.CanCollide = true;
+					piece.CollisionGroup = 'debris';
+					piece.AssemblyLinearVelocity = piece.GetClosestPointOnSurface(closestPoint).sub(closestPoint).Unit.mul(10).add(flingVector);
+					piece.AssemblyAngularVelocity = randomDirection();
+					piece.Parent = effectsFolder;
+					
+					TweenService.Create(piece, tweenTypes.linear.medium, { Transparency: 1 }).Play();
+					task.delay(2.5, () => piece.Destroy());
+				}
 			}
 		}
-	}
-
-	if (!isOnlyEffect) otherPart.LocalTransparencyModifier = 1;
-	waitUntil(() => cube && cube.Position.sub(otherPart.GetClosestPointOnSurface(cube.Position)).Magnitude > 25, 14);
-
+		
+		if (!isOnlyEffect) otherPart.LocalTransparencyModifier = 1;
+	});
+	
+	const cubeScale = (cube?.GetAttribute('scale') as number | undefined) ?? 1;
+	waitUntil(() => cube && cube.Position.sub(otherPart.GetClosestPointOnSurface(cube.Position)).Magnitude > 25 * cubeScale, 14);
+	
 	if (!isOnlyEffect) {
 		const partId = getPartId(otherPart);
 		const dataString = string.format('respawn,%s', partId);
 		Events.MakeReplayEvent.Fire(dataString);
-
+		
 		otherPart.SetAttribute('CAN_BREAK', false);
-		TweenService.Create(otherPart, tweenTypes.linear.short, {
-			LocalTransparencyModifier: 0,
-		}).Play();
+		TweenService.Create(otherPart, tweenTypes.linear.short, { LocalTransparencyModifier: 0 }).Play();
+		
 		for (const descendant of otherPart.GetDescendants()) {
 			if (descendant.IsA('BasePart')) {
-				TweenService.Create(descendant, tweenTypes.linear.short, {
-					LocalTransparencyModifier: 0,
-				}).Play();
+				TweenService.Create(descendant, tweenTypes.linear.short, { LocalTransparencyModifier: 0 }).Play();
 			} else if (descendant.IsA('Decal') || descendant.IsA('Texture')) {
-				TweenService.Create(descendant, tweenTypes.linear.short, {
-					Transparency: 0,
-				}).Play();
+				TweenService.Create(descendant, tweenTypes.linear.short, { Transparency: 0 }).Play();
 			}
 		}
-
+		
 		task.wait(tweenTypes.linear.short.Time);
 		otherPart.CanCollide = true;
 		otherPart.SetAttribute('CAN_BREAK', true);
@@ -356,74 +357,74 @@ function shatterPart(otherPart: BasePart, head: BasePart, isOnlyEffect: boolean 
 
 		playSound('shatter', { PlaybackSpeed: randomFloat(0.9, 1) });
 	}
-
-	if (getSetting(GameSetting.CSG)) {
-		const model = new Instance('Model');
-		otherPart.Clone().Parent = model;
-		const [_, boundingBox] = model.GetBoundingBox();
-		model.Destroy();
-
-		const closestPoint = otherPart.GetClosestPointOnSurface(head.Position);
-		const maxSize = math.max(boundingBox.X, boundingBox.Y, boundingBox.Z);
-		const flingVector = new Vector3(0, 30, 0);
-
-		if (otherPart.IsA('UnionOperation')) {
-			const piece = otherPart.Clone();
-			piece.Anchored = false;
-			piece.CanCollide = true;
-			piece.CollisionGroup = 'debris';
-			piece.AssemblyLinearVelocity = piece.GetClosestPointOnSurface(closestPoint).sub(closestPoint).Unit.mul(10).add(flingVector);
-			piece.AssemblyAngularVelocity = randomDirection();
-			piece.Parent = effectsFolder;
-
-			TweenService.Create(piece, tweenTypes.linear.medium, {
-				Transparency: 1,
-			}).Play();
-			Debris.AddItem(piece, tweenTypes.linear.medium.Time);
-		} else {
-			const slicers: BasePart[] = [];
-
-			for (const i of $range(1, 6)) {
-				const plane = new Instance('Part');
-				plane.CanCollide = false;
-				plane.Anchored = true;
-				plane.Transparency = 1;
-				plane.CFrame = CFrame.lookAlong(closestPoint, randomDirection());
-				plane.Size = new Vector3(thickness, maxSize * 3, maxSize * 3);
-				plane.Parent = effectsFolder;
-				slicers.push(plane);
-			}
-
-			for (const i of $range(1, 3)) {
-				const plane = new Instance('Part');
-				plane.CanCollide = false;
-				plane.Anchored = true;
-				plane.Transparency = 1;
-				plane.CFrame = CFrame.lookAlong(otherPart.Position.add(randomDirection(boundingBox.div(2))), randomDirection());
-				plane.Size = new Vector3(thickness, maxSize * 3, maxSize * 3);
-				plane.Parent = effectsFolder;
-				slicers.push(plane);
-			}
-
-			const pieces = GeometryService.SubtractAsync(otherPart, slicers, subtractOptions) as PartOperation[];
-			for (const piece of pieces) {
+	
+	task.spawn(() => {
+		if (getSetting(GameSetting.CSG)) {
+			const model = new Instance('Model');
+			otherPart.Clone().Parent = model;
+			const [_, boundingBox] = model.GetBoundingBox();
+			model.Destroy();
+	
+			const closestPoint = otherPart.GetClosestPointOnSurface(head.Position);
+			const maxSize = math.max(boundingBox.X, boundingBox.Y, boundingBox.Z);
+			const flingVector = new Vector3(0, 30, 0);
+	
+			if (otherPart.IsA('UnionOperation')) {
+				const piece = otherPart.Clone();
 				piece.Anchored = false;
 				piece.CanCollide = true;
 				piece.CollisionGroup = 'debris';
 				piece.AssemblyLinearVelocity = piece.GetClosestPointOnSurface(closestPoint).sub(closestPoint).Unit.mul(10).add(flingVector);
 				piece.AssemblyAngularVelocity = randomDirection();
 				piece.Parent = effectsFolder;
-
-				TweenService.Create(piece, tweenTypes.linear.medium, {
-					Transparency: 1,
-				}).Play();
-				Debris.AddItem(piece, tweenTypes.linear.medium.Time);
+	
+				TweenService.Create(piece, tweenTypes.linear.medium, { Transparency: 1 }).Play();
+				task.delay(2.5, () => piece.Destroy());
+			} else {
+				const slicers: BasePart[] = [];
+	
+				for (const i of $range(1, 6)) {
+					const plane = new Instance('Part');
+					plane.CanCollide = false;
+					plane.Anchored = true;
+					plane.Transparency = 1;
+					plane.CFrame = CFrame.lookAlong(closestPoint, randomDirection());
+					plane.Size = new Vector3(thickness, maxSize * 3, maxSize * 3);
+					plane.Parent = effectsFolder;
+					slicers.push(plane);
+				}
+	
+				for (const i of $range(1, 3)) {
+					const plane = new Instance('Part');
+					plane.CanCollide = false;
+					plane.Anchored = true;
+					plane.Transparency = 1;
+					plane.CFrame = CFrame.lookAlong(otherPart.Position.add(randomDirection(boundingBox.div(2))), randomDirection());
+					plane.Size = new Vector3(thickness, maxSize * 3, maxSize * 3);
+					plane.Parent = effectsFolder;
+					slicers.push(plane);
+				}
+	
+				const pieces = GeometryService.SubtractAsync(otherPart, slicers, subtractOptions) as PartOperation[];
+				for (const piece of pieces) {
+					piece.Anchored = false;
+					piece.CanCollide = true;
+					piece.CollisionGroup = 'debris';
+					piece.AssemblyLinearVelocity = piece.GetClosestPointOnSurface(closestPoint).sub(closestPoint).Unit.mul(10).add(flingVector);
+					piece.AssemblyAngularVelocity = randomDirection();
+					piece.Parent = effectsFolder;
+	
+					TweenService.Create(piece, tweenTypes.linear.medium, { Transparency: 1 }).Play();
+					task.delay(2.5, () => piece.Destroy());
+				}
 			}
 		}
-	}
-
-	if (!isOnlyEffect) otherPart.LocalTransparencyModifier = 1;
-	waitUntil(() => cube && cube.Position.sub(otherPart.GetClosestPointOnSurface(cube.Position)).Magnitude > 25, 14);
+	
+		if (!isOnlyEffect) otherPart.LocalTransparencyModifier = 1;
+	});
+	
+	const cubeScale = (cube?.GetAttribute('scale') as number | undefined) ?? 1;
+	waitUntil(() => cube && cube.Position.sub(otherPart.GetClosestPointOnSurface(cube.Position)).Magnitude > 25 * cubeScale, 14);
 
 	if (!isOnlyEffect) {
 		const partId = getPartId(otherPart);
@@ -555,7 +556,7 @@ function newPart(part: Instance) {
 						
 						shockwave.Shockwave.Emit(1);
 						
-						Debris.AddItem(shockwave, shockwave.Shockwave.Lifetime.Max);
+						task.delay(shockwave.Shockwave.Lifetime.Max, () => shockwave.Destroy());
 					} else if (otherPart.IsDescendantOf(voltShardsFolder)) {
 						Events.ClientRagdoll.Fire(3.5);
 						
@@ -576,7 +577,7 @@ function newPart(part: Instance) {
 							}
 						}
 						
-						Debris.AddItem(highlight, 2);
+						task.delay(2, () => highlight.Destroy());
 						
 						if (getSetting(GameSetting.Effects)) {
 							const rootAttachment = cube.FindFirstChild('CenterAttachment');
@@ -777,7 +778,7 @@ function newPart(part: Instance) {
 							const particleEmitter = spark.FindFirstChild('ParticleEmitter') as ParticleEmitter;
 							task.delay(0.15, () => (particleEmitter.Enabled = false));
 							
-							Debris.AddItem(spark, 5);
+							task.delay(particleEmitter.Lifetime.Max + 0.1, () => spark.Destroy());
 						}
 					}
 					
@@ -847,10 +848,11 @@ function newPart(part: Instance) {
 						const spark = sparkTemplate.Clone();
 						spark.CFrame = CFrame.lookAlong(point, unitVelocity.mul(-1));
 						spark.Parent = effectsFolder;
-						Debris.AddItem(spark, 5);
-
+						
 						const particleEmitter = spark.FindFirstChild('ParticleEmitter') as ParticleEmitter;
 						task.delay(0.1, () => (particleEmitter.Enabled = false));
+						
+						task.delay(particleEmitter.Lifetime.Max + 0.1, () => particleEmitter.Destroy());
 					}
 				}
 
@@ -1020,7 +1022,7 @@ RunService.Stepped.Connect((_, dt) => {
 					const OuterInfo = new TweenInfo(math.min(relativeVelocity.Magnitude / 30, 10), Enum.EasingStyle.Linear);
 					for (const part of createdParts) {
 						TweenService.Create(part, OuterInfo, { Size: Vector3.zero, Transparency: 1 }).Play();
-						Debris.AddItem(part, OuterInfo.Time);
+						task.delay(OuterInfo.Time, () => part.Destroy());
 					}
 				});
 			}

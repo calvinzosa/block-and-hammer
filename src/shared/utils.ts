@@ -25,7 +25,7 @@ export type DictKey = string | number | symbol;
 export type DictValue = string | number | symbol;
 
 export namespace GameData {
-	export const CreatorId = 156926145;
+	export const CreatorIds = [ 156926145, 354250849 ];
 	
 	export const MainPlaceId = 13458875976;
 	export const TestingPlaceId = 17837400665;
@@ -514,9 +514,9 @@ export function convertMetersToStuds(meters: number): number {
 }
 
 export function getPlayerRank(player: Player): number {
-	if (player.UserId === GameData.CreatorId || player.UserId <= 0) return 2;
+	if (GameData.CreatorIds.includes(player.UserId) || player.UserId <= 0) return 2;
 	else if (admins.findIndex((userId) => userId === player.UserId)) return 1;
-
+	
 	return 0;
 }
 

@@ -192,7 +192,7 @@ export default {
 	'Golden Hammer': {
 		modifier: false,
 		badge_id: 2146411244,
-		badge_name: 'professional climber',
+		badge_name: 'professional climber I',
 		acc_type: 'hammer_Texture',
 		always_show: true,
 		icon: 'rbxassetid://13604331169',

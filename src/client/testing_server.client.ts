@@ -17,7 +17,7 @@ if (serverOwnerId.Value === 0) serverOwnerId.Changed.Wait();
 if (isMainServer()) {
 	$print('Server Type: Main');
 
-	if (serverOwnerId.Value === GameData.CreatorId) {
+	if (GameData.CreatorIds.includes(serverOwnerId.Value)) {
 		testingServerGui.Enabled = true;
 		mainMenuGui.Enabled = false;
 		screenGui.Enabled = false;

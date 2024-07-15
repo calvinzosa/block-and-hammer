@@ -116,6 +116,46 @@ local default = {
 			} },
 		},
 	},
+	bob = {
+		icon = "",
+		talkSound = "rbxassetid://7772738671",
+		talkDelay = { 0.01, 0.015 },
+		dialog = {
+			default = {
+				message = "hi",
+				goodbyeEnabled = true,
+				faceTo = "_player",
+				choices = {
+					hello = {
+						message = "what you doing?",
+						goodbyeEnabled = true,
+						faceTo = "_player",
+						choices = {
+							["how to level 2"] = {
+								message = "i heard that if you used the reached the top of this wall beside me, you can get to level 2",
+								goodbyeEnabled = true,
+								faceTo = "_player",
+								choices = {},
+							},
+							["what that glowy thing beside you?"] = {
+								message = "idk",
+								goodbyeEnabled = true,
+								faceTo = "_player",
+								choices = {},
+							},
+							["why do you exist"] = {
+								message = string.rep(".", 2500),
+								goodbyeEnabled = true,
+								faceTo = "_player",
+								choices = {},
+							},
+						},
+					},
+				},
+			},
+			special = {},
+		},
+	},
 }
 return {
 	default = default,

@@ -28,6 +28,7 @@ const choiceTemplate = guiTemplates.WaitForChild('ChoiceTemplate') as TextButton
 const npcsFolder = Workspace.WaitForChild('NPCs') as Folder;
 const GUI = player.WaitForChild('PlayerGui') as PlayerGui;
 const valueInstances = GUI.WaitForChild('Values') as ScreenGui;
+const menuOpen = valueInstances.WaitForChild('menu_open') as BoolValue;
 const canMove = valueInstances.WaitForChild('can_move') as BoolValue;
 const screenGui = GUI.WaitForChild('ScreenGui');
 const speedometerLabel = screenGui.WaitForChild('Speedometer') as TextLabel;
@@ -99,7 +100,7 @@ UserInputService.InputBegan.Connect((input, processed) => {
 	} else {
 		if (input.UserInputType === Enum.UserInputType.MouseButton1 || input.UserInputType === Enum.UserInputType.Touch) {
 			didSkip = true;
-			if (inDialog) return;
+			if (inDialog || menuOpen.Value) return;
 			
 			const npc = getNpcAtMouse();
 			if (npc && npc.Parent === npcsFolder && npc.Name in dialog) {
@@ -274,7 +275,7 @@ UserInputService.InputChanged.Connect((input, processed) => {
 	
 	if (input.UserInputType === Enum.UserInputType.MouseMovement) {
 		const npc = getNpcAtMouse();
-		if (npc && !inDialog) setMouseIcon(true);
+		if (npc && !inDialog && !menuOpen.Value) setMouseIcon(true);
 		else setMouseIcon(false);
 	}
 });

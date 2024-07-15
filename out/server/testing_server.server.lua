@@ -29,10 +29,12 @@ else
 end
 if isMainServer() then
 	print("[src/server/testing_server.server.ts:15]", "Server Type: Main")
-	if ownerId.Value == GameData.CreatorId then
+	local _creatorIds = GameData.CreatorIds
+	local _value = ownerId.Value
+	if table.find(_creatorIds, _value) ~= nil then
 		while true do
-			local _value = task.wait(3)
-			if not (_value ~= 0 and _value == _value and _value) then
+			local _value_1 = task.wait(3)
+			if not (_value_1 ~= 0 and _value_1 == _value_1 and _value_1) then
 				break
 			end
 			local savedServerId

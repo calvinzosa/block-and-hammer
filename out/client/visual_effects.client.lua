@@ -6,10 +6,9 @@ local ReplicatedStorage = _services.ReplicatedStorage
 local GeometryService = _services.GeometryService
 local TweenService = _services.TweenService
 local RunService = _services.RunService
+local Workspace = _services.Workspace
 local Lighting = _services.Lighting
 local Players = _services.Players
-local Debris = _services.Debris
-local Workspace = _services.Workspace
 local _utils = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "utils")
 local convertStudsToMeters = _utils.convertStudsToMeters
 local getHammerTexture = _utils.getHammerTexture
@@ -131,7 +130,9 @@ local function createDebris(velocity, position, part, multiplier, createHole, ha
 				TweenService:Create(circle, tweenTypes.linear.short, {
 					Transparency = 1,
 				}):Play()
-				Debris:AddItem(circle, 1)
+				task.delay(1, function()
+					return circle:Destroy()
+				end)
 			end)
 			circle.Parent = effectsFolder
 		end
@@ -186,7 +187,9 @@ local function createDebris(velocity, position, part, multiplier, createHole, ha
 							TweenService:Create(debris, tweenTypes.linear.short, {
 								Transparency = 1,
 							}):Play()
-							Debris:AddItem(debris, 1)
+							task.delay(1, function()
+								return debris:Destroy()
+							end)
 						end)
 					end
 				end
@@ -253,43 +256,17 @@ local function breakPart(otherPart, head, isOnlyEffect)
 			end
 		end
 	end
-	if getSetting(GameSetting.CSG) then
-		local model = Instance.new("Model")
-		otherPart:Clone().Parent = model
-		local _, boundingBox = model:GetBoundingBox()
-		model:Destroy()
-		local closestPoint = otherPart:GetClosestPointOnSurface(head.Position)
-		local maxSize = math.max(boundingBox.X, boundingBox.Y, boundingBox.Z)
-		local flingVector = Vector3.new(0, 30, 0)
-		if otherPart:IsA("UnionOperation") then
-			local piece = otherPart:Clone()
-			piece.Anchored = false
-			piece.CanCollide = true
-			piece.CollisionGroup = "debris"
-			piece.AssemblyLinearVelocity = (piece:GetClosestPointOnSurface(closestPoint) - closestPoint).Unit * 10 + flingVector
-			piece.AssemblyAngularVelocity = randomDirection()
-			piece.Parent = effectsFolder
-			TweenService:Create(piece, tweenTypes.linear.medium, {
-				Transparency = 1,
-			}):Play()
-			Debris:AddItem(piece, tweenTypes.linear.medium.Time)
-		else
-			local slicers = {}
-			for i = 1, 6 do
-				local plane = Instance.new("Part")
-				plane.CanCollide = false
-				plane.Anchored = true
-				plane.Transparency = 1
-				local _fn = CFrame
-				local _position = otherPart.Position
-				local _arg0 = randomDirection(boundingBox / 2)
-				plane.CFrame = _fn.lookAlong(_position + _arg0, randomDirection())
-				plane.Size = Vector3.new(0.5, maxSize * 3, maxSize * 3)
-				plane.Parent = effectsFolder
-				table.insert(slicers, plane)
-			end
-			local pieces = GeometryService:SubtractAsync(otherPart, slicers, subtractOptions)
-			for _1, piece in pieces do
+	task.spawn(function()
+		if getSetting(GameSetting.CSG) then
+			local model = Instance.new("Model")
+			otherPart:Clone().Parent = model
+			local _, boundingBox = model:GetBoundingBox()
+			model:Destroy()
+			local closestPoint = otherPart:GetClosestPointOnSurface(head.Position)
+			local maxSize = math.max(boundingBox.X, boundingBox.Y, boundingBox.Z)
+			local flingVector = Vector3.new(0, 30, 0)
+			if otherPart:IsA("UnionOperation") then
+				local piece = otherPart:Clone()
 				piece.Anchored = false
 				piece.CanCollide = true
 				piece.CollisionGroup = "debris"
@@ -299,21 +276,62 @@ local function breakPart(otherPart, head, isOnlyEffect)
 				TweenService:Create(piece, tweenTypes.linear.medium, {
 					Transparency = 1,
 				}):Play()
-				Debris:AddItem(piece, tweenTypes.linear.medium.Time)
+				task.delay(2.5, function()
+					return piece:Destroy()
+				end)
+			else
+				local slicers = {}
+				for _ = 1, 6 do
+					local plane = Instance.new("Part")
+					plane.CanCollide = false
+					plane.Anchored = true
+					plane.Transparency = 1
+					local _fn = CFrame
+					local _position = otherPart.Position
+					local _arg0 = randomDirection(boundingBox / 2)
+					plane.CFrame = _fn.lookAlong(_position + _arg0, randomDirection())
+					plane.Size = Vector3.new(0.5, maxSize * 3, maxSize * 3)
+					plane.Parent = effectsFolder
+					table.insert(slicers, plane)
+				end
+				local pieces = GeometryService:SubtractAsync(otherPart, slicers, subtractOptions)
+				for _1, piece in pieces do
+					piece.Anchored = false
+					piece.CanCollide = true
+					piece.CollisionGroup = "debris"
+					piece.AssemblyLinearVelocity = (piece:GetClosestPointOnSurface(closestPoint) - closestPoint).Unit * 10 + flingVector
+					piece.AssemblyAngularVelocity = randomDirection()
+					piece.Parent = effectsFolder
+					TweenService:Create(piece, tweenTypes.linear.medium, {
+						Transparency = 1,
+					}):Play()
+					task.delay(2.5, function()
+						return piece:Destroy()
+					end)
+				end
 			end
 		end
+		if not isOnlyEffect then
+			otherPart.LocalTransparencyModifier = 1
+		end
+	end)
+	local _result = cube
+	if _result ~= nil then
+		_result = _result:GetAttribute("scale")
 	end
-	if not isOnlyEffect then
-		otherPart.LocalTransparencyModifier = 1
+	local _condition = _result
+	if _condition == nil then
+		_condition = 1
 	end
+	local cubeScale = _condition
 	waitUntil(function()
-		local _condition = cube
-		if _condition then
+		local _condition_1 = cube
+		if _condition_1 then
 			local _position = cube.Position
 			local _arg0 = otherPart:GetClosestPointOnSurface(cube.Position)
-			_condition = (_position - _arg0).Magnitude > 25
+			_condition_1 = (_position - _arg0).Magnitude > 25 * cubeScale
 		end
-		return _condition
+		return _condition_1
 	end, 14)
 	if not isOnlyEffect then
 		local partId = getPartId(otherPart)
@@ -361,53 +379,17 @@ local function shatterPart(otherPart, head, isOnlyEffect)
 			PlaybackSpeed = randomFloat(0.9, 1),
 		})
 	end
-	if getSetting(GameSetting.CSG) then
-		local model = Instance.new("Model")
-		otherPart:Clone().Parent = model
-		local _, boundingBox = model:GetBoundingBox()
-		model:Destroy()
-		local closestPoint = otherPart:GetClosestPointOnSurface(head.Position)
-		local maxSize = math.max(boundingBox.X, boundingBox.Y, boundingBox.Z)
-		local flingVector = Vector3.new(0, 30, 0)
-		if otherPart:IsA("UnionOperation") then
-			local piece = otherPart:Clone()
-			piece.Anchored = false
-			piece.CanCollide = true
-			piece.CollisionGroup = "debris"
-			piece.AssemblyLinearVelocity = (piece:GetClosestPointOnSurface(closestPoint) - closestPoint).Unit * 10 + flingVector
-			piece.AssemblyAngularVelocity = randomDirection()
-			piece.Parent = effectsFolder
-			TweenService:Create(piece, tweenTypes.linear.medium, {
-				Transparency = 1,
-			}):Play()
-			Debris:AddItem(piece, tweenTypes.linear.medium.Time)
-		else
-			local slicers = {}
-			for i = 1, 6 do
-				local plane = Instance.new("Part")
-				plane.CanCollide = false
-				plane.Anchored = true
-				plane.Transparency = 1
-				plane.CFrame = CFrame.lookAlong(closestPoint, randomDirection())
-				plane.Size = Vector3.new(thickness, maxSize * 3, maxSize * 3)
-				plane.Parent = effectsFolder
-				table.insert(slicers, plane)
-			end
-			for i = 1, 3 do
-				local plane = Instance.new("Part")
-				plane.CanCollide = false
-				plane.Anchored = true
-				plane.Transparency = 1
-				local _fn = CFrame
-				local _position = otherPart.Position
-				local _arg0 = randomDirection(boundingBox / 2)
-				plane.CFrame = _fn.lookAlong(_position + _arg0, randomDirection())
-				plane.Size = Vector3.new(thickness, maxSize * 3, maxSize * 3)
-				plane.Parent = effectsFolder
-				table.insert(slicers, plane)
-			end
-			local pieces = GeometryService:SubtractAsync(otherPart, slicers, subtractOptions)
-			for _1, piece in pieces do
+	task.spawn(function()
+		if getSetting(GameSetting.CSG) then
+			local model = Instance.new("Model")
+			otherPart:Clone().Parent = model
+			local _, boundingBox = model:GetBoundingBox()
+			model:Destroy()
+			local closestPoint = otherPart:GetClosestPointOnSurface(head.Position)
+			local maxSize = math.max(boundingBox.X, boundingBox.Y, boundingBox.Z)
+			local flingVector = Vector3.new(0, 30, 0)
+			if otherPart:IsA("UnionOperation") then
+				local piece = otherPart:Clone()
 				piece.Anchored = false
 				piece.CanCollide = true
 				piece.CollisionGroup = "debris"
@@ -417,21 +399,72 @@ local function shatterPart(otherPart, head, isOnlyEffect)
 				TweenService:Create(piece, tweenTypes.linear.medium, {
 					Transparency = 1,
 				}):Play()
-				Debris:AddItem(piece, tweenTypes.linear.medium.Time)
+				task.delay(2.5, function()
+					return piece:Destroy()
+				end)
+			else
+				local slicers = {}
+				for i = 1, 6 do
+					local plane = Instance.new("Part")
+					plane.CanCollide = false
+					plane.Anchored = true
+					plane.Transparency = 1
+					plane.CFrame = CFrame.lookAlong(closestPoint, randomDirection())
+					plane.Size = Vector3.new(thickness, maxSize * 3, maxSize * 3)
+					plane.Parent = effectsFolder
+					table.insert(slicers, plane)
+				end
+				for i = 1, 3 do
+					local plane = Instance.new("Part")
+					plane.CanCollide = false
+					plane.Anchored = true
+					plane.Transparency = 1
+					local _fn = CFrame
+					local _position = otherPart.Position
+					local _arg0 = randomDirection(boundingBox / 2)
+					plane.CFrame = _fn.lookAlong(_position + _arg0, randomDirection())
+					plane.Size = Vector3.new(thickness, maxSize * 3, maxSize * 3)
+					plane.Parent = effectsFolder
+					table.insert(slicers, plane)
+				end
+				local pieces = GeometryService:SubtractAsync(otherPart, slicers, subtractOptions)
+				for _1, piece in pieces do
+					piece.Anchored = false
+					piece.CanCollide = true
+					piece.CollisionGroup = "debris"
+					piece.AssemblyLinearVelocity = (piece:GetClosestPointOnSurface(closestPoint) - closestPoint).Unit * 10 + flingVector
+					piece.AssemblyAngularVelocity = randomDirection()
+					piece.Parent = effectsFolder
+					TweenService:Create(piece, tweenTypes.linear.medium, {
+						Transparency = 1,
+					}):Play()
+					task.delay(2.5, function()
+						return piece:Destroy()
+					end)
+				end
 			end
 		end
+		if not isOnlyEffect then
+			otherPart.LocalTransparencyModifier = 1
+		end
+	end)
+	local _result = cube
+	if _result ~= nil then
+		_result = _result:GetAttribute("scale")
 	end
-	if not isOnlyEffect then
-		otherPart.LocalTransparencyModifier = 1
+	local _condition = _result
+	if _condition == nil then
+		_condition = 1
 	end
+	local cubeScale = _condition
 	waitUntil(function()
-		local _condition = cube
-		if _condition then
+		local _condition_1 = cube
+		if _condition_1 then
 			local _position = cube.Position
 			local _arg0 = otherPart:GetClosestPointOnSurface(cube.Position)
-			_condition = (_position - _arg0).Magnitude > 25
+			_condition_1 = (_position - _arg0).Magnitude > 25 * cubeScale
 		end
-		return _condition
+		return _condition_1
 	end, 14)
 	if not isOnlyEffect then
 		local partId = getPartId(otherPart)
@@ -490,12 +523,12 @@ local function newPart(part)
 		return nil
 	end
 	part:SetAttribute("processed", true)
-	print("[src/client/visual_effects.client.ts:476]", `Cube added: {part.Name} (Client: cube{player.UserId})`)
+	print("[src/client/visual_effects.client.ts:477]", `Cube added: {part.Name} (Client: cube{player.UserId})`)
 	StrokeScale:ScaleBillboardGui(part:WaitForChild("OverheadGUI"), 950)
 	if not isClientCube(part) then
 		return nil
 	end
-	print("[src/client/visual_effects.client.ts:482]", "> Client cube respawned")
+	print("[src/client/visual_effects.client.ts:483]", "> Client cube respawned")
 	cube = part
 	head = cube:WaitForChild("Head", 30)
 	if not head then
@@ -587,7 +620,9 @@ local function newPart(part)
 						local shockwave = shockwaveParticle:Clone()
 						shockwave.Parent = otherPart
 						shockwave.Shockwave:Emit(1)
-						Debris:AddItem(shockwave, shockwave.Shockwave.Lifetime.Max)
+						task.delay(shockwave.Shockwave.Lifetime.Max, function()
+							return shockwave:Destroy()
+						end)
 					elseif otherPart:IsDescendantOf(voltShardsFolder) then
 						Events.ClientRagdoll:Fire(3.5)
 						local highlight = Instance.new("Highlight")
@@ -605,7 +640,9 @@ local function newPart(part)
 								descendantHighlight.Parent = highlight
 							end
 						end
-						Debris:AddItem(highlight, 2)
+						task.delay(2, function()
+							return highlight:Destroy()
+						end)
 						if getSetting(GameSetting.Effects) then
 							local rootAttachment = cube:FindFirstChild("CenterAttachment")
 							local headAttachment = head:FindFirstChild("ArmAttachment")
@@ -827,7 +864,9 @@ local function newPart(part)
 								particleEmitter.Enabled = false
 								return particleEmitter.Enabled
 							end)
-							Debris:AddItem(spark, 5)
+							task.delay(particleEmitter.Lifetime.Max + 0.1, function()
+								return spark:Destroy()
+							end)
 						end
 					end
 					local dataString = string.format("spark,%d,%d,,,%d,%d,,", math.round(point.X * 1000), math.round(point.Y * 1000), math.round(headVelocity.X * 1000), math.round(headVelocity.Y * 1000))
@@ -898,11 +937,13 @@ local function newPart(part)
 						local spark = sparkTemplate:Clone()
 						spark.CFrame = CFrame.lookAlong(point, unitVelocity * (-1))
 						spark.Parent = effectsFolder
-						Debris:AddItem(spark, 5)
 						local particleEmitter = spark:FindFirstChild("ParticleEmitter")
 						task.delay(0.1, function()
 							particleEmitter.Enabled = false
 							return particleEmitter.Enabled
+						end)
+						task.delay(particleEmitter.Lifetime.Max + 0.1, function()
+							return particleEmitter:Destroy()
 						end)
 					end
 				end
@@ -1070,7 +1111,9 @@ RunService.Stepped:Connect(function(_, dt)
 							Size = Vector3.zero,
 							Transparency = 1,
 						}):Play()
-						Debris:AddItem(part, OuterInfo.Time)
+						task.delay(OuterInfo.Time, function()
+							return part:Destroy()
+						end)
 					end
 				end)
 			end
@@ -1111,7 +1154,7 @@ RunService.Stepped:Connect(function(_, dt)
 	prevCubePosition = cube.Position
 	cube:SetAttribute("lastVelocity", cube.AssemblyLinearVelocity)
 end)
-print("[src/client/visual_effects.client.ts:1076]", "Started running visual_effects.client.ts")
+print("[src/client/visual_effects.client.ts:1078]", "Started running visual_effects.client.ts")
 while true do
 	local _value = task.wait(0.05)
 	if not (_value ~= 0 and _value == _value and _value) then

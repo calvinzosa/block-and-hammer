@@ -20,6 +20,7 @@ local choiceTemplate = guiTemplates:WaitForChild("ChoiceTemplate")
 local npcsFolder = Workspace:WaitForChild("NPCs")
 local GUI = player:WaitForChild("PlayerGui")
 local valueInstances = GUI:WaitForChild("Values")
+local menuOpen = valueInstances:WaitForChild("menu_open")
 local canMove = valueInstances:WaitForChild("can_move")
 local screenGui = GUI:WaitForChild("ScreenGui")
 local speedometerLabel = screenGui:WaitForChild("Speedometer")
@@ -102,7 +103,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	else
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			didSkip = true
-			if inDialog then
+			if inDialog or menuOpen.Value then
 				return nil
 			end
 			local npc = getNpcAtMouse()
@@ -243,7 +244,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
 						TS.try(function()
 							messageData.func(player, npc)
 						end, function(err)
-							warn("[src/client/map/npcs.client.ts:248]", err)
+							warn("[src/client/map/npcs.client.ts:249]", err)
 						end)
 					end
 					if targetChoice == "_goodbye" then
@@ -270,7 +271,7 @@ UserInputService.InputChanged:Connect(function(input, processed)
 	end
 	if input.UserInputType == Enum.UserInputType.MouseMovement then
 		local npc = getNpcAtMouse()
-		if npc and not inDialog then
+		if npc and not inDialog and not menuOpen.Value then
 			setMouseIcon(true)
 		else
 			setMouseIcon(false)

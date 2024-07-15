@@ -62,27 +62,29 @@ RunService.RenderStepped.Connect((dt) => {
 	
 	let activeMusic = undefined as (Sound | undefined);
 	
-	if (player.GetAttribute(PlayerAttributes.Client.InMainMenu)) activeMusic = Music.Jamming;
-	else if (targetCube?.IsA('BasePart')) {
-		const area = getCurrentArea(targetCube);
-		
-		const [ altitude ] = convertStudsToMeters(targetCube.Position.Y, true);
-		if (area === 'Tutorial') {
-			activeMusic = Music.CrystalCave;
-		} else if (area === 'Level 1') {
-			if (altitude < 100) activeMusic = Music.StartingOff;
-			else if (altitude < 200) activeMusic = Music.SolitaryIsle;
-			else if (altitude < 300) activeMusic = Music.TheLake;
-			else if (altitude < 400) activeMusic = Music.Mountain;
-			else if (altitude < 500) activeMusic = Music.HauntedField;
-			else if (altitude < 700) activeMusic = Music.Mountain;
-			else activeMusic = Music.Garden;
-		} else if (area === 'Level 2: Entrance') {
-			activeMusic = Music.ForestOfFall;
-		} else if (area === 'Level 2: Cave 1') {
-			activeMusic = Music.CrystallizedAbyss;
-		} else if (area === 'Level 2') {
+	if (getSetting(GameSetting.Music)) {
+		if (player.GetAttribute(PlayerAttributes.Client.InMainMenu)) activeMusic = Music.Jamming;
+		else if (targetCube?.IsA('BasePart')) {
+			const area = getCurrentArea(targetCube);
 			
+			const [ altitude ] = convertStudsToMeters(targetCube.Position.Y, true);
+			if (area === 'Tutorial') {
+				activeMusic = Music.CrystalCave;
+			} else if (area === 'Level 1') {
+				if (altitude < 100) activeMusic = Music.StartingOff;
+				else if (altitude < 200) activeMusic = Music.SolitaryIsle;
+				else if (altitude < 300) activeMusic = Music.TheLake;
+				else if (altitude < 400) activeMusic = Music.Mountain;
+				else if (altitude < 500) activeMusic = Music.HauntedField;
+				else if (altitude < 700) activeMusic = Music.Mountain;
+				else activeMusic = Music.Garden;
+			} else if (area === 'Level 2: Entrance') {
+				activeMusic = Music.ForestOfFall;
+			} else if (area === 'Level 2: Cave 1') {
+				activeMusic = Music.CrystallizedAbyss;
+			} else if (area === 'Level 2') {
+				
+			}
 		}
 	}
 	

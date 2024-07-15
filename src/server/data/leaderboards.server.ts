@@ -1,32 +1,41 @@
-import { ReplicatedStorage, DataStoreService, HttpService, RunService, Players } from '@rbxts/services';
+import {
+	ReplicatedStorage,
+	DataStoreService,
+	HttpService,
+	RunService,
+	Players,
+} from '@rbxts/services';
 
 import { $print, $warn } from 'rbxts-transform-debug';
 
-import { isTestingServer } from 'shared/utils';
+import {
+	isTestingServer,
+} from 'shared/utils';
 
 if (isTestingServer()) {
 	$warn('Leaderboards are not enabled in the testing server');
 } else {
 	const Events = {
 		UpdateLeaderboard: ReplicatedStorage.FindFirstChild('UpdateLeaderboard') as RemoteEvent,
-
+		
 		UpdatePlayerTime: ReplicatedStorage.FindFirstChild('UpdatePlayerTime') as BindableEvent,
 	};
-
-	const leaderboardVersion = 'LEADERBOARD_V6';
-
+	
+	const leaderboardVersion = 'LEADERBOARD_V7';
+	
 	const GlobalLeaderboard = DataStoreService.GetOrderedDataStore('GlobalLeaderboard', leaderboardVersion);
 	const ModdedLeaderboard = DataStoreService.GetOrderedDataStore('ModdedLeaderboard', leaderboardVersion);
-
+	
 	const leaderboardsCache: Record<string, Record<string, number>> = {
-		GlobalLeaderboard: {},
-		ModdedLeaderboard: {},
+		GlobalLeaderboard: {  },
+		ModdedLeaderboard: {  },
 	};
+	
 	let dataCache: Record<string, Record<number, [number, number]>> = {
-		GlobalLeaderboard: {},
-		ModdedLeaderboard: {},
+		GlobalLeaderboard: {  },
+		ModdedLeaderboard: {  },
 	};
-
+	
 	function updateLeaderboardsCache() {
 		if (!RunService.IsStudio() || true) {
 			for (const [userId, totalTime] of pairs(leaderboardsCache.GlobalLeaderboard)) {

@@ -28,8 +28,8 @@ local RNG = Random.new()
 local GameData = {}
 do
 	local _container = GameData
-	local CreatorId = 156926145
-	_container.CreatorId = CreatorId
+	local CreatorIds = { 156926145, 354250849 }
+	_container.CreatorIds = CreatorIds
 	local MainPlaceId = 13458875976
 	_container.MainPlaceId = MainPlaceId
 	local TestingPlaceId = 17837400665
@@ -686,7 +686,13 @@ local function convertMetersToStuds(meters)
 	return roundDecimalPlaces(meters / 0.28)
 end
 local function getPlayerRank(player)
-	if player.UserId == GameData.CreatorId or player.UserId <= 0 then
+	local _creatorIds = GameData.CreatorIds
+	local _userId = player.UserId
+	local _condition = table.find(_creatorIds, _userId) ~= nil
+	if not _condition then
+		_condition = player.UserId <= 0
+	end
+	if _condition then
 		return 2
 	else
 		-- ▼ ReadonlyArray.findIndex ▼

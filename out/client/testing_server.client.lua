@@ -18,7 +18,9 @@ if serverOwnerId.Value == 0 then
 end
 if isMainServer() then
 	print("[src/client/testing_server.client.ts:18]", "Server Type: Main")
-	if serverOwnerId.Value == GameData.CreatorId then
+	local _creatorIds = GameData.CreatorIds
+	local _value = serverOwnerId.Value
+	if table.find(_creatorIds, _value) ~= nil then
 		testingServerGui.Enabled = true
 		mainMenuGui.Enabled = false
 		screenGui.Enabled = false
